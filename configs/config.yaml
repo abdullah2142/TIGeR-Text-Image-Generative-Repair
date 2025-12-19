@@ -8,5 +8,13 @@ data:
 models:
   clip_model_name: "openai/clip-vit-base-patch32"
 sieve:
-  batch_size: 32
-  device: "cpu"   # change to "cuda" later if available
+  batch_size: 16
+  device: "cpu"                # keep cpu for now
+  threshold_method: "iqr"       # "iqr" or "quantile"
+  iqr_k: 1.5                    # used if method="iqr"
+  quantile_q: 0.05              # used if method="quantile"
+
+
+  min_category_samples: 8        # NEW: if a category has <8 rows, use global threshold
+  global_threshold_method: "quantile"   # NEW: "quantile" or "iqr"
+  global_quantile_q: 0.10               # NEW: bottom 10% are suspicious (for small datasets)

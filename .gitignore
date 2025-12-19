@@ -8,3 +8,6 @@ data/cache_embeddings/
 data/outputs/
 *.log
 .DS_Store
+data/outputs/
+data/cache_embeddings/
+data/processed/
