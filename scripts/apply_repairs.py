@@ -60,16 +60,23 @@ def main():
         if col not in df.columns:
             df[col] = ""
 
+    # ✅ Repair metadata columns with correct types
+    if "repaired" not in df.columns:
+        df["repaired"] = False
+    else:
+        df["repaired"] = df["repaired"].fillna(False).astype(bool)
+
+    for col in ["repair_action", "repair_notes", "repair_source_row_id"]:
+        if col not in df.columns:
+            df[col] = ""
+        else:
+            df[col] = df[col].fillna("").astype(str)
+
     # Index for fast lookup
     idx_by_rowid = {str(rid): i for i, rid in enumerate(df["row_id"].astype(str).values)}
 
     repaired_images_dir = (root / "data/processed/repaired_images").resolve()
     repaired_images_dir.mkdir(parents=True, exist_ok=True)
-
-    # Add repair metadata columns
-    for col in ["repaired", "repair_action", "repair_notes", "repair_source_row_id"]:
-        if col not in df.columns:
-            df[col] = ""
 
     log_rows = []
 
@@ -107,7 +114,7 @@ def main():
                             dst_path = repaired_images_dir / f"{row_id}.jpg"
                             shutil.copy2(src_path, dst_path)
 
-                            # Store as relative posix path (cross-platform friendly)
+                            # Store as relative POSIX path
                             df.at[i, "image_path"] = dst_path.relative_to(root).as_posix()
                             df.at[i, "repaired"] = True
                             df.at[i, "repair_action"] = "replace_image_from_row"
@@ -120,14 +127,10 @@ def main():
                     status = "fail"
                     reason = "missing_text_patch"
                 else:
-                    # Load attrs dict
                     attrs = safe_json_load(df.at[i, "attributes"])
                     title = str(df.at[i, "title"])
                     category = str(df.at[i, "category"])
 
-                    # Apply patch keys:
-                    # - "title": "..."
-                    # - "attributes.color": "red"
                     for k, v in patch.items():
                         k = str(k)
                         if k == "title":
@@ -136,7 +139,6 @@ def main():
                             sub = k.split(".", 1)[1]
                             attrs[sub] = v
                         else:
-                            # allow direct field update if exists
                             if k in df.columns:
                                 df.at[i, k] = v
 
@@ -150,7 +152,6 @@ def main():
                     df.at[i, "repair_notes"] = str(p.get("notes", ""))
 
             elif action == "human_review":
-                # no change
                 df.at[i, "repaired"] = False
                 df.at[i, "repair_action"] = "human_review"
                 df.at[i, "repair_notes"] = str(p.get("notes", ""))
@@ -164,6 +165,12 @@ def main():
             reason = f"exception:{type(e).__name__}:{e}"
 
         log_rows.append({"row_id": row_id, "status": status, "reason": reason, "action": action})
+
+    # ✅ Final dtype safety before saving
+    df["repaired"] = df["repaired"].fillna(False).astype(bool)
+    df["repair_action"] = df["repair_action"].fillna("").astype(str)
+    df["repair_notes"] = df["repair_notes"].fillna("").astype(str)
+    df["repair_source_row_id"] = df["repair_source_row_id"].fillna("").astype(str)
 
     # Output paths
     stem = in_parquet.stem
