@@ -1,0 +1,12 @@
+numpy
+pandas
+pyarrow
+tqdm
+pillow
+opencv-python
+scikit-learn
+torch
+torchvision
+transformers
+pyyaml
+requests
