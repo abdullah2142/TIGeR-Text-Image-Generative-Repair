@@ -32,27 +32,27 @@ def coalesce_noise_label(df: pd.DataFrame) -> pd.DataFrame:
     After merges, noise_label may become:
       - noise_label
       - noise_label_x / noise_label_y
-      - noise_label_lbl (if we add it)
-    This function ensures df['noise_label'] exists.
+      - noise_label_lbl (our label copy)
+      - noise_label_label (rare)
+    Ensure df['noise_label'] exists and is filled as best as possible.
     """
+    # If we already have noise_label, still try filling from lbl if available
     if "noise_label" in df.columns:
-        # already ok
+        if "noise_label_lbl" in df.columns:
+            df["noise_label"] = (
+                df["noise_label"].astype("string").fillna(df["noise_label_lbl"].astype("string"))
+            )
         return df
 
-    candidates = []
-    for c in ["noise_label_x", "noise_label_y", "noise_label_lbl", "noise_label_label"]:
-        if c in df.columns:
-            candidates.append(c)
-
+    # Otherwise, coalesce from candidates
+    candidates = [c for c in ["noise_label_x", "noise_label_y", "noise_label_lbl", "noise_label_label"] if c in df.columns]
     if not candidates:
-        raise KeyError("noise_label not found after merges (no noise_label / noise_label_x/y).")
+        raise KeyError("noise_label not found after merges (no noise_label / noise_label_x/y / noise_label_lbl).")
 
-    # coalesce in order
     s = df[candidates[0]].astype("string")
     for c in candidates[1:]:
         s = s.fillna(df[c].astype("string"))
     df["noise_label"] = s
-
     return df
 
 
@@ -78,7 +78,9 @@ def main():
     if not sieve_repaired_csv.exists():
         raise FileNotFoundError(sieve_repaired_csv)
 
+    # ----------------------------
     # Load ground-truth labels
+    # ----------------------------
     labels = pd.read_parquet(noisy_parquet)
     if "noise_label" not in labels.columns:
         raise ValueError("noisy_parquet must contain a 'noise_label' column.")
@@ -86,14 +88,26 @@ def main():
     labels["row_id"] = labels["row_id"].astype(str)
     labels = labels.rename(columns={"noise_label": "noise_label_lbl"})
 
-    # Load sieve outputs
+    # ----------------------------
+    # Load Sieve outputs (before/after)
+    # ----------------------------
     noisy = pd.read_csv(sieve_noisy_csv)
     repaired = pd.read_csv(sieve_repaired_csv)
 
     noisy["row_id"] = noisy["row_id"].astype(str)
     repaired["row_id"] = repaired["row_id"].astype(str)
 
-    # Merge: noisy sieve + labels (may create noise_label_x/y) + repaired sieve
+    # Safety: make sure the before file has a threshold column (we need it for locked evaluation)
+    if "sieve_threshold" not in noisy.columns:
+        raise ValueError(
+            "sieve_noisy_csv must contain 'sieve_threshold'. "
+            "Your run_sieve.py should output it."
+        )
+
+    # ----------------------------
+    # Merge: noisy sieve + labels + repaired sieve
+    # Overlapping cols like 'flagged' and 'sim_score' become *_before / *_after
+    # ----------------------------
     df = noisy.merge(labels, on="row_id", how="left")
     df = df.merge(
         repaired[["row_id", "flagged", "sim_score"]],
@@ -105,42 +119,67 @@ def main():
     # Ensure we have df["noise_label"]
     df = coalesce_noise_label(df)
 
+    # ----------------------------
     # Ground truth: dirty if noise_label != clean
+    # ----------------------------
     df["is_dirty"] = df["noise_label"].fillna("unknown").ne("clean").astype(int)
 
-    # Prediction: flagged before repair
+    # ----------------------------
+    # Predictions (Before)
+    # ----------------------------
     df["flagged_before"] = df["flagged_before"].fillna(False).astype(bool)
-    df["pred_dirty"] = df["flagged_before"].astype(int)
+    df["pred_dirty_before"] = df["flagged_before"].astype(int)
 
-    # ---- Phase 1: Detection metrics ----
+    # ---- Phase 1: Detection metrics (Before) ----
     y_true = df["is_dirty"].to_numpy()
-    y_pred = df["pred_dirty"].to_numpy()
-    tp, fp, tn, fn = confusion_counts(y_true, y_pred)
+    y_pred_before = df["pred_dirty_before"].to_numpy()
+    tp, fp, tn, fn = confusion_counts(y_true, y_pred_before)
     prec, rec, f1 = prf(tp, fp, fn)
 
-    # ---- Repair impact ----
-    df["flagged_after"] = df["flagged_after"].fillna(False).astype(bool)
+    # ----------------------------
+    # Repair impact (LOCKED THRESHOLD)
+    #
+    # We do NOT trust df["flagged_after"] as "repair success" because the second run
+    # can recompute thresholds and cause drift.
+    #
+    # Fair comparison: use the BEFORE threshold as a constant:
+    #   pred_dirty_after_locked = (sim_score_after < sieve_threshold_before)
+    # ----------------------------
+    df["sim_score_before"] = pd.to_numeric(df.get("sim_score_before"), errors="coerce")
+    df["sim_score_after"] = pd.to_numeric(df.get("sim_score_after"), errors="coerce")
+
+    # "before threshold" is the one from the BEFORE run
+    df["sieve_threshold_before"] = pd.to_numeric(df["sieve_threshold"], errors="coerce")
+
+    df["pred_dirty_after_locked"] = (
+        (df["sim_score_after"].notna())
+        & (df["sieve_threshold_before"].notna())
+        & (df["sim_score_after"] < df["sieve_threshold_before"])
+    ).astype(int)
 
     flagged_before = df["flagged_before"] == True
-    fixed = flagged_before & (df["flagged_after"] == False)
-    fix_rate = float(fixed.sum() / (flagged_before.sum() + 1e-12))
 
-    # similarity delta
-    df["sim_score_before"] = pd.to_numeric(df["sim_score_before"], errors="coerce")
-    df["sim_score_after"] = pd.to_numeric(df["sim_score_after"], errors="coerce")
+    # Fixed means: was flagged before AND is NOT dirty anymore under locked threshold
+    fixed_locked = flagged_before & (df["pred_dirty_after_locked"] == 0)
+    fix_rate_locked = float(fixed_locked.sum() / (flagged_before.sum() + 1e-12))
+
+    # Also report any “newly flagged” under locked threshold (should be 0)
+    newly_flagged_locked = (~flagged_before) & (df["pred_dirty_after_locked"] == 1)
+
+    # similarity delta (always useful)
     df["sim_delta"] = df["sim_score_after"] - df["sim_score_before"]
-
     avg_delta_all = float(df["sim_delta"].dropna().mean())
-    avg_delta_fixed = float(df.loc[fixed, "sim_delta"].dropna().mean()) if fixed.any() else 0.0
+    avg_delta_fixed = float(df.loc[fixed_locked, "sim_delta"].dropna().mean()) if fixed_locked.any() else 0.0
 
     # Breakdown by noise_label
     by_noise = (
-        df.groupby("noise_label")
+        df.groupby("noise_label", dropna=False)
         .agg(
             n=("row_id", "count"),
             dirty=("is_dirty", "sum"),
             flagged_before=("flagged_before", "sum"),
-            fixed=("row_id", lambda x: int((fixed.loc[x.index]).sum())),
+            fixed_locked=("row_id", lambda x: int((fixed_locked.loc[x.index]).sum())),
+            newly_flagged_locked=("row_id", lambda x: int((newly_flagged_locked.loc[x.index]).sum())),
             avg_sim_before=("sim_score_before", "mean"),
             avg_sim_after=("sim_score_after", "mean"),
             avg_sim_delta=("sim_delta", "mean"),
@@ -149,22 +188,27 @@ def main():
         .sort_values("n", ascending=False)
     )
 
+    # ----------------------------
     # Print report
-    print("\n===== PHASE 1: DETECTION METRICS (Sieve) =====")
+    # ----------------------------
+    print("\n===== PHASE 1: DETECTION METRICS (Sieve BEFORE) =====")
     print(f"TP={tp} FP={fp} TN={tn} FN={fn}")
     print(f"Precision={prec:.3f}  Recall={rec:.3f}  F1={f1:.3f}")
 
-    print("\n===== REPAIR IMPACT =====")
+    print("\n===== REPAIR IMPACT (LOCKED THRESHOLD) =====")
     print(f"Flagged before: {int(flagged_before.sum())}")
-    print(f"Fixed (flagged->ok): {int(fixed.sum())}")
-    print(f"Fix rate: {fix_rate:.3f}")
+    print(f"Fixed (flagged->ok, locked): {int(fixed_locked.sum())}")
+    print(f"Fix rate (locked): {fix_rate_locked:.3f}")
+    print(f"Newly flagged (ok->flagged, locked): {int(newly_flagged_locked.sum())}")
     print(f"Avg sim delta (all rows): {avg_delta_all:.5f}")
     print(f"Avg sim delta (fixed rows): {avg_delta_fixed:.5f}")
 
     print("\n===== BREAKDOWN BY noise_label =====")
     print(by_noise.to_string(index=False))
 
+    # ----------------------------
     # Save
+    # ----------------------------
     out_prefix.parent.mkdir(parents=True, exist_ok=True)
     out_detail = out_prefix.with_name(out_prefix.name + "_detail.csv")
     out_breakdown = out_prefix.with_name(out_prefix.name + "_breakdown.csv")
