@@ -59,7 +59,7 @@ def main():
             # swap image with a random different row
             j = random.randrange(n)
             if j != idx:
-                toy.at[idx, "image_path"], toy.at[j, "image_path"] = toy.at[j, "image_path"], toy.at[idx, "image_path"]
+                toy.at[idx, "image_path"] = toy.at[j, "image_path"]
             toy.at[idx, "noise_label"] = "swap_image"
         else:
             # mutate color text/attributes
