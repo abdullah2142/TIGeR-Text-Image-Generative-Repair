@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import numpy as np
@@ -35,7 +36,6 @@ def compute_thresholds(
       thr_source: dict(category -> "category"|"global")
       global_thr: float
     """
-
     sims_all = df_valid["sim_score"].dropna().astype(float).values
     if len(sims_all) == 0:
         return {}, {}, -1.0
@@ -50,8 +50,8 @@ def compute_thresholds(
         # default: global quantile
         global_thr = float(np.quantile(sims_all, global_q))
 
-    thresholds = {}
-    thr_source = {}
+    thresholds: dict[str, float] = {}
+    thr_source: dict[str, str] = {}
 
     # --- compute per-category thresholds, with fallback ---
     for cat, g in df_valid.groupby("category"):
@@ -76,10 +76,40 @@ def compute_thresholds(
     return thresholds, thr_source, global_thr
 
 
+def load_thresholds_json(path: Path) -> tuple[dict[str, float], float | None, dict]:
+    """
+    Expected JSON formats supported:
+      1) {"thresholds": {"bags": 0.23, ...}, "global_threshold": 0.20, "quantile": 0.05}
+      2) {"thresholds": {"bags": 0.23, ...}}  (global optional)
+    """
+    obj = json.loads(path.read_text(encoding="utf-8"))
+    thresholds = obj.get("thresholds", {}) or {}
+    thresholds = {str(k): float(v) for k, v in thresholds.items()}
+
+    global_thr = obj.get("global_threshold", None)
+    if global_thr is not None:
+        global_thr = float(global_thr)
+
+    return thresholds, global_thr, obj
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/config.yaml")
     ap.add_argument("--input_parquet", default="", help="Override input parquet path")
+
+    # ✅ Upgrade A additions
+    ap.add_argument(
+        "--thresholds_json",
+        default="",
+        help="If provided, use these per-category thresholds instead of computing from the input set (paper-like baseline).",
+    )
+    ap.add_argument(
+        "--write_thresholds_json",
+        default="",
+        help="If provided, writes the computed thresholds JSON to this path (use this on CLEAN set to create baseline).",
+    )
+
     args = ap.parse_args()
 
     root = Path(__file__).resolve().parents[1]
@@ -123,6 +153,10 @@ def main():
                 df[col] = False
             else:
                 df[col] = ""
+
+    # Make sure missing flags are boolean
+    df["is_image_missing"] = df["is_image_missing"].fillna(False).astype(bool)
+    df["is_text_missing"] = df["is_text_missing"].fillna(False).astype(bool)
 
     print("Loading CLIP:", model_name)
     model = CLIPModel.from_pretrained(model_name)
@@ -203,19 +237,82 @@ def main():
     # Compute thresholds from rows that have sim_score
     df_valid = df[~df["sim_score"].isna()].copy()
 
-    thresholds, thr_source, global_thr = compute_thresholds(
-        df_valid=df_valid,
-        method=threshold_method,
-        iqr_k=iqr_k,
-        q=quantile_q,
-        min_cat_samples=min_cat,
-        global_method=global_method,
-        global_q=global_q,
-    )
+    # ==========================
+    # ✅ Upgrade A: baseline thresholds support
+    # ==========================
+    thresholds: dict[str, float] = {}
+    thr_source: dict[str, str] = {}
+    global_thr: float = -1.0
+    threshold_meta: dict = {}
 
+    if args.thresholds_json:
+        thr_path = Path(args.thresholds_json)
+        thr_path = thr_path if thr_path.is_absolute() else (root / thr_path)
+        thr_path = thr_path.resolve()
+        if not thr_path.exists():
+            raise FileNotFoundError(f"Missing thresholds_json: {thr_path}")
+
+        thresholds, json_global_thr, threshold_meta = load_thresholds_json(thr_path)
+
+        # If JSON doesn't provide a global threshold, fall back to input-global
+        if json_global_thr is None:
+            sims_all = df_valid["sim_score"].dropna().astype(float).values
+            if len(sims_all) > 0:
+                # Use config global method for fallback
+                if global_method == "iqr":
+                    q1g = np.quantile(sims_all, 0.25)
+                    q3g = np.quantile(sims_all, 0.75)
+                    iqrg = q3g - q1g
+                    global_thr = float(q1g - iqr_k * iqrg)
+                else:
+                    global_thr = float(np.quantile(sims_all, global_q))
+            else:
+                global_thr = -1.0
+        else:
+            global_thr = float(json_global_thr)
+
+        # threshold source is baseline_json for all categories
+        all_cats = df["category"].astype(str).unique().tolist()
+        thr_source = {cat: "baseline_json" for cat in all_cats}
+
+    else:
+        thresholds, thr_source, global_thr = compute_thresholds(
+            df_valid=df_valid,
+            method=threshold_method,
+            iqr_k=iqr_k,
+            q=quantile_q,
+            min_cat_samples=min_cat,
+            global_method=global_method,
+            global_q=global_q,
+        )
+
+    # Map thresholds; if a category is missing in thresholds_json, fall back to global_thr
     df["sieve_threshold"] = df["category"].map(thresholds)
-    df["threshold_source"] = df["category"].map(thr_source).fillna("unknown")
+    df.loc[df["sieve_threshold"].isna(), "sieve_threshold"] = global_thr
+
+    df["threshold_source"] = df["category"].map(thr_source).fillna("global_fallback")
     df["global_threshold"] = global_thr  # for reference
+
+    # Optionally write thresholds JSON (use this on CLEAN set to create baseline)
+    if args.write_thresholds_json:
+        out_thr = Path(args.write_thresholds_json)
+        out_thr = out_thr if out_thr.is_absolute() else (root / out_thr)
+        out_thr = out_thr.resolve()
+        out_thr.parent.mkdir(parents=True, exist_ok=True)
+
+        payload = {
+            "created_from": str(processed_parquet),
+            "threshold_method": threshold_method,
+            "iqr_k": iqr_k,
+            "quantile_q": quantile_q,
+            "min_category_samples": min_cat,
+            "global_threshold_method": global_method,
+            "global_quantile_q": global_q,
+            "global_threshold": float(global_thr),
+            "thresholds": {k: float(v) for k, v in thresholds.items()},
+        }
+        out_thr.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        print(f"✅ Wrote thresholds JSON: {out_thr}")
 
     # Flagging logic
     df["flagged"] = False
@@ -257,7 +354,6 @@ def main():
             return np.zeros((emb_dim,), dtype=np.float32)
         e = np.asarray(e, dtype=np.float32)
         if e.shape[0] != emb_dim:
-            # safety: pad/trim if dimension mismatch
             out = np.zeros((emb_dim,), dtype=np.float32)
             n = min(emb_dim, e.shape[0])
             out[:n] = e[:n]

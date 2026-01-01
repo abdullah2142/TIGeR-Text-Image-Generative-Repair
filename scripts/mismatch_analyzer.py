@@ -70,17 +70,15 @@ def dominant_color_name(image_path: Path) -> Tuple[str, Tuple[int, int, int]]:
         im = im.resize((64, 64))
         arr = np.array(im, dtype=np.float32).reshape(-1, 3)
 
-    # Filter out near-white and near-black extremes a bit (helps)
     brightness = arr.mean(axis=1)
     keep = (brightness > 15) & (brightness < 245)
     if keep.sum() > 100:
         arr = arr[keep]
 
-    avg = arr.mean(axis=0)  # (3,)
+    avg = arr.mean(axis=0)
     rgb = (int(avg[0]), int(avg[1]), int(avg[2]))
 
-    # nearest prototype
-    best = None
+    best = ""
     best_d = 1e18
     for name, p in COLOR_PROTOTYPES.items():
         d = (rgb[0] - p[0]) ** 2 + (rgb[1] - p[1]) ** 2 + (rgb[2] - p[2]) ** 2
@@ -88,7 +86,7 @@ def dominant_color_name(image_path: Path) -> Tuple[str, Tuple[int, int, int]]:
             best_d = d
             best = name
 
-    return best or "", rgb
+    return best, rgb
 
 
 def l2_normalize(x: np.ndarray) -> np.ndarray:
@@ -103,11 +101,17 @@ def analyze_row(
     row_ids: np.ndarray,
     text_emb: np.ndarray,
     image_emb: np.ndarray,
+    cat_by_idx: np.ndarray,
+    valid_image_idx: np.ndarray,
+    same_category_only: bool,
+    swap_margin: float,
+    candidate_margin: float,
 ) -> Dict[str, Any]:
     row_id = str(row["row_id"])
     own_idx = rowid_to_idx.get(row_id, None)
+    category = str(row.get("category", "")).strip()
 
-    # Basic flags
+    # ---------- Missing checks ----------
     if bool(row.get("is_image_missing", False)):
         return {
             "row_id": row_id,
@@ -132,7 +136,7 @@ def analyze_row(
 
     img_rel = str(row.get("image_path", "")).strip()
     img_path = (root / img_rel).resolve()
-    if not img_path.exists():
+    if not img_rel or not img_path.exists():
         return {
             "row_id": row_id,
             "error_type": "Type III",
@@ -143,76 +147,144 @@ def analyze_row(
             "notes": f"Image file not found at: {img_rel}",
         }
 
-    # --- Color check ---
+    # ---------- Color check ----------
     attrs = safe_json_load(row.get("attributes", "{}"))
     text_color = str(attrs.get("color", "")).lower().strip()
     if not text_color:
-        # fallback: try title
         text_color = extract_color_from_text(str(row.get("title", "")))
 
     img_color, img_rgb = dominant_color_name(img_path)
     color_mismatch = bool(text_color) and bool(img_color) and (text_color != img_color)
 
-    # --- CLIP retrieval check (swap detection) ---
-    # If we don't have embedding index, we can still do color-based classification.
+    # ---------- CLIP retrieval checks ----------
+    # We'll compute BOTH:
+    # (A) V2T: image -> text (to detect "this image belongs to another row's text")
+    # (B) T2V: text  -> image (to propose the replacement image for THIS row)
     swap_like = False
-    top_match_row = ""
-    top_match_sim = None
-    own_sim = None
-    margin = None
 
-    if own_idx is not None:
-        # cosine similarity: use normalized matrices
-        v = image_emb[own_idx : own_idx + 1]  # (1, D)
-        sims = (text_emb @ v.T).reshape(-1)   # (N,)
-        best_idx = int(np.argmax(sims))
-        best_sim = float(sims[best_idx])
+    # debug vars
+    own_sim_v2t = None
+    best_text_row = ""
+    best_text_sim = None
+    v2t_margin = None
 
-        own_sim = float(sims[own_idx]) if 0 <= own_idx < len(sims) else None
+    own_sim_t2v = None
+    best_img_row = ""
+    best_img_sim = None
+    t2v_margin = None
 
-        # best "other" (excluding itself)
-        sims2 = sims.copy()
-        if 0 <= own_idx < len(sims2):
-            sims2[own_idx] = -1e9
-        best_other_idx = int(np.argmax(sims2))
-        best_other_sim = float(sims2[best_other_idx])
-        best_other_row = str(row_ids[best_other_idx])
+    if own_idx is not None and 0 <= own_idx < len(row_ids):
+        # ---- (A) V2T: image -> text ----
+        v = image_emb[own_idx : own_idx + 1]          # (1, D)
+        sims_text = (text_emb @ v.T).reshape(-1)      # (N,)
+        own_sim_v2t = float(sims_text[own_idx])
 
-        top_match_row = best_other_row
-        top_match_sim = best_other_sim
-        margin = (best_other_sim - (own_sim if own_sim is not None else best_sim))
+        sims_text2 = sims_text.copy()
+        sims_text2[own_idx] = -1e9
+        best_text_idx = int(np.argmax(sims_text2))
+        best_text_sim = float(sims_text2[best_text_idx])
+        best_text_row = str(row_ids[best_text_idx])
+        v2t_margin = best_text_sim - own_sim_v2t
 
-        # Heuristic: looks swapped if another row’s text matches image notably better
-        # Tune margin if needed.
-        if own_sim is not None and (best_other_sim > own_sim + 0.01):
+        if best_text_sim > own_sim_v2t + swap_margin:
             swap_like = True
 
-    # --- Decide error type + direction ---
-    # For this MVP:
-    # - swap_like => Type I (irrelevant / swapped image) => trust text more => T2V (replace/fix image)
-    # - else color mismatch => Type II-ish (attribute mismatch) => trust image more => V2T (fix text/attrs)
-    # - else => low similarity but unclear => HUMAN
+        # ---- (B) T2V: text -> image (replacement candidate) ----
+        t = text_emb[own_idx : own_idx + 1]           # (1, D)
+        sims_img = (image_emb @ t.T).reshape(-1)      # (N,)
+        own_sim_t2v = float(sims_img[own_idx])
+
+        candidate_mask = valid_image_idx.copy()
+        candidate_mask[own_idx] = False
+
+        if same_category_only and category:
+            candidate_mask &= (cat_by_idx == category)
+
+        if candidate_mask.any():
+            sims_img_masked = sims_img.copy()
+            sims_img_masked[~candidate_mask] = -1e9
+            best_img_idx = int(np.argmax(sims_img_masked))
+            best_img_sim = float(sims_img_masked[best_img_idx])
+            best_img_row = str(row_ids[best_img_idx])
+            t2v_margin = best_img_sim - own_sim_t2v
+        else:
+            best_img_idx = None
+
+    # ---------- Decide type ----------
+    # Priority: if swap_like, DO NOT trust color patch (color from wrong image would be wrong).
     if swap_like:
+        proposed = {}
+        if best_img_row:
+            proposed["image_replacement_candidate_row_id"] = best_img_row
+            proposed["notes"] = (
+                "Swap-like: current image matches another row's text better. "
+                "Proposed replacement is the image that best matches THIS row's text "
+                f"{'(same-category)' if same_category_only else '(any-category)'}."
+            )
+        else:
+            proposed["notes"] = "Swap-like detected but no valid replacement candidate found."
+
+        # include extra debug: where this image seems to belong
+        proposed["image_seems_to_belong_to_row_id"] = best_text_row
+
         return {
             "row_id": row_id,
             "error_type": "Type I",
             "mismatch_aspects": ["image_relevance"],
             "suggested_direction": "T2V",
             "confidence": {"image_trust": 0.3, "text_trust": 0.8},
-            "proposed_fix": {
-                "image_replacement_candidate_row_id": top_match_row,
-                "notes": "Image seems to match another row's text better; likely swapped.",
-            },
+            "proposed_fix": proposed,
             "debug": {
-                "own_sim": own_sim,
-                "best_other_row": top_match_row,
-                "best_other_sim": top_match_sim,
-                "margin": margin,
+                "category": category,
+                "v2t": {
+                    "own_sim": own_sim_v2t,
+                    "best_text_row": best_text_row,
+                    "best_text_sim": best_text_sim,
+                    "margin": v2t_margin,
+                    "swap_margin": swap_margin,
+                },
+                "t2v": {
+                    "own_sim": own_sim_t2v,
+                    "best_img_row": best_img_row,
+                    "best_img_sim": best_img_sim,
+                    "margin": t2v_margin,
+                    "candidate_margin": candidate_margin,
+                    "same_category_only": same_category_only,
+                },
             },
         }
 
+    # If not swap_like but still flagged, we can still propose a candidate replacement
+    # when the best candidate image matches the text much better than the current image.
+    if best_img_row and own_sim_t2v is not None and best_img_sim is not None:
+        if best_img_sim > own_sim_t2v + candidate_margin:
+            return {
+                "row_id": row_id,
+                "error_type": "Type I",
+                "mismatch_aspects": ["image_relevance"],
+                "suggested_direction": "T2V",
+                "confidence": {"image_trust": 0.35, "text_trust": 0.75},
+                "proposed_fix": {
+                    "image_replacement_candidate_row_id": best_img_row,
+                    "notes": (
+                        "Low-similarity: proposing a better-matching image for this row's text "
+                        f"{'(same-category)' if same_category_only else '(any-category)'}."
+                    ),
+                },
+                "debug": {
+                    "category": category,
+                    "t2v": {
+                        "own_sim": own_sim_t2v,
+                        "best_img_row": best_img_row,
+                        "best_img_sim": best_img_sim,
+                        "margin": t2v_margin,
+                        "candidate_margin": candidate_margin,
+                    },
+                },
+            }
+
+    # Color mismatch (only if not swap_like)
     if color_mismatch:
-        # propose patch to attributes.color (and optionally title)
         patch = {"attributes.color": img_color}
         return {
             "row_id": row_id,
@@ -227,10 +299,19 @@ def analyze_row(
                 "text_color": text_color,
             },
             "debug": {
-                "own_sim": own_sim,
-                "best_other_row": top_match_row,
-                "best_other_sim": top_match_sim,
-                "margin": margin,
+                "category": category,
+                "v2t": {
+                    "own_sim": own_sim_v2t,
+                    "best_text_row": best_text_row,
+                    "best_text_sim": best_text_sim,
+                    "margin": v2t_margin,
+                },
+                "t2v": {
+                    "own_sim": own_sim_t2v,
+                    "best_img_row": best_img_row,
+                    "best_img_sim": best_img_sim,
+                    "margin": t2v_margin,
+                },
             },
         }
 
@@ -242,10 +323,19 @@ def analyze_row(
         "confidence": {"image_trust": 0.5, "text_trust": 0.5},
         "proposed_fix": {},
         "debug": {
-            "own_sim": own_sim,
-            "best_other_row": top_match_row,
-            "best_other_sim": top_match_sim,
-            "margin": margin,
+            "category": category,
+            "v2t": {
+                "own_sim": own_sim_v2t,
+                "best_text_row": best_text_row,
+                "best_text_sim": best_text_sim,
+                "margin": v2t_margin,
+            },
+            "t2v": {
+                "own_sim": own_sim_t2v,
+                "best_img_row": best_img_row,
+                "best_img_sim": best_img_sim,
+                "margin": t2v_margin,
+            },
             "img_color": img_color,
             "text_color": text_color,
         },
@@ -256,6 +346,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sieve_csv", required=True, help="Path to sieve_results_*.csv")
     ap.add_argument("--emb_npz", required=True, help="Path to clip_embeddings_*.npz")
+
+    # ✅ new knobs (won't break your current command)
+    ap.add_argument("--same_category_only", type=int, default=1, help="1=restrict replacement candidates to same category (default). 0=allow cross-category.")
+    ap.add_argument("--swap_margin", type=float, default=0.01, help="How much better another row's TEXT must match this image to call it swap-like.")
+    ap.add_argument("--candidate_margin", type=float, default=0.02, help="How much better a candidate IMAGE must match this row's TEXT to propose replacement.")
     args = ap.parse_args()
 
     root = Path(__file__).resolve().parents[1]
@@ -274,6 +369,7 @@ def main():
         raise FileNotFoundError(f"Missing: {emb_npz}")
 
     df = pd.read_csv(sieve_csv)
+    df["row_id"] = df["row_id"].astype(str)
 
     # Load embeddings
     z = np.load(emb_npz, allow_pickle=True)
@@ -287,6 +383,29 @@ def main():
 
     rowid_to_idx = {rid: i for i, rid in enumerate(row_ids)}
 
+    # Build per-idx category + valid image mask from df (aligned via row_id mapping)
+    df_by_rowid = df.set_index("row_id", drop=False)
+
+    cat_by_idx = np.array(
+        [str(df_by_rowid.loc[rid, "category"]) if rid in df_by_rowid.index else "" for rid in row_ids],
+        dtype=object,
+    )
+
+    valid_image_idx = np.zeros((len(row_ids),), dtype=bool)
+    for i, rid in enumerate(row_ids):
+        if rid not in df_by_rowid.index:
+            continue
+        r = df_by_rowid.loc[rid]
+        if bool(r.get("is_image_missing", False)):
+            continue
+        img_rel = str(r.get("image_path", "")).strip()
+        if not img_rel:
+            continue
+        img_path = (root / img_rel).resolve()
+        if not img_path.exists():
+            continue
+        valid_image_idx[i] = True
+
     # Analyze only flagged
     flagged_df = df[df["flagged"] == True].copy()
 
@@ -299,6 +418,11 @@ def main():
             row_ids=row_ids,
             text_emb=text_emb,
             image_emb=image_emb,
+            cat_by_idx=cat_by_idx,
+            valid_image_idx=valid_image_idx,
+            same_category_only=bool(args.same_category_only),
+            swap_margin=float(args.swap_margin),
+            candidate_margin=float(args.candidate_margin),
         )
         reports.append(rep)
 
@@ -314,7 +438,7 @@ def main():
         for rep in reports:
             f.write(json.dumps(rep, ensure_ascii=False) + "\n")
 
-    # Save CSV queue for Arbiter (flatten key columns)
+    # Save CSV queue for Arbiter
     flat_rows = []
     for rep in reports:
         flat_rows.append({
