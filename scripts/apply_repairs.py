@@ -55,6 +55,30 @@ def main():
     df = pd.read_parquet(in_parquet)
     plan = pd.read_csv(plan_csv)
 
+    # -------------------------------
+    # Upgrade 1B: cycle-safe snapshot
+    # -------------------------------
+    # If plans contain swap-cycles (A<-B, B<-A) or chains, applying row-by-row can overwrite donors.
+    # So we snapshot each row's original image file path BEFORE any modifications.
+    donor_image_snapshot: dict[str, Path | None] = {}
+
+    row_ids = df["row_id"].astype(str).values if "row_id" in df.columns else []
+    img_paths = df["image_path"].astype(str).values if "image_path" in df.columns else []
+
+    for rid, img_rel in zip(row_ids, img_paths):
+        img_rel = str(img_rel).strip()
+        if not img_rel or img_rel.lower() == "nan":
+            donor_image_snapshot[rid] = None
+            continue
+
+        # normalize windows backslashes -> forward slashes
+        img_rel_norm = img_rel.replace("\\", "/")
+        p = Path(img_rel_norm)
+
+        # make absolute against repo root if needed
+        abs_p = p if p.is_absolute() else (root / p)
+        donor_image_snapshot[rid] = abs_p.resolve()
+        
     # Ensure columns exist
     for col in ["row_id", "title", "category", "attributes", "canonical_text", "image_path"]:
         if col not in df.columns:
@@ -100,26 +124,25 @@ def main():
                     status = "fail"
                     reason = "candidate_missing_or_not_found"
                 else:
-                    j = idx_by_rowid[cand]
-                    src_rel = str(df.at[j, "image_path"]).strip()
-                    if not src_rel:
-                        status = "fail"
-                        reason = "candidate_has_no_image_path"
-                    else:
-                        src_path = (root / Path(src_rel)).resolve()
-                        if not src_path.exists():
-                            status = "fail"
-                            reason = f"candidate_image_file_missing:{src_rel}"
-                        else:
-                            dst_path = repaired_images_dir / f"{row_id}.jpg"
-                            shutil.copy2(src_path, dst_path)
+                    # Upgrade 1B: use snapshot instead of df.at[j,"image_path"]
+                    src_path = donor_image_snapshot.get(cand)
 
-                            # Store as relative POSIX path
-                            df.at[i, "image_path"] = dst_path.relative_to(root).as_posix()
-                            df.at[i, "repaired"] = True
-                            df.at[i, "repair_action"] = "replace_image_from_row"
-                            df.at[i, "repair_source_row_id"] = cand
-                            df.at[i, "repair_notes"] = str(p.get("notes", ""))
+                    if src_path is None:
+                        status = "fail"
+                        reason = "candidate_has_no_image_path_snapshot"
+                    elif not src_path.exists():
+                        status = "fail"
+                        reason = f"candidate_image_file_missing_snapshot:{src_path.as_posix()}"
+                    else:
+                        dst_path = repaired_images_dir / f"{row_id}.jpg"
+                        shutil.copy2(src_path, dst_path)
+
+                        # Store as relative POSIX path
+                        df.at[i, "image_path"] = dst_path.relative_to(root).as_posix()
+                        df.at[i, "repaired"] = True
+                        df.at[i, "repair_action"] = "replace_image_from_row"
+                        df.at[i, "repair_source_row_id"] = cand
+                        df.at[i, "repair_notes"] = str(p.get("notes", ""))
 
             elif action == "apply_text_patch":
                 patch = proposed_fix.get("text_patch", {})
