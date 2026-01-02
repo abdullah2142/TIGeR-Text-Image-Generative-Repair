@@ -18,3 +18,10 @@ sieve:
   min_category_samples: 8        # NEW: if a category has <8 rows, use global threshold
   global_threshold_method: "quantile"   # NEW: "quantile" or "iqr"
   global_quantile_q: 0.10               # NEW: bottom 10% are suspicious (for small datasets)
+
+  noise:
+  seed: 7
+  copies_per_row: 15
+  noise_rate: 0.30
+  p_swap_image: 0.50
+  max_strength: 3
