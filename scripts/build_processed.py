@@ -41,6 +41,55 @@ def safe_json_load(s: str) -> dict:
         return {}
 
 
+# -----------------------------
+# Upgrade 2B: Stable, sensitive canonical text (color-first)
+# -----------------------------
+def _norm_str(x) -> str:
+    if x is None or (isinstance(x, float) and pd.isna(x)):
+        return ""
+    return str(x).strip()
+
+
+def build_canonical_text(title: str, category: str, attrs: dict) -> str:
+    """
+    Deterministic canonical text to improve sensitivity to attribute mutations (esp. color).
+    Template:
+      "{title}. Color: {color}. Category: {category}. Attributes: k=v, k=v."
+    - Color is placed early to increase impact on text embedding.
+    - Attributes are sorted for deterministic ordering.
+    """
+    title = _norm_str(title)
+    category = _norm_str(category)
+    attrs = dict(attrs) if isinstance(attrs, dict) else {}
+
+    # normalize color if present
+    color = attrs.get("color", None)
+    if isinstance(color, str):
+        color = color.strip().lower()
+        if color:
+            attrs["color"] = color
+        else:
+            attrs.pop("color", None)
+            color = None
+    elif color is None:
+        pass
+    else:
+        # if it's non-string, coerce to string
+        color = str(color).strip().lower()
+        if color:
+            attrs["color"] = color
+        else:
+            attrs.pop("color", None)
+            color = None
+
+    # stable ordering
+    items = sorted((str(k), str(v)) for k, v in attrs.items())
+    attrs_for_text = ", ".join([f"{k}={v}" for k, v in items])
+
+    color_prefix = f"Color: {color}. " if color else ""
+    return f"{title}. {color_prefix}Category: {category}. Attributes: {attrs_for_text}."
+
+
 def download_image(url: str, out_path: Path, timeout: int = 30) -> bool:
     try:
         r = requests.get(url, stream=True, timeout=timeout)
@@ -97,13 +146,13 @@ def main():
     normalized = 0
 
     for _, row in df.iterrows():
-        row_id = str(row["row_id"]).strip()
-        title = "" if pd.isna(row["title"]) else str(row["title"]).strip()
-        category = "" if pd.isna(row["category"]) else str(row["category"]).strip()
-        attrs = safe_json_load(row["attributes_json"])
+        row_id = _norm_str(row.get("row_id", ""))
+        title = _norm_str(row.get("title", ""))
+        category = _norm_str(row.get("category", ""))
+        attrs = safe_json_load(row.get("attributes_json", ""))
 
-        image_path = "" if pd.isna(row["image_path"]) else str(row["image_path"]).strip()
-        image_url = "" if pd.isna(row["image_url"]) else str(row["image_url"]).strip()
+        image_path = _norm_str(row.get("image_path", ""))
+        image_url = _norm_str(row.get("image_url", ""))
 
         # Determine source image
         src_local = None
@@ -149,9 +198,8 @@ def main():
 
         is_text_missing = (title == "" and (not attrs or len(attrs) == 0))
 
-        # Canonical text we’ll use later for CLIP text embedding
-        attrs_for_text = ", ".join([f"{k}={v}" for k, v in attrs.items()])
-        canonical_text = f"{title}. Category: {category}. Attributes: {attrs_for_text}."
+        # Canonical text we’ll use later for CLIP text embedding (Upgrade 2B)
+        canonical_text = build_canonical_text(title, category, attrs)
 
         out_rows.append(
             {
