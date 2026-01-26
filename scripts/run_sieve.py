@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import numpy as np
@@ -62,6 +63,30 @@ def build_attrs_text(row: dict) -> str:
     if not parts:
         return ""
     return ". ".join(parts) + "."
+
+
+def extract_stated_color(row: dict, vocab_set: set[str]) -> str | None:
+    """
+    Try to extract a canonical color token from row["attributes"].
+    Returns one of vocab_set, else None.
+    """
+    attrs = parse_attributes(row.get("attributes", None))
+    if not attrs:
+        return None
+
+    attrs_lc = {str(k).lower(): v for k, v in attrs.items()}
+
+    for key in ["color", "colour"]:
+        v = attrs_lc.get(key, None)
+        if v in (None, "", []):
+            continue
+        s = str(v).lower().strip().replace("grey", "gray")
+        toks = [t for t in re.split(r"[^a-z]+", s) if t]
+        for t in toks:
+            if t in vocab_set:
+                return t
+
+    return None
 
 
 def _l2_normalize(x: torch.Tensor) -> torch.Tensor:
@@ -212,7 +237,7 @@ def main():
     outputs_dir.mkdir(parents=True, exist_ok=True)
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    df = pd.read_parquet(processed_parquet)
+    df = pd.read_parquet(processed_parquet).reset_index(drop=True)
 
     # Config
     model_name = cfg["models"]["clip_model_name"]
@@ -239,6 +264,15 @@ def main():
     gap_min_cat = int(cfg.get("sieve", {}).get("gap_min_category_samples", min_cat))
     gap_global_q = float(cfg.get("sieve", {}).get("gap_global_quantile", gap_outlier_q))
     gap_positive_only = bool(cfg.get("sieve", {}).get("gap_positive_only", True))
+
+    # ✅ Upgrade 3B knobs (color probe)
+    enable_color_probe = bool(cfg.get("sieve", {}).get("enable_color_probe", False))
+    color_vocab = cfg.get("sieve", {}).get(
+        "color_vocab",
+        ["red", "blue", "green", "black", "white", "yellow", "pink", "purple", "brown", "orange", "gray"],
+    )
+    color_margin_threshold = float(cfg.get("sieve", {}).get("color_margin_threshold", 0.05))
+    color_min_confidence = float(cfg.get("sieve", {}).get("color_min_confidence", 0.30))
 
     # Ensure required columns exist
     required_cols = [
@@ -278,7 +312,7 @@ def main():
     rows = df.to_dict(orient="records")
 
     # Similarities
-    sim_full = [np.nan] * len(rows)   # df["sim_score"]
+    sim_full = [np.nan] * len(rows)  # df["sim_score"]
     sim_title = [np.nan] * len(rows)
     sim_attrs = [np.nan] * len(rows)
 
@@ -437,6 +471,68 @@ def main():
     df["sim_attrs"] = sim_attrs
 
     # ==========================
+    # Upgrade 3B: Color probe (fine-grained mismatch)
+    # ==========================
+    df["pred_color"] = None
+    df["stated_color"] = None
+    df["color_conf"] = np.nan
+    df["color_margin"] = np.nan
+    df["color_mismatch"] = False
+
+    if enable_color_probe and isinstance(color_vocab, (list, tuple)) and len(color_vocab) > 0:
+        print("Running color probe...")
+
+        vocab = [str(c).lower().strip().replace("grey", "gray") for c in color_vocab]
+        vocab_set = set(vocab)
+        prompts = [f"a photo of a {c} item" for c in vocab]
+
+        # Encode color prompts -> text embeddings (K, D)
+        txt_inputs = processor(text=prompts, return_tensors="pt", padding=True)
+        txt_inputs = {k: v.to(device) for k, v in txt_inputs.items()}
+
+        with torch.inference_mode():
+            t = model.get_text_features(**txt_inputs)
+            t = _l2_normalize(t)
+
+        color_text_np = t.detach().cpu().numpy().astype(np.float32)  # (K, D)
+
+        # Collect valid image embeddings
+        valid_idx = [i for i, e in enumerate(image_embs) if e is not None]
+        if len(valid_idx) > 0:
+            img_np = np.stack([image_embs[i] for i in valid_idx]).astype(np.float32)  # (N, D)
+
+            sims = img_np @ color_text_np.T  # (N, K)
+
+            top2_idx = np.argsort(-sims, axis=1)[:, :2]
+            top2_vals = np.take_along_axis(sims, top2_idx, axis=1)
+
+            pred_idx = top2_idx[:, 0]
+            pred_colors = [vocab[j] for j in pred_idx.tolist()]
+            confs = top2_vals[:, 0].astype(float)
+            margins = (top2_vals[:, 0] - top2_vals[:, 1]).astype(float)
+
+            stated_colors = []
+            mismatches = []
+
+            for j, i in enumerate(valid_idx):
+                sc = extract_stated_color(rows[i], vocab_set)
+                stated_colors.append(sc)
+
+                mismatch = (
+                    sc is not None
+                    and pred_colors[j] != sc
+                    and confs[j] >= color_min_confidence
+                    and margins[j] >= color_margin_threshold
+                )
+                mismatches.append(bool(mismatch))
+
+            df.loc[valid_idx, "pred_color"] = pred_colors
+            df.loc[valid_idx, "stated_color"] = stated_colors
+            df.loc[valid_idx, "color_conf"] = confs
+            df.loc[valid_idx, "color_margin"] = margins
+            df.loc[valid_idx, "color_mismatch"] = mismatches
+
+    # ==========================
     # Thresholds for sim_score (baseline support)
     # ==========================
     df_valid = df[~df["sim_score"].isna()].copy()
@@ -456,7 +552,6 @@ def main():
         thresholds, json_global_thr, threshold_meta = load_thresholds_json(thr_path)
 
         if json_global_thr is None:
-            # fallback compute global from current df_valid
             sims_all = df_valid["sim_score"].dropna().astype(float).values
             if len(sims_all) > 0:
                 if global_method == "iqr":
@@ -598,6 +693,10 @@ def main():
     )
     df.loc[mask_sim, "flagged"] = True
 
+    # 3B: color mismatch
+    if enable_color_probe:
+        df.loc[df["color_mismatch"] == True, "flagged"] = True
+
     # secondary: attrs outlier
     df.loc[df["attrs_outlier"] == True, "flagged"] = True
 
@@ -612,8 +711,14 @@ def main():
             reasons.append("missing_image")
         elif bool(r.get("is_text_missing", False)):
             reasons.append("missing_text")
-        elif pd.notna(r.get("sim_score")) and pd.notna(r.get("sieve_threshold")) and float(r["sim_score"]) < float(r["sieve_threshold"]):
+        elif (
+            pd.notna(r.get("sim_score"))
+            and pd.notna(r.get("sieve_threshold"))
+            and float(r["sim_score"]) < float(r["sieve_threshold"])
+        ):
             reasons.append("low_similarity")
+        elif enable_color_probe and bool(r.get("color_mismatch", False)):
+            reasons.append("color_mismatch")
         elif bool(r.get("attrs_outlier", False)):
             reasons.append("attrs_outlier")
         elif enable_gap_probe and bool(r.get("gap_outlier", False)):
@@ -658,9 +763,15 @@ def main():
         attrs_threshold=np.array(df["attrs_threshold"].fillna(-1.0).values, dtype=np.float32),
         gap_threshold=np.array(df["gap_threshold"].fillna(-1.0).values, dtype=np.float32),
         flagged=np.array(df["flagged"].astype(int).values, dtype=np.int32),
+        # 3B extras (optional but handy)
+        pred_color=np.asarray(df["pred_color"].fillna("").astype(str).values, dtype="U"),
+        stated_color=np.asarray(df["stated_color"].fillna("").astype(str).values, dtype="U"),
+        color_conf=np.array(df["color_conf"].fillna(-1.0).values, dtype=np.float32),
+        color_margin=np.array(df["color_margin"].fillna(-1.0).values, dtype=np.float32),
+        color_mismatch=np.array(df["color_mismatch"].astype(int).values, dtype=np.int32),
     )
 
-    print("✅ Sieve complete (Upgrade 3A + gap probe)")
+    print("✅ Sieve complete (Upgrade 3A + gap probe + color probe)")
     print("Input:", processed_parquet)
     print("Results:", out_csv)
     print("Flagged:", out_flagged)
@@ -677,6 +788,11 @@ def main():
         "sieve_threshold",
         "attrs_threshold",
         "gap_threshold",
+        "pred_color",
+        "stated_color",
+        "color_conf",
+        "color_margin",
+        "color_mismatch",
         "threshold_source",
         "attrs_threshold_source",
         "gap_threshold_source",
