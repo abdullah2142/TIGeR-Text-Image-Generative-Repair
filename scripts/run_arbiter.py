@@ -7,16 +7,40 @@ from pathlib import Path
 import pandas as pd
 
 
-def safe_json_load(s: str) -> dict:
+def safe_json_load(s) -> dict:
+    """Robust JSON loader for CSV fields."""
     if s is None:
         return {}
+    if isinstance(s, dict):
+        return s
     s = str(s).strip()
     if not s:
         return {}
     try:
-        return json.loads(s)
+        obj = json.loads(s)
+        return obj if isinstance(obj, dict) else {}
     except Exception:
         return {}
+
+
+def get_text_patch(proposed_fix: dict) -> dict:
+    """
+    Extract text_patch safely.
+    Supports:
+      proposed_fix["text_patch"]
+      OR proposed_fix["proposed_fix"]["text_patch"] (future-proof)
+    """
+    if not isinstance(proposed_fix, dict):
+        return {}
+    patch = proposed_fix.get("text_patch", {})
+    if isinstance(patch, dict) and patch:
+        return patch
+    nested = proposed_fix.get("proposed_fix", {})
+    if isinstance(nested, dict):
+        patch2 = nested.get("text_patch", {})
+        if isinstance(patch2, dict):
+            return patch2
+    return {}
 
 
 def main():
@@ -42,14 +66,17 @@ def main():
         error_type = str(r.get("error_type", "")).strip()
         mismatch_aspects = str(r.get("mismatch_aspects", "")).strip()
 
-        proposed_fix = safe_json_load(str(r.get("proposed_fix", "")))
+        proposed_fix = safe_json_load(r.get("proposed_fix", ""))
 
-        # Default plan
+        # Defaults
         action = "human_review"
         tier = 0
         cost_units = 0.0
-        notes = ""
+        notes = "Low confidence or missing modalities."
 
+        # ----------------------------
+        # Tier-1 routing rules (4B)
+        # ----------------------------
         if suggested == "T2V":
             # MVP T2V = replace image using candidate row's image
             cand = proposed_fix.get("image_replacement_candidate_row_id", "")
@@ -65,24 +92,25 @@ def main():
                 notes = "Would require generative T2V editing; not implemented in MVP."
 
         elif suggested == "V2T":
-            # MVP V2T = patch text / attributes
-            patch = proposed_fix.get("text_patch", {})
-            if patch:
+            # ✅ 4B: If V2T and text_patch exists -> apply_text_patch, tier=1
+            text_patch = get_text_patch(proposed_fix)
+            if isinstance(text_patch, dict) and len(text_patch) > 0:
                 action = "apply_text_patch"
                 tier = 1
                 cost_units = 0.5
-                notes = "Apply text_patch to row fields/attributes."
+
+                # Nice-to-have: indicate if title replacement is requested (color patch workflow)
+                if text_patch.get("title_color_replace", False):
+                    notes = "Apply V2T text_patch (attributes.color + title_color_replace)."
+                else:
+                    notes = "Apply V2T text_patch to row fields/attributes."
             else:
                 action = "v2t_generate_text_unimplemented"
                 tier = 2
                 cost_units = 4.0
                 notes = "Would require VLM-based text generation; not implemented in MVP."
 
-        else:
-            action = "human_review"
-            tier = 0
-            cost_units = 0.0
-            notes = "Low confidence or missing modalities."
+        # else: stays human_review
 
         plan_rows.append(
             {
