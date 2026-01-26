@@ -2,13 +2,23 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 from pathlib import Path
+from typing import Any, Dict
 
 import pandas as pd
 
 
-def safe_json_load(s) -> dict:
+# Must match mismatch_analyzer.py basic list (start MVP here)
+BASIC_COLORS = [
+    "black", "white", "gray",
+    "red", "green", "blue",
+    "yellow", "orange", "pink", "purple", "brown",
+]
+
+
+def safe_json_load(s: Any) -> dict:
     if s is None:
         return {}
     if isinstance(s, dict):
@@ -25,9 +35,67 @@ def safe_json_load(s) -> dict:
         return {}
 
 
+def safe_json_dump(obj: Any) -> str:
+    try:
+        return json.dumps(obj, ensure_ascii=False)
+    except Exception:
+        return "{}"
+
+
 def rebuild_canonical_text(title: str, category: str, attrs: dict) -> str:
     attrs_for_text = ", ".join([f"{k}={v}" for k, v in attrs.items()])
     return f"{title}. Category: {category}. Attributes: {attrs_for_text}."
+
+
+def replace_known_color_word(title: str, new_color: str) -> str:
+    """
+    Replace an existing known color token in title with new_color.
+    If title contains no known color word, DO NOTHING.
+    """
+    if not title or not new_color:
+        return title
+
+    for c in BASIC_COLORS:
+        if re.search(rf"\b{re.escape(c)}\b", title, flags=re.IGNORECASE):
+            return re.sub(rf"\b{re.escape(c)}\b", new_color, title, flags=re.IGNORECASE)
+    return title
+
+
+def apply_v2t_color_patch(
+    title: str,
+    attrs: Dict[str, Any],
+    text_patch: Dict[str, Any],
+) -> tuple[str, Dict[str, Any], str]:
+    """
+    4C safe patching rules:
+      - allow only "attributes.color"
+      - if title_color_replace==true, replace an existing color word in title
+      - ignore everything else
+    Returns: (new_title, new_attrs, repair_action)
+    """
+    if not isinstance(text_patch, dict) or not text_patch:
+        return title, attrs, "apply_text_patch"
+
+    # 1) color in attrs
+    new_color = text_patch.get("attributes.color", "")
+    if isinstance(new_color, str):
+        new_color = new_color.strip().lower()
+    else:
+        new_color = ""
+
+    if new_color and new_color in BASIC_COLORS:
+        attrs["color"] = new_color
+
+    # 2) title replacement flag
+    do_title_replace = bool(text_patch.get("title_color_replace", False))
+    if do_title_replace and new_color:
+        title = replace_known_color_word(title, new_color)
+
+    # If we applied a color patch, tag specifically
+    if new_color:
+        return title, attrs, "v2t_color_patch"
+
+    return title, attrs, "apply_text_patch"
 
 
 def main():
@@ -58,8 +126,6 @@ def main():
     # -------------------------------
     # Upgrade 1B: cycle-safe snapshot
     # -------------------------------
-    # If plans contain swap-cycles (A<-B, B<-A) or chains, applying row-by-row can overwrite donors.
-    # So we snapshot each row's original image file path BEFORE any modifications.
     donor_image_snapshot: dict[str, Path | None] = {}
 
     row_ids = df["row_id"].astype(str).values if "row_id" in df.columns else []
@@ -71,20 +137,17 @@ def main():
             donor_image_snapshot[rid] = None
             continue
 
-        # normalize windows backslashes -> forward slashes
         img_rel_norm = img_rel.replace("\\", "/")
         p = Path(img_rel_norm)
-
-        # make absolute against repo root if needed
         abs_p = p if p.is_absolute() else (root / p)
         donor_image_snapshot[rid] = abs_p.resolve()
-        
+
     # Ensure columns exist
     for col in ["row_id", "title", "category", "attributes", "canonical_text", "image_path"]:
         if col not in df.columns:
             df[col] = ""
 
-    # ✅ Repair metadata columns with correct types
+    # Repair metadata columns with correct types
     if "repaired" not in df.columns:
         df["repaired"] = False
     else:
@@ -124,7 +187,6 @@ def main():
                     status = "fail"
                     reason = "candidate_missing_or_not_found"
                 else:
-                    # Upgrade 1B: use snapshot instead of df.at[j,"image_path"]
                     src_path = donor_image_snapshot.get(cand)
 
                     if src_path is None:
@@ -137,7 +199,6 @@ def main():
                         dst_path = repaired_images_dir / f"{row_id}.jpg"
                         shutil.copy2(src_path, dst_path)
 
-                        # Store as relative POSIX path
                         df.at[i, "image_path"] = dst_path.relative_to(root).as_posix()
                         df.at[i, "repaired"] = True
                         df.at[i, "repair_action"] = "replace_image_from_row"
@@ -145,8 +206,8 @@ def main():
                         df.at[i, "repair_notes"] = str(p.get("notes", ""))
 
             elif action == "apply_text_patch":
-                patch = proposed_fix.get("text_patch", {})
-                if not isinstance(patch, dict) or not patch:
+                text_patch = proposed_fix.get("text_patch", {})
+                if not isinstance(text_patch, dict) or not text_patch:
                     status = "fail"
                     reason = "missing_text_patch"
                 else:
@@ -154,23 +215,20 @@ def main():
                     title = str(df.at[i, "title"])
                     category = str(df.at[i, "category"])
 
-                    for k, v in patch.items():
-                        k = str(k)
-                        if k == "title":
-                            title = str(v)
-                        elif k.startswith("attributes."):
-                            sub = k.split(".", 1)[1]
-                            attrs[sub] = v
-                        else:
-                            if k in df.columns:
-                                df.at[i, k] = v
+                    # -------- 4C SAFE PATCHING HERE --------
+                    # Only apply attributes.color + optional title replacement
+                    title, attrs, repair_action = apply_v2t_color_patch(
+                        title=title,
+                        attrs=attrs,
+                        text_patch=text_patch,
+                    )
 
                     df.at[i, "title"] = title
-                    df.at[i, "attributes"] = json.dumps(attrs, ensure_ascii=False)
+                    df.at[i, "attributes"] = safe_json_dump(attrs)
                     df.at[i, "canonical_text"] = rebuild_canonical_text(title, category, attrs)
 
                     df.at[i, "repaired"] = True
-                    df.at[i, "repair_action"] = "apply_text_patch"
+                    df.at[i, "repair_action"] = repair_action  # ✅ v2t_color_patch
                     df.at[i, "repair_source_row_id"] = ""
                     df.at[i, "repair_notes"] = str(p.get("notes", ""))
 
@@ -189,7 +247,7 @@ def main():
 
         log_rows.append({"row_id": row_id, "status": status, "reason": reason, "action": action})
 
-    # ✅ Final dtype safety before saving
+    # Final dtype safety before saving
     df["repaired"] = df["repaired"].fillna(False).astype(bool)
     df["repair_action"] = df["repair_action"].fillna("").astype(str)
     df["repair_notes"] = df["repair_notes"].fillna("").astype(str)
