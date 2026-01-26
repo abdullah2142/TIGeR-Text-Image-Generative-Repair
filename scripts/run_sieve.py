@@ -16,13 +16,61 @@ def load_yaml(path: Path) -> dict:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
-def cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
-    denom = (np.linalg.norm(a) * np.linalg.norm(b)) + 1e-12
-    return float(np.dot(a, b) / denom)
+def parse_attributes(val) -> dict:
+    """Attributes may be dict, JSON string, NaN, etc."""
+    if isinstance(val, dict):
+        return val
+    if val is None:
+        return {}
+    if isinstance(val, float) and np.isnan(val):
+        return {}
+    if isinstance(val, str):
+        s = val.strip()
+        if not s:
+            return {}
+        try:
+            obj = json.loads(s)
+            return obj if isinstance(obj, dict) else {}
+        except Exception:
+            return {}
+    return {}
 
 
-def compute_thresholds(
+def build_attrs_text(row: dict) -> str:
+    """Make attribute-only text view: 'Color: purple. Type: duffel.'"""
+    attrs = parse_attributes(row.get("attributes", None))
+    if not attrs:
+        return ""
+
+    parts = []
+    preferred = ["color", "material", "type", "brand", "pattern", "size"]
+    used = set()
+
+    for k in preferred:
+        if k in attrs and attrs[k] not in (None, "", []):
+            parts.append(f"{k.replace('_', ' ').title()}: {attrs[k]}")
+            used.add(k)
+
+    for k in sorted(attrs.keys()):
+        if k in used:
+            continue
+        v = attrs.get(k)
+        if v in (None, "", []):
+            continue
+        parts.append(f"{k.replace('_', ' ').title()}: {v}")
+
+    if not parts:
+        return ""
+    return ". ".join(parts) + "."
+
+
+def _l2_normalize(x: torch.Tensor) -> torch.Tensor:
+    return x / (x.norm(dim=-1, keepdim=True) + 1e-12)
+
+
+def compute_thresholds_iqr_or_quantile(
     df_valid: pd.DataFrame,
+    col: str,
     method: str,
     iqr_k: float,
     q: float,
@@ -31,47 +79,82 @@ def compute_thresholds(
     global_q: float,
 ) -> tuple[dict, dict, float]:
     """
+    Per-category thresholds with global fallback.
+
     Returns:
       thresholds: dict(category -> threshold)
       thr_source: dict(category -> "category"|"global")
       global_thr: float
     """
-    sims_all = df_valid["sim_score"].dropna().astype(float).values
-    if len(sims_all) == 0:
-        return {}, {}, -1.0
+    vals_all = df_valid[col].dropna().astype(float).values
+    if len(vals_all) == 0:
+        return {}, {}, np.nan
 
-    # --- compute GLOBAL threshold ---
+    # --- GLOBAL threshold ---
     if global_method == "iqr":
-        q1g = np.quantile(sims_all, 0.25)
-        q3g = np.quantile(sims_all, 0.75)
+        q1g = np.quantile(vals_all, 0.25)
+        q3g = np.quantile(vals_all, 0.75)
         iqrg = q3g - q1g
         global_thr = float(q1g - iqr_k * iqrg)
     else:
-        # default: global quantile
-        global_thr = float(np.quantile(sims_all, global_q))
+        global_thr = float(np.quantile(vals_all, global_q))
 
     thresholds: dict[str, float] = {}
     thr_source: dict[str, str] = {}
 
-    # --- compute per-category thresholds, with fallback ---
     for cat, g in df_valid.groupby("category"):
-        sims = g["sim_score"].dropna().astype(float).values
-
-        if len(sims) < min_cat_samples:
-            thresholds[cat] = global_thr
-            thr_source[cat] = "global"
+        vals = g[col].dropna().astype(float).values
+        if len(vals) < min_cat_samples:
+            thresholds[str(cat)] = global_thr
+            thr_source[str(cat)] = "global"
             continue
 
         if method == "quantile":
-            thresholds[cat] = float(np.quantile(sims, q))
+            thresholds[str(cat)] = float(np.quantile(vals, q))
         else:
-            # default: IQR lower fence
-            q1 = np.quantile(sims, 0.25)
-            q3 = np.quantile(sims, 0.75)
+            q1 = np.quantile(vals, 0.25)
+            q3 = np.quantile(vals, 0.75)
             iqr = q3 - q1
-            thresholds[cat] = float(q1 - iqr_k * iqr)
+            thresholds[str(cat)] = float(q1 - iqr_k * iqr)
 
-        thr_source[cat] = "category"
+        thr_source[str(cat)] = "category"
+
+    return thresholds, thr_source, global_thr
+
+
+def compute_upper_quantile_thresholds(
+    df_valid: pd.DataFrame,
+    col: str,
+    q_hi: float,
+    min_cat_samples: int,
+    global_q_hi: float,
+) -> tuple[dict, dict, float]:
+    """
+    For "high outliers" like GAP: threshold = upper quantile (e.g., 0.95).
+    Outlier rule becomes: value > threshold (and optionally > 0).
+
+    Returns:
+      thresholds: dict(category -> threshold)
+      thr_source: dict(category -> "category"|"global")
+      global_thr: float
+    """
+    vals_all = df_valid[col].dropna().astype(float).values
+    if len(vals_all) == 0:
+        return {}, {}, np.nan
+
+    global_thr = float(np.quantile(vals_all, global_q_hi))
+
+    thresholds: dict[str, float] = {}
+    thr_source: dict[str, str] = {}
+
+    for cat, g in df_valid.groupby("category"):
+        vals = g[col].dropna().astype(float).values
+        if len(vals) < min_cat_samples:
+            thresholds[str(cat)] = global_thr
+            thr_source[str(cat)] = "global"
+        else:
+            thresholds[str(cat)] = float(np.quantile(vals, q_hi))
+            thr_source[str(cat)] = "category"
 
     return thresholds, thr_source, global_thr
 
@@ -79,7 +162,7 @@ def compute_thresholds(
 def load_thresholds_json(path: Path) -> tuple[dict[str, float], float | None, dict]:
     """
     Expected JSON formats supported:
-      1) {"thresholds": {"bags": 0.23, ...}, "global_threshold": 0.20, "quantile": 0.05}
+      1) {"thresholds": {"bags": 0.23, ...}, "global_threshold": 0.20, ...}
       2) {"thresholds": {"bags": 0.23, ...}}  (global optional)
     """
     obj = json.loads(path.read_text(encoding="utf-8"))
@@ -98,16 +181,15 @@ def main():
     ap.add_argument("--config", default="configs/config.yaml")
     ap.add_argument("--input_parquet", default="", help="Override input parquet path")
 
-    # ✅ Upgrade A additions
     ap.add_argument(
         "--thresholds_json",
         default="",
-        help="If provided, use these per-category thresholds instead of computing from the input set (paper-like baseline).",
+        help="If provided, use these per-category thresholds instead of computing from the input set.",
     )
     ap.add_argument(
         "--write_thresholds_json",
         default="",
-        help="If provided, writes the computed thresholds JSON to this path (use this on CLEAN set to create baseline).",
+        help="If provided, writes the computed thresholds JSON to this path (use on CLEAN set to create baseline).",
     )
 
     args = ap.parse_args()
@@ -134,7 +216,6 @@ def main():
 
     # Config
     model_name = cfg["models"]["clip_model_name"]
-
     device = cfg.get("sieve", {}).get("device", "cpu")
     batch_size = int(cfg.get("sieve", {}).get("batch_size", 16))
 
@@ -146,84 +227,199 @@ def main():
     global_method = cfg.get("sieve", {}).get("global_threshold_method", "quantile")
     global_q = float(cfg.get("sieve", {}).get("global_quantile_q", 0.10))
 
+    # ✅ Upgrade 3A knobs (multi-text + attrs outlier)
+    enable_multi_text = bool(cfg.get("sieve", {}).get("enable_multi_text", True))
+    attrs_outlier_q = float(cfg.get("sieve", {}).get("attrs_outlier_quantile", 0.05))
+    attrs_min_cat = int(cfg.get("sieve", {}).get("attrs_min_category_samples", min_cat))
+    attrs_global_q = float(cfg.get("sieve", {}).get("attrs_global_quantile", global_q))
+
+    # ✅ Gap probe knobs
+    enable_gap_probe = bool(cfg.get("sieve", {}).get("enable_gap_probe", True))
+    gap_outlier_q = float(cfg.get("sieve", {}).get("gap_outlier_quantile", 0.95))
+    gap_min_cat = int(cfg.get("sieve", {}).get("gap_min_category_samples", min_cat))
+    gap_global_q = float(cfg.get("sieve", {}).get("gap_global_quantile", gap_outlier_q))
+    gap_positive_only = bool(cfg.get("sieve", {}).get("gap_positive_only", True))
+
     # Ensure required columns exist
-    for col in ["row_id", "category", "canonical_text", "image_path", "is_image_missing", "is_text_missing"]:
+    required_cols = [
+        "row_id",
+        "category",
+        "canonical_text",
+        "image_path",
+        "is_image_missing",
+        "is_text_missing",
+        "title",
+        "attributes",
+    ]
+    for col in required_cols:
         if col not in df.columns:
-            if col in ["is_image_missing", "is_text_missing"]:
-                df[col] = False
-            else:
-                df[col] = ""
+            df[col] = False if col in ["is_image_missing", "is_text_missing"] else ""
 
     # Make sure missing flags are boolean
     df["is_image_missing"] = df["is_image_missing"].fillna(False).astype(bool)
     df["is_text_missing"] = df["is_text_missing"].fillna(False).astype(bool)
 
+    # Runtime "missing" corrections (in case parquet isn't perfect)
+    runtime_is_image_missing = df["is_image_missing"].to_numpy().copy()
+    runtime_is_text_missing = df["is_text_missing"].to_numpy().copy()
+
     print("Loading CLIP:", model_name)
     model = CLIPModel.from_pretrained(model_name)
-    processor = CLIPProcessor.from_pretrained(model_name)
+    try:
+        processor = CLIPProcessor.from_pretrained(model_name, use_fast=True)
+    except TypeError:
+        processor = CLIPProcessor.from_pretrained(model_name)
+
     model.eval()
     model.to(device)
 
     emb_dim = int(getattr(model.config, "projection_dim", 512))
 
-    # Compute similarity for rows that have image present
     rows = df.to_dict(orient="records")
-    sim_scores = [np.nan] * len(rows)
-    text_embs = [None] * len(rows)
+
+    # Similarities
+    sim_full = [np.nan] * len(rows)   # df["sim_score"]
+    sim_title = [np.nan] * len(rows)
+    sim_attrs = [np.nan] * len(rows)
+
+    # Embeddings
+    text_emb_full = [None] * len(rows)
+    text_emb_title = [None] * len(rows)
+    text_emb_attrs = [None] * len(rows)
     image_embs = [None] * len(rows)
 
+    # Batch holders
     batch_indices: list[int] = []
-    batch_texts: list[str] = []
+    batch_full: list[str] = []
+    batch_title: list[str] = []
+    batch_attrs: list[str] = []
+    batch_has_title: list[bool] = []
+    batch_has_attrs: list[bool] = []
     batch_images: list[Image.Image] = []
 
     def flush_batch():
-        nonlocal batch_indices, batch_texts, batch_images
+        nonlocal batch_indices, batch_full, batch_title, batch_attrs, batch_images, batch_has_title, batch_has_attrs
         if not batch_indices:
             return
 
-        inputs = processor(
-            text=batch_texts,
-            images=batch_images,
-            return_tensors="pt",
-            padding=True,
-        )
-        inputs = {k: v.to(device) for k, v in inputs.items()}
+        img_inputs = processor(images=batch_images, return_tensors="pt")
+        img_inputs = {k: v.to(device) for k, v in img_inputs.items()}
 
-        with torch.no_grad():
-            out = model(**inputs)
-            t = out.text_embeds.detach().cpu().numpy()   # (B, D)
-            v = out.image_embeds.detach().cpu().numpy()  # (B, D)
+        txt_full_inputs = processor(text=batch_full, return_tensors="pt", padding=True)
+        txt_full_inputs = {k: v.to(device) for k, v in txt_full_inputs.items()}
+
+        if enable_multi_text:
+            txt_title_inputs = processor(text=batch_title, return_tensors="pt", padding=True)
+            txt_title_inputs = {k: v.to(device) for k, v in txt_title_inputs.items()}
+
+            txt_attrs_inputs = processor(text=batch_attrs, return_tensors="pt", padding=True)
+            txt_attrs_inputs = {k: v.to(device) for k, v in txt_attrs_inputs.items()}
+        else:
+            txt_title_inputs = None
+            txt_attrs_inputs = None
+
+        with torch.inference_mode():
+            v = model.get_image_features(**img_inputs)
+            t_full = model.get_text_features(**txt_full_inputs)
+
+            v = _l2_normalize(v)
+            t_full = _l2_normalize(t_full)
+            s_full = (t_full * v).sum(dim=-1).detach().cpu().numpy()
+
+            if enable_multi_text:
+                t_title = model.get_text_features(**txt_title_inputs)
+                t_attrs = model.get_text_features(**txt_attrs_inputs)
+
+                t_title = _l2_normalize(t_title)
+                t_attrs = _l2_normalize(t_attrs)
+
+                s_title = (t_title * v).sum(dim=-1).detach().cpu().numpy()
+                s_attrs = (t_attrs * v).sum(dim=-1).detach().cpu().numpy()
+            else:
+                t_title = None
+                t_attrs = None
+                s_title = None
+                s_attrs = None
+
+        v_np = v.detach().cpu().numpy().astype(np.float32)
+        t_full_np = t_full.detach().cpu().numpy().astype(np.float32)
+
+        if enable_multi_text:
+            t_title_np = t_title.detach().cpu().numpy().astype(np.float32)
+            t_attrs_np = t_attrs.detach().cpu().numpy().astype(np.float32)
 
         for i, df_idx in enumerate(batch_indices):
-            t_i = t[i]
-            v_i = v[i]
-            s = cosine_sim(t_i, v_i)
+            sim_full[df_idx] = float(s_full[i])
+            image_embs[df_idx] = v_np[i]
+            text_emb_full[df_idx] = t_full_np[i]
 
-            sim_scores[df_idx] = s
-            text_embs[df_idx] = t_i.astype(np.float32)
-            image_embs[df_idx] = v_i.astype(np.float32)
+            if enable_multi_text:
+                if batch_has_title[i]:
+                    sim_title[df_idx] = float(s_title[i])
+                    text_emb_title[df_idx] = t_title_np[i]
+                else:
+                    sim_title[df_idx] = np.nan
+                    text_emb_title[df_idx] = None
 
-        batch_indices, batch_texts, batch_images = [], [], []
+                if batch_has_attrs[i]:
+                    sim_attrs[df_idx] = float(s_attrs[i])
+                    text_emb_attrs[df_idx] = t_attrs_np[i]
+                else:
+                    sim_attrs[df_idx] = np.nan
+                    text_emb_attrs[df_idx] = None
 
+        # Clear batch
+        batch_indices, batch_full, batch_title, batch_attrs, batch_images = [], [], [], [], []
+        batch_has_title, batch_has_attrs = [], []
+
+    # Encode
     for idx, r in enumerate(rows):
-        if bool(r.get("is_image_missing", False)):
-            continue
+        # Text missing (runtime)
+        full_text_raw = str(r.get("canonical_text", "")).strip()
+        if not full_text_raw:
+            runtime_is_text_missing[idx] = True
 
-        img_rel = r.get("image_path", "")
+        # Image path checks (runtime)
+        img_rel = str(r.get("image_path", "")).strip()
         if not img_rel:
+            runtime_is_image_missing[idx] = True
             continue
 
-        img_path = (root / Path(str(img_rel))).resolve()
+        img_path = (root / Path(img_rel)).resolve()
         if not img_path.exists():
+            runtime_is_image_missing[idx] = True
             continue
 
         try:
-            img = Image.open(img_path).convert("RGB")
+            with Image.open(img_path) as im:
+                img = im.convert("RGB")
         except Exception:
+            runtime_is_image_missing[idx] = True
             continue
 
+        # If marked missing, skip
+        if runtime_is_image_missing[idx]:
+            continue
+
+        # Build multi-text
+        full_text = full_text_raw if full_text_raw else " "
+        title_text = str(r.get("title", "")).strip()
+        has_title = bool(title_text)
+        attrs_text = build_attrs_text(r)
+        has_attrs = bool(attrs_text)
+
+        # Avoid empty strings for tokenizer
+        if not title_text:
+            title_text = " "
+        if not attrs_text:
+            attrs_text = " "
+
         batch_indices.append(idx)
-        batch_texts.append(str(r.get("canonical_text", "")))
+        batch_full.append(full_text)
+        batch_title.append(title_text)
+        batch_attrs.append(attrs_text)
+        batch_has_title.append(has_title)
+        batch_has_attrs.append(has_attrs)
         batch_images.append(img)
 
         if len(batch_indices) >= batch_size:
@@ -231,18 +427,23 @@ def main():
 
     flush_batch()
 
-    # Attach sim scores
-    df["sim_score"] = sim_scores
+    # Attach runtime missing flags back
+    df["is_image_missing"] = runtime_is_image_missing.astype(bool)
+    df["is_text_missing"] = runtime_is_text_missing.astype(bool)
 
-    # Compute thresholds from rows that have sim_score
+    # Similarity scores
+    df["sim_score"] = sim_full
+    df["sim_title"] = sim_title
+    df["sim_attrs"] = sim_attrs
+
+    # ==========================
+    # Thresholds for sim_score (baseline support)
+    # ==========================
     df_valid = df[~df["sim_score"].isna()].copy()
 
-    # ==========================
-    # ✅ Upgrade A: baseline thresholds support
-    # ==========================
     thresholds: dict[str, float] = {}
     thr_source: dict[str, str] = {}
-    global_thr: float = -1.0
+    global_thr: float = float("nan")
     threshold_meta: dict = {}
 
     if args.thresholds_json:
@@ -254,11 +455,10 @@ def main():
 
         thresholds, json_global_thr, threshold_meta = load_thresholds_json(thr_path)
 
-        # If JSON doesn't provide a global threshold, fall back to input-global
         if json_global_thr is None:
+            # fallback compute global from current df_valid
             sims_all = df_valid["sim_score"].dropna().astype(float).values
             if len(sims_all) > 0:
-                # Use config global method for fallback
                 if global_method == "iqr":
                     q1g = np.quantile(sims_all, 0.25)
                     q3g = np.quantile(sims_all, 0.75)
@@ -267,17 +467,17 @@ def main():
                 else:
                     global_thr = float(np.quantile(sims_all, global_q))
             else:
-                global_thr = -1.0
+                global_thr = float("nan")
         else:
             global_thr = float(json_global_thr)
 
-        # threshold source is baseline_json for all categories
         all_cats = df["category"].astype(str).unique().tolist()
         thr_source = {cat: "baseline_json" for cat in all_cats}
 
     else:
-        thresholds, thr_source, global_thr = compute_thresholds(
+        thresholds, thr_source, global_thr = compute_thresholds_iqr_or_quantile(
             df_valid=df_valid,
+            col="sim_score",
             method=threshold_method,
             iqr_k=iqr_k,
             q=quantile_q,
@@ -286,14 +486,11 @@ def main():
             global_q=global_q,
         )
 
-    # Map thresholds; if a category is missing in thresholds_json, fall back to global_thr
-    df["sieve_threshold"] = df["category"].map(thresholds)
+    df["sieve_threshold"] = df["category"].astype(str).map(thresholds)
     df.loc[df["sieve_threshold"].isna(), "sieve_threshold"] = global_thr
+    df["threshold_source"] = df["category"].astype(str).map(thr_source).fillna("global_fallback")
+    df["global_threshold"] = float(global_thr) if global_thr == global_thr else np.nan
 
-    df["threshold_source"] = df["category"].map(thr_source).fillna("global_fallback")
-    df["global_threshold"] = global_thr  # for reference
-
-    # Optionally write thresholds JSON (use this on CLEAN set to create baseline)
     if args.write_thresholds_json:
         out_thr = Path(args.write_thresholds_json)
         out_thr = out_thr if out_thr.is_absolute() else (root / out_thr)
@@ -308,17 +505,92 @@ def main():
             "min_category_samples": min_cat,
             "global_threshold_method": global_method,
             "global_quantile_q": global_q,
-            "global_threshold": float(global_thr),
+            "global_threshold": float(global_thr) if global_thr == global_thr else None,
             "thresholds": {k: float(v) for k, v in thresholds.items()},
         }
         out_thr.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         print(f"✅ Wrote thresholds JSON: {out_thr}")
 
+    # ==========================
+    # Upgrade 3A: attrs outlier thresholding (LOW tail)
+    # ==========================
+    df["attrs_threshold"] = np.nan
+    df["attrs_threshold_source"] = ""
+    df["attrs_outlier"] = False
+
+    df_valid_attrs = df[~df["sim_attrs"].isna()].copy()
+    sims_attrs_all = df_valid_attrs["sim_attrs"].dropna().astype(float).values
+
+    global_attrs_thr = float(np.quantile(sims_attrs_all, attrs_global_q)) if len(sims_attrs_all) > 0 else np.nan
+
+    attrs_thresholds: dict[str, float] = {}
+    attrs_thr_source: dict[str, str] = {}
+
+    for cat, g in df_valid_attrs.groupby("category"):
+        sims = g["sim_attrs"].dropna().astype(float).values
+        if len(sims) < attrs_min_cat or len(sims) == 0 or np.isnan(global_attrs_thr):
+            attrs_thresholds[str(cat)] = global_attrs_thr
+            attrs_thr_source[str(cat)] = "global"
+        else:
+            attrs_thresholds[str(cat)] = float(np.quantile(sims, attrs_outlier_q))
+            attrs_thr_source[str(cat)] = "category"
+
+    df["attrs_threshold"] = df["category"].astype(str).map(attrs_thresholds)
+    df.loc[df["attrs_threshold"].isna(), "attrs_threshold"] = global_attrs_thr
+    df["attrs_threshold_source"] = df["category"].astype(str).map(attrs_thr_source).fillna("global_fallback")
+
+    mask_attrs_outlier = (
+        (~df["sim_attrs"].isna())
+        & (~df["attrs_threshold"].isna())
+        & (df["sim_attrs"] < df["attrs_threshold"])
+    )
+    df.loc[mask_attrs_outlier, "attrs_outlier"] = True
+
+    # ==========================
+    # Gap probe: gap = sim_attrs - sim_score (HIGH outliers)
+    # ==========================
+    df["gap"] = np.nan
+    df["gap_threshold"] = np.nan
+    df["gap_threshold_source"] = ""
+    df["gap_outlier"] = False
+
+    if enable_gap_probe:
+        mask_gap_valid = (~df["sim_attrs"].isna()) & (~df["sim_score"].isna())
+        df.loc[mask_gap_valid, "gap"] = df.loc[mask_gap_valid, "sim_attrs"] - df.loc[mask_gap_valid, "sim_score"]
+
+        df_valid_gap = df[~df["gap"].isna()].copy()
+
+        gap_thresholds, gap_thr_source, global_gap_thr = compute_upper_quantile_thresholds(
+            df_valid=df_valid_gap,
+            col="gap",
+            q_hi=gap_outlier_q,
+            min_cat_samples=gap_min_cat,
+            global_q_hi=gap_global_q,
+        )
+
+        df["gap_threshold"] = df["category"].astype(str).map(gap_thresholds)
+        df.loc[df["gap_threshold"].isna(), "gap_threshold"] = global_gap_thr
+        df["gap_threshold_source"] = df["category"].astype(str).map(gap_thr_source).fillna("global_fallback")
+
+        mask_gap_outlier = (
+            (~df["gap"].isna())
+            & (~df["gap_threshold"].isna())
+            & (df["gap"] > df["gap_threshold"])
+        )
+        if gap_positive_only:
+            mask_gap_outlier = mask_gap_outlier & (df["gap"] > 0)
+
+        df.loc[mask_gap_outlier, "gap_outlier"] = True
+
+    # ==========================
     # Flagging logic
+    # ==========================
     df["flagged"] = False
+
     df.loc[df["is_image_missing"] == True, "flagged"] = True
     df.loc[df["is_text_missing"] == True, "flagged"] = True
 
+    # primary: sim_full threshold
     mask_sim = (
         (~df["sim_score"].isna())
         & (~df["sieve_threshold"].isna())
@@ -326,7 +598,14 @@ def main():
     )
     df.loc[mask_sim, "flagged"] = True
 
-    # Reason
+    # secondary: attrs outlier
+    df.loc[df["attrs_outlier"] == True, "flagged"] = True
+
+    # tertiary: gap outlier
+    if enable_gap_probe:
+        df.loc[df["gap_outlier"] == True, "flagged"] = True
+
+    # Reason (priority order)
     reasons = []
     for _, r in df.iterrows():
         if bool(r.get("is_image_missing", False)):
@@ -335,18 +614,22 @@ def main():
             reasons.append("missing_text")
         elif pd.notna(r.get("sim_score")) and pd.notna(r.get("sieve_threshold")) and float(r["sim_score"]) < float(r["sieve_threshold"]):
             reasons.append("low_similarity")
+        elif bool(r.get("attrs_outlier", False)):
+            reasons.append("attrs_outlier")
+        elif enable_gap_probe and bool(r.get("gap_outlier", False)):
+            reasons.append("gap_outlier")
         else:
             reasons.append("ok")
     df["flag_reason"] = reasons
 
-    # Output file naming (avoid overwrites)
-    stem = processed_parquet.stem  # e.g., processed_rows or toy_noisy_rows
+    # Output files
+    stem = processed_parquet.stem
     out_csv = outputs_dir / f"sieve_results_{stem}.csv"
     out_flagged = outputs_dir / f"flagged_rows_{stem}.csv"
     df.to_csv(out_csv, index=False)
     df[df["flagged"] == True].to_csv(out_flagged, index=False)
 
-    # Embeddings cache (aligned to df rows)
+    # Embeddings cache
     emb_npz = cache_dir / f"clip_embeddings_{stem}.npz"
 
     def as_vec(e):
@@ -363,22 +646,45 @@ def main():
     np.savez_compressed(
         emb_npz,
         row_id=np.asarray(df["row_id"].astype(str).values, dtype="U"),
-        text_emb=np.stack([as_vec(e) for e in text_embs]),
+        text_emb=np.stack([as_vec(e) for e in text_emb_full]),
         image_emb=np.stack([as_vec(e) for e in image_embs]),
+        text_emb_title=np.stack([as_vec(e) for e in text_emb_title]),
+        text_emb_attrs=np.stack([as_vec(e) for e in text_emb_attrs]),
         sim_score=np.array(df["sim_score"].fillna(-1.0).values, dtype=np.float32),
+        sim_title=np.array(df["sim_title"].fillna(-1.0).values, dtype=np.float32),
+        sim_attrs=np.array(df["sim_attrs"].fillna(-1.0).values, dtype=np.float32),
+        gap=np.array(df["gap"].fillna(-1.0).values, dtype=np.float32),
         sieve_threshold=np.array(df["sieve_threshold"].fillna(-1.0).values, dtype=np.float32),
+        attrs_threshold=np.array(df["attrs_threshold"].fillna(-1.0).values, dtype=np.float32),
+        gap_threshold=np.array(df["gap_threshold"].fillna(-1.0).values, dtype=np.float32),
         flagged=np.array(df["flagged"].astype(int).values, dtype=np.int32),
     )
 
-    print("✅ Sieve complete")
+    print("✅ Sieve complete (Upgrade 3A + gap probe)")
     print("Input:", processed_parquet)
     print("Results:", out_csv)
     print("Flagged:", out_flagged)
     print("Embedding cache:", emb_npz)
 
     print("\nSummary:")
-    cols = ["row_id", "category", "sim_score", "sieve_threshold", "threshold_source", "flagged", "flag_reason"]
-    print(df[cols].to_string(index=False))
+    cols = [
+        "row_id",
+        "category",
+        "sim_score",
+        "sim_title",
+        "sim_attrs",
+        "gap",
+        "sieve_threshold",
+        "attrs_threshold",
+        "gap_threshold",
+        "threshold_source",
+        "attrs_threshold_source",
+        "gap_threshold_source",
+        "flagged",
+        "flag_reason",
+    ]
+    keep = [c for c in cols if c in df.columns]
+    print(df[keep].to_string(index=False))
 
 
 if __name__ == "__main__":
