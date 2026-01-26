@@ -157,9 +157,6 @@ def analyze_row(
     color_mismatch = bool(text_color) and bool(img_color) and (text_color != img_color)
 
     # ---------- CLIP retrieval checks ----------
-    # We'll compute BOTH:
-    # (A) V2T: image -> text (to detect "this image belongs to another row's text")
-    # (B) T2V: text  -> image (to propose the replacement image for THIS row)
     swap_like = False
 
     # debug vars
@@ -175,8 +172,8 @@ def analyze_row(
 
     if own_idx is not None and 0 <= own_idx < len(row_ids):
         # ---- (A) V2T: image -> text ----
-        v = image_emb[own_idx : own_idx + 1]          # (1, D)
-        sims_text = (text_emb @ v.T).reshape(-1)      # (N,)
+        v = image_emb[own_idx: own_idx + 1]          # (1, D)
+        sims_text = (text_emb @ v.T).reshape(-1)     # (N,)
         own_sim_v2t = float(sims_text[own_idx])
 
         sims_text2 = sims_text.copy()
@@ -190,8 +187,8 @@ def analyze_row(
             swap_like = True
 
         # ---- (B) T2V: text -> image (replacement candidate) ----
-        t = text_emb[own_idx : own_idx + 1]           # (1, D)
-        sims_img = (image_emb @ t.T).reshape(-1)      # (N,)
+        t = text_emb[own_idx: own_idx + 1]           # (1, D)
+        sims_img = (image_emb @ t.T).reshape(-1)     # (N,)
         own_sim_t2v = float(sims_img[own_idx])
 
         candidate_mask = valid_image_idx.copy()
@@ -207,13 +204,11 @@ def analyze_row(
             best_img_sim = float(sims_img_masked[best_img_idx])
             best_img_row = str(row_ids[best_img_idx])
             t2v_margin = best_img_sim - own_sim_t2v
-        else:
-            best_img_idx = None
 
     # ---------- Decide type ----------
     # Priority: if swap_like, DO NOT trust color patch (color from wrong image would be wrong).
     if swap_like:
-        proposed = {}
+        proposed: Dict[str, Any] = {}
         if best_img_row:
             proposed["image_replacement_candidate_row_id"] = best_img_row
             proposed["notes"] = (
@@ -255,7 +250,6 @@ def analyze_row(
         }
 
     # If not swap_like but still flagged, we can still propose a candidate replacement
-    # when the best candidate image matches the text much better than the current image.
     if best_img_row and own_sim_t2v is not None and best_img_sim is not None:
         if best_img_sim > own_sim_t2v + candidate_margin:
             return {
@@ -283,37 +277,43 @@ def analyze_row(
                 },
             }
 
-    # Color mismatch (only if not swap_like)
+    # ---------- (4A) Color mismatch -> V2T patch payload (consistent) ----------
     if color_mismatch:
-        patch = {"attributes.color": img_color}
+        # pred_color comes from vision (dominant color), used as patch value
+        pred_color = img_color
+
         return {
-            "row_id": row_id,
-            "error_type": "Type II",
-            "mismatch_aspects": ["color"],
-            "suggested_direction": "V2T",
-            "confidence": {"image_trust": 0.75, "text_trust": 0.4},
-            "proposed_fix": {
-                "text_patch": patch,
-                "observed_image_color": img_color,
-                "observed_image_rgb": img_rgb,
-                "text_color": text_color,
+        "row_id": row_id,
+        "error_type": "Type II",
+        "flag_reason": "color_mismatch",              # <-- NEW (helps arbiter/routing)
+        "mismatch_aspects": ["color"],
+        "suggested_direction": "V2T",
+        "confidence": {"image_trust": 0.9, "text_trust": 0.4},   # <-- per spec
+        "proposed_fix": {
+            "text_patch": {
+                "attributes.color": img_color,        # pred_color (from image)
+                "title_color_replace": True
+            }
+        },
+        "debug": {
+            "category": category,
+            "observed_image_color": img_color,
+            "observed_image_rgb": list(img_rgb) if isinstance(img_rgb, tuple) else img_rgb,
+            "text_color": text_color,
+            "v2t": {
+                "own_sim": own_sim_v2t,
+                "best_text_row": best_text_row,
+                "best_text_sim": best_text_sim,
+                "margin": v2t_margin,
             },
-            "debug": {
-                "category": category,
-                "v2t": {
-                    "own_sim": own_sim_v2t,
-                    "best_text_row": best_text_row,
-                    "best_text_sim": best_text_sim,
-                    "margin": v2t_margin,
-                },
-                "t2v": {
-                    "own_sim": own_sim_t2v,
-                    "best_img_row": best_img_row,
-                    "best_img_sim": best_img_sim,
-                    "margin": t2v_margin,
-                },
+            "t2v": {
+                "own_sim": own_sim_t2v,
+                "best_img_row": best_img_row,
+                "best_img_sim": best_img_sim,
+                "margin": t2v_margin,
             },
-        }
+        },
+    }
 
     return {
         "row_id": row_id,
