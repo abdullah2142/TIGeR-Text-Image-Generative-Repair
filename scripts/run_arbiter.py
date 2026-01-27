@@ -92,23 +92,42 @@ def main():
                 notes = "Would require generative T2V editing; not implemented in MVP."
 
         elif suggested == "V2T":
-            # ✅ 4B: If V2T and text_patch exists -> apply_text_patch, tier=1
-            text_patch = get_text_patch(proposed_fix)
-            if isinstance(text_patch, dict) and len(text_patch) > 0:
-                action = "apply_text_patch"
-                tier = 1
-                cost_units = 0.5
 
-                # Nice-to-have: indicate if title replacement is requested (color patch workflow)
-                if text_patch.get("title_color_replace", False):
-                    notes = "Apply V2T text_patch (attributes.color + title_color_replace)."
-                else:
-                    notes = "Apply V2T text_patch to row fields/attributes."
+            # ============================================================
+            # Upgrade 5 — Automatic attribute color repair (NO VLM)
+            # ============================================================
+            pred_color = proposed_fix.get("pred_color", "")
+            color_conf = float(proposed_fix.get("color_conf", 0.0))
+            color_margin = float(proposed_fix.get("color_margin", 0.0))
+
+            if (
+                pred_color
+                and color_conf >= 0.25
+                and color_margin >= 0.02
+                and ("attr" in mismatch_aspects.lower() or "gap" in mismatch_aspects.lower())
+            ):
+                action = "auto_attr_color_fix"
+                tier = 1
+                cost_units = 0.2
+                notes = f"Auto attribute color fix: set color={pred_color}"
+
             else:
-                action = "v2t_generate_text_unimplemented"
-                tier = 2
-                cost_units = 4.0
-                notes = "Would require VLM-based text generation; not implemented in MVP."
+                # ✅ Existing V2T logic (unchanged)
+                text_patch = get_text_patch(proposed_fix)
+                if isinstance(text_patch, dict) and len(text_patch) > 0:
+                    action = "apply_text_patch"
+                    tier = 1
+                    cost_units = 0.5
+
+                    if text_patch.get("title_color_replace", False):
+                        notes = "Apply V2T text_patch (attributes.color + title_color_replace)."
+                    else:
+                        notes = "Apply V2T text_patch to row fields/attributes."
+                else:
+                    action = "v2t_generate_text_unimplemented"
+                    tier = 2
+                    cost_units = 4.0
+                    notes = "Would require VLM-based text generation; not implemented in MVP."
 
         # else: stays human_review
 

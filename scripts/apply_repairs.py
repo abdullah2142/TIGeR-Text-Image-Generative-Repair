@@ -91,7 +91,6 @@ def apply_v2t_color_patch(
     if do_title_replace and new_color:
         title = replace_known_color_word(title, new_color)
 
-    # If we applied a color patch, tag specifically
     if new_color:
         return title, attrs, "v2t_color_patch"
 
@@ -100,7 +99,7 @@ def apply_v2t_color_patch(
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--in_parquet", required=True, help="Input rows parquet (e.g., toy_noisy_rows.parquet)")
+    ap.add_argument("--in_parquet", required=True, help="Input rows parquet")
     ap.add_argument("--plan_csv", required=True, help="arbiter_plan_*.csv")
     ap.add_argument("--out_parquet", default="", help="Output repaired parquet path")
     args = ap.parse_args()
@@ -123,9 +122,6 @@ def main():
     df = pd.read_parquet(in_parquet)
     plan = pd.read_csv(plan_csv)
 
-    # -------------------------------
-    # Upgrade 1B: cycle-safe snapshot
-    # -------------------------------
     donor_image_snapshot: dict[str, Path | None] = {}
 
     row_ids = df["row_id"].astype(str).values if "row_id" in df.columns else []
@@ -142,12 +138,10 @@ def main():
         abs_p = p if p.is_absolute() else (root / p)
         donor_image_snapshot[rid] = abs_p.resolve()
 
-    # Ensure columns exist
     for col in ["row_id", "title", "category", "attributes", "canonical_text", "image_path"]:
         if col not in df.columns:
             df[col] = ""
 
-    # Repair metadata columns with correct types
     if "repaired" not in df.columns:
         df["repaired"] = False
     else:
@@ -159,7 +153,6 @@ def main():
         else:
             df[col] = df[col].fillna("").astype(str)
 
-    # Index for fast lookup
     idx_by_rowid = {str(rid): i for i, rid in enumerate(df["row_id"].astype(str).values)}
 
     repaired_images_dir = (root / "data/processed/repaired_images").resolve()
@@ -188,17 +181,9 @@ def main():
                     reason = "candidate_missing_or_not_found"
                 else:
                     src_path = donor_image_snapshot.get(cand)
-
-                    if src_path is None:
-                        status = "fail"
-                        reason = "candidate_has_no_image_path_snapshot"
-                    elif not src_path.exists():
-                        status = "fail"
-                        reason = f"candidate_image_file_missing_snapshot:{src_path.as_posix()}"
-                    else:
+                    if src_path and src_path.exists():
                         dst_path = repaired_images_dir / f"{row_id}.jpg"
                         shutil.copy2(src_path, dst_path)
-
                         df.at[i, "image_path"] = dst_path.relative_to(root).as_posix()
                         df.at[i, "repaired"] = True
                         df.at[i, "repair_action"] = "replace_image_from_row"
@@ -207,30 +192,40 @@ def main():
 
             elif action == "apply_text_patch":
                 text_patch = proposed_fix.get("text_patch", {})
-                if not isinstance(text_patch, dict) or not text_patch:
-                    status = "fail"
-                    reason = "missing_text_patch"
-                else:
+                if text_patch:
                     attrs = safe_json_load(df.at[i, "attributes"])
                     title = str(df.at[i, "title"])
                     category = str(df.at[i, "category"])
 
-                    # -------- 4C SAFE PATCHING HERE --------
-                    # Only apply attributes.color + optional title replacement
-                    title, attrs, repair_action = apply_v2t_color_patch(
-                        title=title,
-                        attrs=attrs,
-                        text_patch=text_patch,
-                    )
+                    title, attrs, repair_action = apply_v2t_color_patch(title, attrs, text_patch)
 
                     df.at[i, "title"] = title
                     df.at[i, "attributes"] = safe_json_dump(attrs)
                     df.at[i, "canonical_text"] = rebuild_canonical_text(title, category, attrs)
+                    df.at[i, "repaired"] = True
+                    df.at[i, "repair_action"] = repair_action
+                    df.at[i, "repair_notes"] = str(p.get("notes", ""))
+
+            # ==================================================
+            # Upgrade 5 — auto attribute color fix (NEW)
+            # ==================================================
+            elif action == "auto_attr_color_fix":
+                pred_color = str(proposed_fix.get("pred_color", "")).strip().lower()
+                if pred_color:
+                    attrs = safe_json_load(df.at[i, "attributes"])
+                    title = str(df.at[i, "title"])
+                    category = str(df.at[i, "category"])
+
+                    attrs["color"] = pred_color
+                    df.at[i, "attributes"] = safe_json_dump(attrs)
+                    df.at[i, "canonical_text"] = rebuild_canonical_text(title, category, attrs)
 
                     df.at[i, "repaired"] = True
-                    df.at[i, "repair_action"] = repair_action  # ✅ v2t_color_patch
-                    df.at[i, "repair_source_row_id"] = ""
-                    df.at[i, "repair_notes"] = str(p.get("notes", ""))
+                    df.at[i, "repair_action"] = "auto_attr_color_fix"
+                    df.at[i, "repair_notes"] = f"Auto color fix applied: color={pred_color}"
+                else:
+                    status = "fail"
+                    reason = "missing_pred_color"
 
             elif action == "human_review":
                 df.at[i, "repaired"] = False
@@ -247,30 +242,15 @@ def main():
 
         log_rows.append({"row_id": row_id, "status": status, "reason": reason, "action": action})
 
-    # Final dtype safety before saving
-    df["repaired"] = df["repaired"].fillna(False).astype(bool)
-    df["repair_action"] = df["repair_action"].fillna("").astype(str)
-    df["repair_notes"] = df["repair_notes"].fillna("").astype(str)
-    df["repair_source_row_id"] = df["repair_source_row_id"].fillna("").astype(str)
-
-    # Output paths
-    stem = in_parquet.stem
-    out_parquet = Path(args.out_parquet) if args.out_parquet else (root / "data/processed" / f"repaired_{stem}.parquet")
-    out_parquet = out_parquet if out_parquet.is_absolute() else (root / out_parquet)
-    out_parquet.parent.mkdir(parents=True, exist_ok=True)
-
-    df.to_parquet(out_parquet, index=False)
+    df.to_parquet(
+        Path(args.out_parquet) if args.out_parquet else (root / "data/processed" / f"repaired_{in_parquet.stem}.parquet"),
+        index=False,
+    )
 
     log_df = pd.DataFrame(log_rows)
-    log_csv = (root / "data/outputs" / f"repair_log_{stem}.csv").resolve()
-    log_df.to_csv(log_csv, index=False)
+    log_df.to_csv(root / "data/outputs" / f"repair_log_{in_parquet.stem}.csv", index=False)
 
     print("✅ Repairs applied")
-    print("Input parquet:", in_parquet)
-    print("Plan:", plan_csv)
-    print("Output parquet:", out_parquet)
-    print("Repair log:", log_csv)
-    print("\nLog summary:")
     print(log_df["status"].value_counts().to_string())
 
 
