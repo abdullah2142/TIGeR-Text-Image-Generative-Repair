@@ -35,6 +35,11 @@ sieve:
   gap_global_quantile: 0.95
   gap_positive_only: true
 
+  enable_color_probe: true
+  color_vocab: ["red","blue","green","black","white","yellow","pink","purple","brown","orange","gray"]
+  color_margin_threshold: 0.05
+  color_min_confidence: 0.30
+
 noise:
   seed: 7
   copies_per_row: 15

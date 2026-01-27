@@ -1,0 +1,15 @@
+{
+  "created_from": "G:\\Uni Work\\tiger\\data\\processed\\processed_rows.parquet",
+  "threshold_method": "iqr",
+  "iqr_k": 1.5,
+  "quantile_q": 0.05,
+  "min_category_samples": 8,
+  "global_threshold_method": "quantile",
+  "global_quantile_q": 0.1,
+  "global_threshold": 0.2912235498428345,
+  "thresholds": {
+    "bags": 0.27801572903990746,
+    "shirts": 0.2751101590692997,
+    "shoes": 0.24784817546606064
+  }
+}
