@@ -1,0 +1,2 @@
+flagged_before,fixed_flagged_to_ok,remaining_flagged,regress_ok_to_flagged,stable_ok,fix_rate_over_flagged_before,regression_rate_over_ok_before,n_rows_compared
+65,47,18,24,361,0.7230769230769231,0.06233766233766234,450
