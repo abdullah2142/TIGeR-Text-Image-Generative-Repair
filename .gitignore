@@ -12,3 +12,6 @@ data/outputs/
 data/cache_embeddings/
 data/processed/
 .env
+.env
+.env.*
+
