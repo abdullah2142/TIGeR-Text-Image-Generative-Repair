@@ -1,0 +1,40 @@
+# Declarative schema and constraint set C (roadmap 2.4, findings F9/F10).
+#
+# Omega_j: legal value domain per checkable attribute.
+# constraints: cross-field rules evaluated by tiger.schema.validate_attrs.
+#
+# Every repair patch value MUST validate against this file before it is applied
+# (roadmap 1.5); out-of-domain values are refused and escalated.
+
+attributes:
+  color:
+    required: true
+    type: enum
+    values: [red, blue, green, black, white, yellow, pink, purple, brown, orange, gray, multicolour]
+    aliases:
+      grey: gray
+      multicolor: multicolour
+      multi-color: multicolour
+  material:
+    type: enum
+    values: [cotton, leather, canvas, wool, denim, suede, polyester]
+  pattern:
+    type: enum
+    values: [solid, striped, dotted]
+  size:
+    type: enum
+    values: [XS, S, M, L, XL, "6", "7", "8", "9", "10", "11", one-size]
+  brand:
+    type: free_text
+    max_len: 60
+
+categories: [shirts, shoes, bags, hats]
+
+# Cross-field constraints. Each rule: {if: {field: value}, then_not: {field: [values]}}
+constraints:
+  - name: shoes_have_numeric_sizes
+    if: {category: shoes}
+    allow: {size: ["6", "7", "8", "9", "10", "11", one-size]}
+  - name: apparel_letter_sizes
+    if: {category: shirts}
+    allow: {size: [XS, S, M, L, XL, one-size]}

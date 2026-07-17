@@ -1,0 +1,66 @@
+# Configuration for the tiger/ package pipeline (supersedes configs/config.yaml,
+# which is kept for the legacy scripts/ implementation).
+
+data:
+  sample_dir: "data/sample"            # bundled synthetic catalogue (committed)
+  processed_dir: "data/processed"
+  cache_dir: "data/cache_embeddings"
+  outputs_dir: "data/outputs"
+  schema: "configs/schema.yaml"
+
+models:
+  clip_model_name: "openai/clip-vit-base-patch32"
+  device: "cpu"
+  batch_size: 32
+
+# Synthetic sample catalogue (roadmap 4.2 bundled dataset; replaces lost toy data)
+synthgen:
+  seed: 20260717
+  products_per_category: 60            # 4 categories -> 240 unique products
+  image_size: 224
+  calibration_fraction: 0.5            # product-level split: calibration vs report
+
+# Error injection (roadmap 1.1). Rates are per-row probabilities; the assignment
+# is deterministic given the seed, and every injected error is verified to have
+# actually changed the row (no-op noise is a hard failure).
+noise:
+  seed: 7
+  copies_per_row: 1                    # duplication OFF by default (F4); if >1,
+                                       # product_id is the duplicate-group key
+  rates:
+    swap_image: 0.10                   # image from a different product, any category
+    swap_image_same_category: 0.03     # subtle variant: donor from same category
+    color_flip: 0.06                   # attrs.color -> domain \ {current}, title updated
+    near_color_flip: 0.02              # subtle variant: perceptually adjacent colour
+    material_flip: 0.02
+    attribute_drop: 0.02               # color attribute removed
+    title_contradiction: 0.02          # title colour word changed, attrs left correct
+    mixed_swap_color: 0.02             # E3: swap_image + color_flip on the same row
+    missing_image: 0.01
+  max_redraws: 20
+
+sieve:
+  threshold_method: "quantile"         # tau_k = Q_p of CLEAN calibration sims (F3)
+  quantile_q: 0.02
+  min_products_per_category: 8         # effective (unique-product) sample size gate (F4)
+  global_quantile_q: 0.02
+  # per-field contrastive probes (Phase 3; colour probe active from Phase 1)
+  probes:
+    fields: ["color", "material", "pattern"]
+    z_margin: 2.0                      # declared value must lose by >= this many
+                                       # clean-calibration std-devs to fire
+    min_margin_raw: 0.005              # floor to guard against degenerate stds
+
+analyzer:
+  knn_k: 8                             # Eq. 19 neighbourhood size
+  swap_z_margin: 2.0                   # replaces the raw 0.01 margin (F5)
+
+arbiter:
+  gamma: 0.60                          # Eq. 22 confidence gate; below -> E4/escalate
+  t2v_policy:
+    allowed_categories: ["shirts", "shoes", "bags", "hats"]
+    max_cost_units: 5.0
+
+verify:
+  epsilon_quantile: 0.95               # eps = this quantile of |clean pair deltas|
+  max_passes: 2
