@@ -5,7 +5,7 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 
 - **Branch:** `phase1-critical-fixes`
 - **Started:** 2026-07-17
-- **Last updated:** 2026-07-18 — Phase 2a done (Eq. 18/19 wired); awaiting checkpoint review
+- **Last updated:** 2026-07-18 — Phase 2b done (Arbiter p(E1..E4) + γ gate); awaiting checkpoint review
 - **Rule of engagement:** stop at each milestone checkpoint for user review before
   the next phase begins.
 
@@ -163,9 +163,23 @@ Outputs: `data/outputs/detection_metrics_sweep.json`,
   Note: kNN colour-agreement is weak on synthetic shapes (CLIP image
   neighbours cluster by shape more than colour) — kept as a feature, the 2b
   model will weigh it.
-- **2b (next): Arbiter** — calibrated p(E1..E4) (logistic over evidence
-  features, trained on a noisy calibration split with its own seed), γ gate,
-  explicit E4 state, T→V policy gate (2.6).
+- **2b ✅ (2026-07-18): Arbiter — p(E1..E4), γ gate, E4, policy gate.**
+  `tiger/arbiter.py`: transparent multinomial logistic router over 14 evidence
+  features, stored as JSON coefficients (no pickle). Trained via
+  `tiger.cli train-arbiter` on 8 separately-seeded noise runs over the
+  CALIBRATION split (261 flagged rows; last seed held out); applied via
+  `tiger.cli route`. Eq. 22 γ gate (0.60) makes E4 an explicit state; CLEAN
+  can dismiss sieve FPs but a safety guard blocks dismissal while any strong
+  contrary signal is live; T→V policy object gates E2/E3 (2.6); missing-
+  modality rows bypass the model and follow the F11 rules.
+  **Holdout results (seed 1014):** 4-class accuracy 0.649 — but the metric
+  that matters is direction safety: among acted-on rows **direction accuracy
+  0.909** (20/22), 15/37 escalated to E4/human rather than risk a confident
+  wrong-direction repair, 1 dismissal and it was a true FP. Known limitation:
+  E2↔E3 confusion is intrinsic (a swapped image makes text probes fire
+  either way); harmless by design since both route image-first and the 2c
+  repair loop re-diagnoses after image replacement (review A1.3).
+  Report-split seed 7 routing: 19/20 acted rows in the correct direction.
 - **2c: Solver planning + Verify** — per-repair Eq. 27–29 acceptance with ε
   from caption-rewording noise floor, rollback, re-route, 2-pass cap (2.5),
   cost-minimal patches (2.7).
@@ -206,5 +220,9 @@ claim; needs second encoder + VLM judge (key pending).
   (numbers above). User: commit to new branch `phase1-critical-fixes`; stop
   after Phase 1; do NOT start Phase 2 yet. Done.
 - **2026-07-18 · Checkpoint 2a** — Eq. 18/19 evidence wired and validated
-  (table above). User controls continuation to 2b.
-- *(next)* **Checkpoint 2b** — Arbiter p(E1..E4) + γ; pending user review of 2a.
+  (table above). User approved continuation.
+- **2026-07-18 · Checkpoint 2b** — Arbiter trained + validated (direction
+  accuracy 0.909 among acted rows, γ gate escalating ambiguity). Awaiting
+  review before 2c.
+- *(next)* **Checkpoint 2c** — Solver planning + Verify Eq. 27–29 with
+  rollback/re-route; end-to-end repair run.
