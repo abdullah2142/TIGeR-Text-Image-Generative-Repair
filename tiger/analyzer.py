@@ -298,7 +298,11 @@ def analyze(df_signals: pd.DataFrame, arrays: dict, encoder: ClipEncoder, schema
             ev.pixel_color = est.top
             ev.pixel_color_confidence = est.confidence
             if declared_color:
-                ev.pixel_agrees_declared = (est.top == declared_color)
+                # striped/dotted products legitimately report "multicolour";
+                # count agreement if the declared colour is in the top-2 masses
+                top2_names = {n for n, _ in est.top2}
+                ev.pixel_agrees_declared = (est.top == declared_color
+                                            or declared_color in top2_names)
 
         evidences.append(ev)
 

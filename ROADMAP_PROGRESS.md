@@ -5,7 +5,7 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 
 - **Branch:** `phase1-critical-fixes`
 - **Started:** 2026-07-17
-- **Last updated:** 2026-07-17 — Phase 1 complete, awaiting go-ahead for Phase 2
+- **Last updated:** 2026-07-18 — Phase 2a done (Eq. 18/19 wired); awaiting checkpoint review
 - **Rule of engagement:** stop at each milestone checkpoint for user review before
   the next phase begins.
 
@@ -17,7 +17,7 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 | --- | --- | --- |
 | 0. Environment + dataset bootstrap | ✅ done | — |
 | 1. Fix what is wrong (1.1–1.8) | ✅ done | **Milestone 1 reported, committed** |
-| 2. Paper alignment (Eq. 18/19/22/27–29, C) | ⏸ NOT STARTED — awaiting user go-ahead | Milestone 2 |
+| 2. Paper alignment (Eq. 18/19/22/27–29, C) | 🔄 in progress — 2a done, 2b/2c pending | Milestone 2 (sub-checkpoints 2a ✅ / 2b / 2c) |
 | 3. Recall & coverage (probes, fusion) | 🔶 infrastructure landed early (see notes) | Milestone 3 |
 | 4. Real-world readiness | 🔶 4.2 partially (tests); rest not started | — |
 | 5. Evaluation completeness | 🔶 5.5 groundwork (seeds, product-level CIs) | — |
@@ -145,18 +145,31 @@ Outputs: `data/outputs/detection_metrics_sweep.json`,
 
 ---
 
-## Phase 2 — Paper Alignment ⏸ NOT STARTED (stop-gate)
+## Phase 2 — Paper Alignment 🔄 (sub-checkpoints so the user controls pace)
 
-Planned scope when unblocked (Checkpoint 2 = Milestone 2):
-
-- 2.1 Wire Eq. 18 leave-one-out attribution (code staged in analyzer, unwired)
-- 2.2 Wire Eq. 19 kNN neighbour evidence (code staged, unwired)
-- 2.3 Calibrated p(E1..E4) + γ gate + explicit E4 state (Arbiter rewrite)
-- 2.4 ✅ schema/constraints already landed (see Phase 1 notes)
-- 2.5 Per-repair acceptance Eq. 27–29 with ε, rollback, re-route, 2-pass cap
-- 2.6 T→V policy gate
-- 2.7 Cost-minimal V→T repair
-- Open design point: ε from caption-rewording noise floor (see decision #5)
+- **2a ✅ (2026-07-18): Eq. 18 + Eq. 19 wired into the pipeline.**
+  `tiger.cli calibrate` now also fits clean-split LOO delta stats
+  (`data/thresholds/tiger_loo_calibration.json`); new `tiger.cli analyze`
+  emits per-flagged-row evidence JSONL (`data/outputs/evidence_*.jsonl`).
+  Evidence quality on seed 7 (means by ground-truth label):
+  | label | swap_z | loo_top_z | grp_outlier_z | pixel_agree |
+  | --- | --- | --- | --- | --- |
+  | clean (FPs) | 1.14 | 1.37 | −1.92 | 0.67 |
+  | mutate_text | 1.83 | 2.16 | −0.50 | 0.20 |
+  | swap_image | 4.36 | 2.50 | −3.23 | 0.07 |
+  | mixed (E3) | 3.52 | 3.53 | −7.21 | 0.00 |
+  Eq. 18 ranks `color` as the top suspect field on **8/8 colour mutations**.
+  swap_z and grp_outlier_z separate image-side (E2) from text-side (E1).
+  Note: kNN colour-agreement is weak on synthetic shapes (CLIP image
+  neighbours cluster by shape more than colour) — kept as a feature, the 2b
+  model will weigh it.
+- **2b (next): Arbiter** — calibrated p(E1..E4) (logistic over evidence
+  features, trained on a noisy calibration split with its own seed), γ gate,
+  explicit E4 state, T→V policy gate (2.6).
+- **2c: Solver planning + Verify** — per-repair Eq. 27–29 acceptance with ε
+  from caption-rewording noise floor, rollback, re-route, 2-pass cap (2.5),
+  cost-minimal patches (2.7).
+- 2.4 ✅ schema/constraints landed in Phase 1.
 
 ## Phase 3 — Recall & Coverage 🔶 partially landed early
 
@@ -192,4 +205,6 @@ claim; needs second encoder + VLM judge (key pending).
 - **2026-07-17 · Checkpoint 1 (Milestone 1)** — honest baseline reported
   (numbers above). User: commit to new branch `phase1-critical-fixes`; stop
   after Phase 1; do NOT start Phase 2 yet. Done.
-- *(next)* **Checkpoint 2 (Milestone 2)** — pending user go-ahead.
+- **2026-07-18 · Checkpoint 2a** — Eq. 18/19 evidence wired and validated
+  (table above). User controls continuation to 2b.
+- *(next)* **Checkpoint 2b** — Arbiter p(E1..E4) + γ; pending user review of 2a.

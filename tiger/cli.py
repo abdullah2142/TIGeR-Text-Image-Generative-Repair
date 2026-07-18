@@ -93,14 +93,20 @@ def cmd_calibrate(cfg: dict, args) -> None:
     cal = df[df["split"] == "calibration"].reset_index(drop=True)
 
     enc = _encoder(cfg)
-    sig, _arrays = sieve_mod.compute_signals(cal, enc, schema, cfg, ROOT)
+    sig, arrays = sieve_mod.compute_signals(cal, enc, schema, cfg, ROOT)
     thr = sieve_mod.calibrate(sig, cfg, schema)
 
     out = ROOT / "data/thresholds/tiger_locked_thresholds.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(thr.to_json(), encoding="utf-8")
     print(f"locked thresholds -> {out}")
-    print(thr.to_json())
+
+    # Eq. 18 normalisation: clean-split leave-one-out delta stats (Phase 2.1)
+    from tiger import analyzer as analyzer_mod
+    loo_stats = analyzer_mod.calibrate_loo(sig, arrays, enc, schema, schema.checkable_fields())
+    loo_out = ROOT / "data/thresholds/tiger_loo_calibration.json"
+    loo_out.write_text(json.dumps(loo_stats, indent=2), encoding="utf-8")
+    print(f"LOO calibration -> {loo_out}")
 
 
 def cmd_detect(cfg: dict, args) -> None:
@@ -136,6 +142,31 @@ def cmd_evaluate(cfg: dict, args) -> None:
     out.write_text(json.dumps(res, indent=2, default=float), encoding="utf-8")
     print(det_eval.format_report(res))
     print(f"\nwrote {out}")
+
+
+def cmd_analyze(cfg: dict, args) -> None:
+    """Phase 2.1/2.2: compute Eq. 18 + Eq. 19 evidence for flagged rows."""
+    import numpy as np
+
+    schema = load_schema(ROOT / cfg["data"]["schema"])
+    p = _paths(cfg)
+    tag = f"seed{args.seed if args.seed is not None else cfg.get('noise', {}).get('seed', 7)}"
+
+    df = pd.read_parquet(p["outputs"] / f"sieve_{tag}.parquet")
+    z = np.load(p["outputs"] / f"sieve_{tag}_arrays.npz")
+    arrays = {k: z[k] for k in z.files}
+
+    thr = sieve_mod.SieveThresholds.from_json(
+        (ROOT / "data/thresholds/tiger_locked_thresholds.json").read_text(encoding="utf-8"))
+    loo_stats = json.loads(
+        (ROOT / "data/thresholds/tiger_loo_calibration.json").read_text(encoding="utf-8"))
+
+    from tiger import analyzer as analyzer_mod
+    enc = _encoder(cfg)
+    evidences = analyzer_mod.analyze(df, arrays, enc, schema, thr, loo_stats, cfg, ROOT)
+    out = p["outputs"] / f"evidence_{tag}.jsonl"
+    analyzer_mod.save_evidence(evidences, out)
+    print(f"wrote {out} ({len(evidences)} evidence records)")
 
 
 def cmd_sweep(cfg: dict, args) -> None:
@@ -177,7 +208,8 @@ def cmd_sweep(cfg: dict, args) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(prog="tiger")
-    ap.add_argument("command", choices=["synthgen", "noise", "calibrate", "detect", "evaluate", "sweep"])
+    ap.add_argument("command", choices=["synthgen", "noise", "calibrate", "detect", "evaluate",
+                                        "analyze", "sweep"])
     ap.add_argument("--config", default="configs/tiger.yaml")
     ap.add_argument("--seed", type=int, default=None, help="noise seed override")
     ap.add_argument("--seeds", default="7,8,9,10,11", help="sweep: comma-separated noise seeds")
@@ -190,6 +222,7 @@ def main() -> None:
         "calibrate": cmd_calibrate,
         "detect": cmd_detect,
         "evaluate": cmd_evaluate,
+        "analyze": cmd_analyze,
         "sweep": cmd_sweep,
     }[args.command](cfg, args)
 
