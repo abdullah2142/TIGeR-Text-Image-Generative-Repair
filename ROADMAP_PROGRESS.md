@@ -5,7 +5,7 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 
 - **Branch:** `phase1-critical-fixes`
 - **Started:** 2026-07-17
-- **Last updated:** 2026-07-18 — Phase 2b done (Arbiter p(E1..E4) + γ gate); awaiting checkpoint review
+- **Last updated:** 2026-07-21 — Phase 2c done (Solver planning + Verify Eq.27–29 + end-to-end loop); **Phase 2 complete**, awaiting checkpoint review
 - **Rule of engagement:** stop at each milestone checkpoint for user review before
   the next phase begins.
 
@@ -17,8 +17,8 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 | --- | --- | --- |
 | 0. Environment + dataset bootstrap | ✅ done | — |
 | 1. Fix what is wrong (1.1–1.8) | ✅ done | **Milestone 1 reported, committed** |
-| 2. Paper alignment (Eq. 18/19/22/27–29, C) | 🔄 in progress — 2a done, 2b/2c pending | Milestone 2 (sub-checkpoints 2a ✅ / 2b / 2c) |
-| 3. Recall & coverage (probes, fusion) | 🔶 infrastructure landed early (see notes) | Milestone 3 |
+| 2. Paper alignment (Eq. 18/19/22/27–29, C) | ✅ done (2.7 cost-minimal partial) | **Milestone 2 reached** (2a ✅ / 2b ✅ / 2c ✅) |
+| 3. Recall & coverage (probes, fusion) | 🔶 3.1/3.2/3.5 landed early; 3.3/3.4/3.6 pending | Milestone 3 |
 | 4. Real-world readiness | 🔶 4.2 partially (tests); rest not started | — |
 | 5. Evaluation completeness | 🔶 5.5 groundwork (seeds, product-level CIs) | — |
 | 6. Extensions | ⛔ not started (VLM API key pending from user) | Milestone 4 |
@@ -180,10 +180,40 @@ Outputs: `data/outputs/detection_metrics_sweep.json`,
   either way); harmless by design since both route image-first and the 2c
   repair loop re-diagnoses after image replacement (review A1.3).
   Report-split seed 7 routing: 19/20 acted rows in the correct direction.
-- **2c: Solver planning + Verify** — per-repair Eq. 27–29 acceptance with ε
-  from caption-rewording noise floor, rollback, re-route, 2-pass cap (2.5),
-  cost-minimal patches (2.7).
+- **2c ✅ (2026-07-21): Solver planning + Verify + end-to-end loop.**
+  - `tiger/solver.py::plan_repair` (2.7): V2T builds a cost-minimal single-field
+    patch from the Eq. 18 suspect + fired probe (colour uses the deterministic
+    HSV estimate when confident); T2V picks the best catalogue image for the
+    row's text from a `CandidatePool` that **excludes the row's own product**,
+    so the pristine original is never handed back (F14 applied to the repair
+    operator, not just eval).
+  - `tiger/verify.py` (2.5): per-repair gates Eq. 27 (schema A'⊨C), Eq. 28
+    (c'≥τ̂ locked), Eq. 29 (Δc≥ε). **ε is the caption-rewording noise floor**
+    measured on clean calibration rows (0.0318 global; per-category 0.024–0.035)
+    — a repair must beat what a mere paraphrase moves similarity by. `independent_ok`
+    slot reserved for the VLM judge (6.4). Reported, not arbitrary.
+  - `tiger/repair.py`: closed loop (the feedback edge A1.1 said was missing) —
+    detect→analyze→route→plan→apply→verify; accept commits & re-checks next
+    pass, reject rolls back & escalates; 2-pass cap; provenance log per attempt.
+  - CLI: `calibrate` now also writes ε; new `tiger.cli repair`.
+  **End-to-end run (seed 7, 120 products):** 15 repaired, 22 escalated to human,
+  1 dismissed (a true FP), 1 acquire-image (missing). No clean row auto-corrupted.
+  - **V2T colour restoration vs noise ground truth: 5/5 = 1.000** — every
+    accepted text repair restored the *true original* colour (not re-flagging;
+    the F14-honest metric).
+  - Direction correctness among 15 repairs: **14/15**. All 22 escalations are
+    legitimate (γ-gate ambiguity, unplannable, or constraint-refused patches).
+  - **The 1 failure is the F7 finding, reproduced live:** `hats_000` is a
+    *same-category* image swap; the Arbiter misread it as a colour error and
+    V2T made the text match the wrong (on-category) image. All three CLIP gates
+    passed because similarity honestly rose 0.23→0.29. CLIP-based verification
+    structurally cannot catch a wrong-direction repair that improves CLIP
+    similarity — this is exactly why the review ranks the independent-verifier
+    ensemble (6.4) as the #1 safety item. The `independent_ok` hook is in place;
+    it needs the VLM key.
 - 2.4 ✅ schema/constraints landed in Phase 1.
+- **Partial:** 2.7 is single-field cost-minimal only (multi-field patch
+  enumeration deferred to 6.2); 2.6 policy gate ✅ in 2b.
 
 ## Phase 3 — Recall & Coverage 🔶 partially landed early
 
@@ -222,7 +252,13 @@ claim; needs second encoder + VLM judge (key pending).
 - **2026-07-18 · Checkpoint 2a** — Eq. 18/19 evidence wired and validated
   (table above). User approved continuation.
 - **2026-07-18 · Checkpoint 2b** — Arbiter trained + validated (direction
-  accuracy 0.909 among acted rows, γ gate escalating ambiguity). Awaiting
-  review before 2c.
-- *(next)* **Checkpoint 2c** — Solver planning + Verify Eq. 27–29 with
-  rollback/re-route; end-to-end repair run.
+  accuracy 0.909 among acted rows, γ gate escalating ambiguity). User approved.
+- **2026-07-21 · Checkpoint 2c (Milestone 2 reached)** — full closed-loop
+  repair cycle live; V2T colour restoration 5/5; 14/15 repairs correct
+  direction; the 1 miss reproduces the F7 wrong-direction failure that only the
+  independent verifier (6.4, needs VLM key) can catch. Every paper equation
+  (18/19/22/27–29) and the constraint set C now exists in code and is exercised
+  end-to-end. Awaiting review.
+- *(next)* **Phase 3 / Milestone 3** — recall & coverage (encoder upgrade path
+  3.3, formal decision fusion 3.4, VLM precision audits 3.6 — key-gated), then
+  baselines/ablations 5.4. Sub-checkpoints as with Phase 2.

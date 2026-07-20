@@ -113,6 +113,15 @@ def cmd_calibrate(cfg: dict, args) -> None:
     loo_out.write_text(json.dumps(loo_stats, indent=2), encoding="utf-8")
     print(f"LOO calibration -> {loo_out}")
 
+    # Eq. 29 epsilon: caption-rewording noise floor on clean rows (Phase 2.5)
+    from tiger import verify as verify_mod
+    vcal = verify_mod.calibrate_epsilon(sig, arrays, enc,
+                                        quantile=float(cfg.get("verify", {}).get("epsilon_quantile", 0.95)))
+    vout = ROOT / "data/thresholds/tiger_verify_calibration.json"
+    vout.write_text(vcal.to_json(), encoding="utf-8")
+    print(f"verify epsilon={vcal.epsilon:.4f} (by category: "
+          f"{ {k: round(v,4) for k,v in vcal.epsilon_by_category.items()} }) -> {vout}")
+
 
 def cmd_detect(cfg: dict, args) -> None:
     schema = load_schema(ROOT / cfg["data"]["schema"])
@@ -262,6 +271,72 @@ def cmd_route(cfg: dict, args) -> None:
     print(f"wrote {out}")
 
 
+def cmd_repair(cfg: dict, args) -> None:
+    """Phase 2.5: end-to-end detect->diagnose->route->plan->apply->verify cycle."""
+    import numpy as np
+
+    from tiger import arbiter as arbiter_mod
+    from tiger import repair as repair_mod
+    from tiger import verify as verify_mod
+
+    schema = load_schema(ROOT / cfg["data"]["schema"])
+    p = _paths(cfg)
+    seed = args.seed if args.seed is not None else cfg.get("noise", {}).get("seed", 7)
+    tag = _tag("report", seed)
+    noisy = pd.read_parquet(p["processed"] / f"noisy_report_{tag}.parquet")
+
+    thr = sieve_mod.SieveThresholds.from_json(
+        (ROOT / "data/thresholds/tiger_locked_thresholds.json").read_text(encoding="utf-8"))
+    loo_stats = json.loads((ROOT / "data/thresholds/tiger_loo_calibration.json").read_text(encoding="utf-8"))
+    vcal = verify_mod.load_calibration(ROOT / "data/thresholds/tiger_verify_calibration.json")
+    model = arbiter_mod.ArbiterModel.from_json(
+        (ROOT / "data/thresholds/tiger_arbiter_model.json").read_text(encoding="utf-8"))
+
+    enc = _encoder(cfg)
+    max_passes = int(cfg.get("verify", {}).get("max_passes", 2))
+    repaired, report = repair_mod.run_repair_cycle(noisy, enc, schema, thr, loo_stats, vcal,
+                                                   model, cfg, ROOT, max_passes=max_passes)
+
+    p["outputs"].mkdir(parents=True, exist_ok=True)
+    repaired.to_parquet(p["processed"] / f"repaired_report_{tag}.parquet", index=False)
+    (p["outputs"] / f"repair_report_{tag}.json").write_text(
+        json.dumps(report, indent=2, default=float), encoding="utf-8")
+
+    # ---- honest repair-quality evaluation (F14: not just re-flagging) ----
+    audit_path = p["processed"] / f"noise_audit_{tag}.csv"
+    audit = pd.read_csv(audit_path) if audit_path.exists() else pd.DataFrame()
+    truth_color = {}  # row_id -> original (correct) colour, from the noise audit
+    if not audit.empty:
+        for _, r in audit[audit["field"] == "color"].iterrows():
+            truth_color[str(r["row_id"])] = str(r["old_value"])
+
+    before = noisy.set_index("row_id")
+    after = repaired.set_index("row_id")
+    v2t_correct = v2t_total = 0
+    for rid, oc in report["outcomes"].items():
+        if oc["final_status"] != "repaired":
+            continue
+        if rid in truth_color:
+            import json as _json
+            new_color = _json.loads(after.at[rid, "attributes"]).get("color", "")
+            v2t_total += 1
+            v2t_correct += int(str(new_color) == truth_color[rid])
+
+    print("\n=== repair cycle ===")
+    print(json.dumps(report["summary"], indent=2))
+    if v2t_total:
+        print(f"\nV2T colour restoration (vs noise ground truth): "
+              f"{v2t_correct}/{v2t_total} = {v2t_correct/v2t_total:.3f}")
+
+    # before/after re-flag context (reported, NOT the acceptance criterion -- F7)
+    sig_a, _ = sieve_mod.compute_signals(repaired, enc, schema, cfg, ROOT)
+    flg_a = sieve_mod.apply_thresholds(sig_a, thr)
+    print(f"flagged before -> after: {int(len(noisy))} rows, "
+          f"{report['summary'].get('by_status', {})}; "
+          f"post-repair still flagged: {int(flg_a['flagged'].sum())}")
+    print(f"wrote {p['processed'] / f'repaired_report_{tag}.parquet'}")
+
+
 def cmd_sweep(cfg: dict, args) -> None:
     """Multi-seed evaluation (roadmap 5.5): noise -> detect -> evaluate per seed,
     then aggregate mean +/- std and pooled per-error-type recall."""
@@ -302,7 +377,7 @@ def cmd_sweep(cfg: dict, args) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(prog="tiger")
     ap.add_argument("command", choices=["synthgen", "noise", "calibrate", "detect", "evaluate",
-                                        "analyze", "train-arbiter", "route", "sweep"])
+                                        "analyze", "train-arbiter", "route", "repair", "sweep"])
     ap.add_argument("--config", default="configs/tiger.yaml")
     ap.add_argument("--seed", type=int, default=None, help="noise seed override")
     ap.add_argument("--seeds", default="7,8,9,10,11", help="sweep: comma-separated noise seeds")
@@ -319,6 +394,7 @@ def main() -> None:
         "analyze": cmd_analyze,
         "train-arbiter": cmd_train_arbiter,
         "route": cmd_route,
+        "repair": cmd_repair,
         "sweep": cmd_sweep,
     }[args.command](cfg, args)
 

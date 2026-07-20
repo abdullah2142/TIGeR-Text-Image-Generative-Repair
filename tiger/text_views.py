@@ -75,6 +75,36 @@ def full_caption(category: str, attrs: dict) -> str:
     return " ".join(parts + tail)
 
 
+def full_caption_paraphrase(category: str, attrs: dict) -> str:
+    """A meaning-preserving rewording of full_caption.
+
+    Used only to measure the caption-rewording noise floor for Eq. 29 epsilon
+    (tiger.verify): the change in image-text similarity induced by rephrasing a
+    caption that still describes the same product bounds how large a repair's
+    improvement must be to count as real rather than wording wobble.
+    """
+    a = {str(k).lower(): str(v).strip().lower() for k, v in attrs.items() if v not in (None, "", [])}
+    noun = singular(category)
+
+    descriptors = []
+    if a.get("material"):
+        descriptors.append(a["material"])
+    if a.get("color"):
+        descriptors.append(a["color"])
+
+    head = f"a product photo of a {noun}"
+    if descriptors:
+        head += " in " + " ".join(descriptors)
+
+    tail = []
+    if a.get("pattern") and a["pattern"] != "solid":
+        tail.append(f"showing a {a['pattern']} pattern")
+    if a.get("brand"):
+        tail.append(f"from {attrs.get('brand')}")
+
+    return " ".join([head] + tail)
+
+
 def title_view(title: str) -> str:
     return str(title or "").strip()
 
