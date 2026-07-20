@@ -271,6 +271,62 @@ def cmd_route(cfg: dict, args) -> None:
     print(f"wrote {out}")
 
 
+def cmd_calibrate_fusion(cfg: dict, args) -> None:
+    """Phase 3.4/3.6: tune per-signal margins to a precision floor on labelled
+    CALIBRATION-split noise runs; quarantine signals that miss the floor."""
+    import glob
+
+    from tiger import fusion as fusion_mod
+
+    schema = load_schema(ROOT / cfg["data"]["schema"])
+    p = _paths(cfg)
+    files = sorted(glob.glob(str(p["outputs"] / "sieve_cal_seed*.parquet")))
+    if not files:
+        raise FileNotFoundError("no calibration-split sieve files; run train-arbiter first")
+    labeled = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
+
+    probe_fields = cfg.get("sieve", {}).get("probes", {}).get("fields", [])
+    floor = float(cfg.get("sieve", {}).get("precision_floor", 0.85))
+    fc = fusion_mod.calibrate_fusion(labeled, probe_fields, precision_floor=floor)
+
+    out = ROOT / "data/thresholds/tiger_fusion.json"
+    out.write_text(fc.to_json(), encoding="utf-8")
+    print(f"precision floor {floor}; calibrated on {len(labeled)} labelled rows")
+    for sig, v in fc.per_signal.items():
+        q = " QUARANTINED" if v.get("quarantined") else ""
+        zm = f" z>={v['z_margin']}" if v.get("z_margin") else ""
+        print(f"  {sig:26s} precision={v.get('precision')} fired={v.get('fired')}{zm}{q}")
+    print(f"wrote {out}")
+
+
+def cmd_ablate(cfg: dict, args) -> None:
+    """Phase 5.4: baselines + ablations over report-split seeds."""
+    from tiger import fusion as fusion_mod
+    from tiger.eval import ablation as abl
+
+    p = _paths(cfg)
+    seeds = [int(s) for s in args.seeds.split(",")]
+    frames = []
+    for s in seeds:
+        f = p["outputs"] / f"sieve_seed{s}.parquet"
+        if f.exists():
+            frames.append(pd.read_parquet(f))
+    if not frames:
+        raise FileNotFoundError("no report-split sieve files; run sweep or detect first")
+
+    thr = sieve_mod.SieveThresholds.from_json(
+        (ROOT / "data/thresholds/tiger_locked_thresholds.json").read_text(encoding="utf-8"))
+    fpath = ROOT / "data/thresholds/tiger_fusion.json"
+    fusion = fusion_mod.FusionConfig.from_json(fpath.read_text(encoding="utf-8")) if fpath.exists() else None
+
+    results = abl.run_ablations(frames, thr, fusion=fusion)
+    print(f"=== baselines & ablations ({len(frames)} seeds pooled) ===")
+    print(abl.format_ablations(results))
+    out = p["outputs"] / "ablations.json"
+    out.write_text(json.dumps(results, indent=2, default=float), encoding="utf-8")
+    print(f"\nwrote {out}")
+
+
 def cmd_repair(cfg: dict, args) -> None:
     """Phase 2.5: end-to-end detect->diagnose->route->plan->apply->verify cycle."""
     import numpy as np
@@ -377,7 +433,8 @@ def cmd_sweep(cfg: dict, args) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(prog="tiger")
     ap.add_argument("command", choices=["synthgen", "noise", "calibrate", "detect", "evaluate",
-                                        "analyze", "train-arbiter", "route", "repair", "sweep"])
+                                        "analyze", "train-arbiter", "route", "repair", "sweep",
+                                        "calibrate-fusion", "ablate"])
     ap.add_argument("--config", default="configs/tiger.yaml")
     ap.add_argument("--seed", type=int, default=None, help="noise seed override")
     ap.add_argument("--seeds", default="7,8,9,10,11", help="sweep: comma-separated noise seeds")
@@ -396,6 +453,8 @@ def main() -> None:
         "route": cmd_route,
         "repair": cmd_repair,
         "sweep": cmd_sweep,
+        "calibrate-fusion": cmd_calibrate_fusion,
+        "ablate": cmd_ablate,
     }[args.command](cfg, args)
 
 

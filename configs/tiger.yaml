@@ -50,6 +50,8 @@ sieve:
     z_margin: 2.0                      # declared value must lose by >= this many
                                        # clean-calibration std-devs to fire
     min_margin_raw: 0.005              # floor to guard against degenerate stds
+  precision_floor: 0.85                # fusion (3.4): retained signals must meet
+                                       # this precision on the calibration set
 
 analyzer:
   knn_k: 8                             # Eq. 19 neighbourhood size

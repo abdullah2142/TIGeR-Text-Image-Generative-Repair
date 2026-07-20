@@ -5,7 +5,7 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 
 - **Branch:** `phase1-critical-fixes`
 - **Started:** 2026-07-17
-- **Last updated:** 2026-07-21 — Phase 2c done (Solver planning + Verify Eq.27–29 + end-to-end loop); **Phase 2 complete**, awaiting checkpoint review
+- **Last updated:** 2026-07-21 — Phase 3a done (decision fusion + baselines/ablations); awaiting checkpoint review
 - **Rule of engagement:** stop at each milestone checkpoint for user review before
   the next phase begins.
 
@@ -18,7 +18,7 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 | 0. Environment + dataset bootstrap | ✅ done | — |
 | 1. Fix what is wrong (1.1–1.8) | ✅ done | **Milestone 1 reported, committed** |
 | 2. Paper alignment (Eq. 18/19/22/27–29, C) | ✅ done (2.7 cost-minimal partial) | **Milestone 2 reached** (2a ✅ / 2b ✅ / 2c ✅) |
-| 3. Recall & coverage (probes, fusion) | 🔶 3.1/3.2/3.5 landed early; 3.3/3.4/3.6 pending | Milestone 3 |
+| 3. Recall & coverage (probes, fusion) | 🔶 3.1/3.2/3.4/3.5 + 3.6(non-VLM) done; 3.3/3.6(VLM) pending | Milestone 3 (3a ✅) |
 | 4. Real-world readiness | 🔶 4.2 partially (tests); rest not started | — |
 | 5. Evaluation completeness | 🔶 5.5 groundwork (seeds, product-level CIs) | — |
 | 6. Extensions | ⛔ not started (VLM API key pending from user) | Milestone 4 |
@@ -215,12 +215,37 @@ Outputs: `data/outputs/detection_metrics_sweep.json`,
 - **Partial:** 2.7 is single-field cost-minimal only (multi-field patch
   enumeration deferred to 6.2); 2.6 policy gate ✅ in 2b.
 
-## Phase 3 — Recall & Coverage 🔶 partially landed early
+## Phase 3 — Recall & Coverage 🔶 (sub-checkpoints)
 
-Done: 3.1 probes, 3.2 ensembling+category conditioning, 3.5 text-only checks
-(all Phase-1-adjacent, see above). Remaining: 3.3 encoder upgrade path
-(SigLIP), 3.4 formal decision-fusion calibration to a precision floor,
-3.6 VLM precision audits (**blocked on API key**).
+Landed early in Phase 1: 3.1 probes, 3.2 ensembling+category conditioning,
+3.5 text-only checks.
+
+- **3a ✅ (2026-07-21): decision fusion + quarantine + baselines/ablations.**
+  - `tiger/fusion.py` (3.4/3.6-nonVLM): tunes each probe's z-margin to the
+    smallest value meeting a precision floor (0.85) on the LABELLED calibration
+    split, and QUARANTINES any signal that can't reach the floor. Result:
+    colour and pattern probes tightened z≥2.0→z≥2.5 (precision 0.92 / 0.94),
+    material kept at z≥2.0 (1.0), nothing quarantined. `tiger.cli calibrate-fusion`;
+    `apply_thresholds(..., fusion=...)` honours per-signal margins + quarantine.
+  - `tiger/eval/ablation.py` (5.4): `tiger.cli ablate`. Baselines + ablations
+    pooled over 5 report seeds, per-error-type recall in every row:
+    | config | P | R | F1 | mutate_text | swap_image |
+    | --- | --- | --- | --- | --- | --- |
+    | random@budget | 0.31 | 0.36 | 0.33 | 0.36 | 0.36 |
+    | text_only (no CLIP) | 1.00 | 0.12 | 0.21 | 0.27 | 0.00 |
+    | global_only (CLIP sim) | 0.92 | 0.57 | 0.70 | **0.27** | 0.78 |
+    | probes_only | 0.80 | 0.76 | 0.78 | 0.60 | 0.94 |
+    | full (OR-fused) | 0.79 | 0.92 | 0.85 | 0.85 | 0.97 |
+    | **full_fusion** | **0.89** | 0.88 | **0.885** | 0.77 | 0.96 |
+  - **Key evidence:** global_only catches only 0.27 of mutate_text — the
+    review's central F2 claim (global cosine is blind to single-field edits),
+    now reproduced on our own data. The probes are what lift it. Fusion raises
+    precision 0.79→0.89 (+10pts) for a 4pt recall cost, best F1 (0.885).
+  - Fusion is available but NOT yet the default in `detect`/`repair` (keeps
+    Milestone 1 numbers comparable); flip is a one-liner when adopted.
+- **3b (next): encoder upgrade path (3.3)** — evaluate SigLIP / larger CLIP
+  behind the encoder interface, selecting by per-field probe accuracy.
+- **3.6 VLM audits + 6.4 verifier: blocked on API key.**
 
 ## Phase 4 — Real-World Readiness 🔶
 
@@ -259,6 +284,7 @@ claim; needs second encoder + VLM judge (key pending).
   independent verifier (6.4, needs VLM key) can catch. Every paper equation
   (18/19/22/27–29) and the constraint set C now exists in code and is exercised
   end-to-end. Awaiting review.
-- *(next)* **Phase 3 / Milestone 3** — recall & coverage (encoder upgrade path
-  3.3, formal decision fusion 3.4, VLM precision audits 3.6 — key-gated), then
-  baselines/ablations 5.4. Sub-checkpoints as with Phase 2.
+- **2026-07-21 · Checkpoint 3a** — decision fusion calibrated to a 0.85
+  precision floor (P 0.79→0.89, F1 0.885); baselines/ablations table
+  reproduces the F2 global-cosine ceiling (mutate_text 0.27). Awaiting review.
+- *(next)* **Checkpoint 3b** — encoder upgrade path (SigLIP eval, 3.3).

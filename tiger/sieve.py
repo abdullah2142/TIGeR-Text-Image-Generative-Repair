@@ -251,8 +251,14 @@ def calibrate(df_signals_clean: pd.DataFrame, cfg: dict, schema: Schema) -> Siev
 
 
 def apply_thresholds(df_signals: pd.DataFrame, thr: SieveThresholds,
-                     enabled_signals: list[str] | None = None) -> pd.DataFrame:
-    """Apply LOCKED thresholds; emit per-signal flags + fused `flagged`."""
+                     enabled_signals: list[str] | None = None,
+                     fusion=None) -> pd.DataFrame:
+    """Apply LOCKED thresholds; emit per-signal flags + fused `flagged`.
+
+    `fusion` (tiger.fusion.FusionConfig) optionally supplies per-signal z-margins
+    and quarantine flags calibrated to a precision floor (roadmap 3.4). Without
+    it every probe uses the single default z-margin from calibration.
+    """
     df = df_signals.copy()
     z_margin = float(thr.config.get("z_margin", 2.0))
     probe_fields = thr.config.get("probe_fields", [])
@@ -280,13 +286,18 @@ def apply_thresholds(df_signals: pd.DataFrame, thr: SieveThresholds,
         ps = ps.replace(0.0, np.nan)
         z = (df[col] - pm) / ps
         df[f"probe_{fld}_z"] = z
-        df[flag_col] = (~df[col].isna()) & (z <= -z_margin) & (df[col] < 0)
+        margin = fusion.z_margin(flag_col, z_margin) if fusion is not None else z_margin
+        df[flag_col] = (~df[col].isna()) & (z <= -margin) & (df[col] < 0)
+        if fusion is not None and fusion.is_quarantined(flag_col):
+            df[flag_col] = False  # signal failed the precision floor (roadmap 3.6)
 
     for c in SIGNAL_FLAGS:
         if c not in df.columns:
             df[c] = False
 
     active = enabled_signals if enabled_signals is not None else SIGNAL_FLAGS
+    if fusion is not None and enabled_signals is None:
+        active = [s for s in SIGNAL_FLAGS if not fusion.is_quarantined(s)]
     df["flagged"] = False
     for c in active:
         df["flagged"] |= df[c].astype(bool)
