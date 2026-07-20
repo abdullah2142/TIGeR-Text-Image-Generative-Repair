@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tiger"
+version = "0.2.0"
+description = "TIGeR: Text-Image Generative Repair -- multimodal catalogue data cleaning (Sieve, Analyzer, Arbiter, Solver, Verify)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+# Core runtime. The CLIP encoder path additionally needs torch+transformers
+# (installed via the `clip` extra); unit tests do not require them.
+dependencies = [
+    "numpy",
+    "pandas",
+    "pyarrow",
+    "pillow",
+    "scikit-learn",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+clip = ["torch", "transformers"]
+test = ["pytest"]
+dev = ["pytest", "torch", "transformers"]
+
+[project.scripts]
+tiger = "tiger.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["tiger*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

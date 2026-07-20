@@ -16,3 +16,6 @@ data/processed/
 .env.*
 
 docs/
+
+# packaging
+*.egg-info/

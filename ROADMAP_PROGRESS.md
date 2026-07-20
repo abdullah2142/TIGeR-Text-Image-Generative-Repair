@@ -5,7 +5,7 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 
 - **Branch:** `phase1-critical-fixes`
 - **Started:** 2026-07-17
-- **Last updated:** 2026-07-21 — Phase 3a done (decision fusion + baselines/ablations); awaiting checkpoint review
+- **Last updated:** 2026-07-21 — Phase 4.2 done (pyproject + README + CI); awaiting checkpoint review
 - **Rule of engagement:** stop at each milestone checkpoint for user review before
   the next phase begins.
 
@@ -19,7 +19,7 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 | 1. Fix what is wrong (1.1–1.8) | ✅ done | **Milestone 1 reported, committed** |
 | 2. Paper alignment (Eq. 18/19/22/27–29, C) | ✅ done (2.7 cost-minimal partial) | **Milestone 2 reached** (2a ✅ / 2b ✅ / 2c ✅) |
 | 3. Recall & coverage (probes, fusion) | 🔶 3.1/3.2/3.4/3.5 + 3.6(non-VLM) done; 3.3/3.6(VLM) pending | Milestone 3 (3a ✅) |
-| 4. Real-world readiness | 🔶 4.2 partially (tests); rest not started | — |
+| 4. Real-world readiness | 🔶 4.2 done (pkg/README/CI/tests); 4.1/4.3/4.4 pending | — |
 | 5. Evaluation completeness | 🔶 5.5 groundwork (seeds, product-level CIs) | — |
 | 6. Extensions | ⛔ not started (VLM API key pending from user) | Milestone 4 |
 
@@ -249,9 +249,14 @@ Landed early in Phase 1: 3.1 probes, 3.2 ensembling+category conditioning,
 
 ## Phase 4 — Real-World Readiness 🔶
 
-Done: package structure, unit tests (4.2 partial). Remaining: ABO real-data
-onboarding (4.1), robustness hardening (4.3), ANN index + scaling bench (4.4),
-CI workflow, README.
+- **4.2 ✅ (2026-07-21): engineering hygiene.** `pyproject.toml` (editable
+  install, `tiger` console entry point, `[test]`/`[clip]`/`[dev]` extras so unit
+  tests need no torch), `README.md` (architecture, pipeline, honest results +
+  caveats, paper-equation → code map), `.github/workflows/ci.yml` (pytest on
+  py3.10/3.12, test-deps only — verified in a clean venv: 68 tests pass with no
+  torch/transformers installed). egg-info gitignored.
+- Remaining: ABO real-data onboarding (4.1), robustness hardening (4.3),
+  ANN index + scaling bench (4.4).
 
 ## Phase 5 — Evaluation Completeness 🔶
 
@@ -287,4 +292,10 @@ claim; needs second encoder + VLM judge (key pending).
 - **2026-07-21 · Checkpoint 3a** — decision fusion calibrated to a 0.85
   precision floor (P 0.79→0.89, F1 0.885); baselines/ablations table
   reproduces the F2 global-cosine ceiling (mutate_text 0.27). Awaiting review.
-- *(next)* **Checkpoint 3b** — encoder upgrade path (SigLIP eval, 3.3).
+- **2026-07-21 · Checkpoint 4.2** — package/README/CI landed; clean-venv
+  install verified (68 tests, no heavy deps). Chosen over 3b because material
+  isn't visible on synthetic silhouettes (encoder upgrade only pays off on real
+  photos, 4.1), whereas reproducibility is a Must and key-independent.
+- *(next, user's choice)* candidates: **3b** SigLIP encoder eval (3.3),
+  **5.1** repair-quality metrics with independent encoder + held-out original,
+  **4.1** real-data (ABO) onboarding. VLM-gated: 3.6 audits, 6.4 verifier.
