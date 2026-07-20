@@ -45,24 +45,43 @@ class ClipEncoder:
                 z = np.load(self._cache_path)
                 self._cache = {k: z[k] for k in z.files}
 
-    # ---------- lazy model ----------
+    @property
+    def is_siglip(self) -> bool:
+        return "siglip" in self.model_name.lower()
+
+    # ---------- lazy model (family-agnostic: CLIP, SigLIP, ...) ----------
 
     def _ensure_model(self):
         if self._model is None:
             import torch  # noqa: F401
-            from transformers import CLIPModel, CLIPProcessor
+            from transformers import AutoModel, AutoProcessor
 
-            self._model = CLIPModel.from_pretrained(self.model_name)
+            self._model = AutoModel.from_pretrained(self.model_name)
             self._model.eval().to(self.device)
             try:
-                self._processor = CLIPProcessor.from_pretrained(self.model_name, use_fast=True)
+                self._processor = AutoProcessor.from_pretrained(self.model_name, use_fast=True)
             except TypeError:
-                self._processor = CLIPProcessor.from_pretrained(self.model_name)
+                self._processor = AutoProcessor.from_pretrained(self.model_name)
+
+    def _text_inputs(self, texts: list[str]):
+        # SigLIP was trained with a fixed 64-token padded context; CLIP pads to
+        # the longest in-batch sequence and truncates at 77.
+        if self.is_siglip:
+            return self._processor(text=texts, return_tensors="pt",
+                                   padding="max_length", truncation=True)
+        return self._processor(text=texts, return_tensors="pt", padding=True, truncation=True)
 
     @property
     def dim(self) -> int:
         self._ensure_model()
-        return int(getattr(self._model.config, "projection_dim", 512))
+        for attr in ("projection_dim",):
+            v = getattr(self._model.config, attr, None)
+            if v:
+                return int(v)
+        tc = getattr(self._model.config, "text_config", None)
+        if tc is not None and getattr(tc, "hidden_size", None):
+            return int(tc.hidden_size)
+        return 512
 
     # ---------- cache ----------
 
@@ -96,8 +115,7 @@ class ClipEncoder:
 
             for start in range(0, len(missing), self.batch_size):
                 chunk = missing[start: start + self.batch_size]
-                inputs = self._processor(text=[t for _, t in chunk], return_tensors="pt",
-                                         padding=True, truncation=True)
+                inputs = self._text_inputs([t for _, t in chunk])
                 inputs = {k: v.to(self.device) for k, v in inputs.items()}
                 with torch.inference_mode():
                     emb = _as_tensor(self._model.get_text_features(**inputs))

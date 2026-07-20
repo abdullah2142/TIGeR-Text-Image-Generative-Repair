@@ -137,3 +137,47 @@ def verify_repair(row_id: str, category: str, attrs_after: dict, c_before: float
 
 def load_calibration(path: str | Path) -> VerifyCalibration:
     return VerifyCalibration.from_json(Path(path).read_text(encoding="utf-8"))
+
+
+class IndependentVerifier:
+    """Second-encoder-family cross-check on a proposed repair (roadmap 6.4, partial).
+
+    Uses an independent encoder (SigLIP by default) so acceptance no longer rests
+    on the CLIP objective alone (F7). Calibration-free relative checks:
+
+      V2T: the independent encoder's own per-field probe must predict the patched
+           value for the image (it agrees the image shows that attribute).
+      T2V: the independent encoder must also score the new image above the old
+           one for the row's caption (it agrees the swap is an improvement).
+
+    A VLM judge (product-identity aware, which would catch same-category swaps
+    like hats_000) plugs in the same way once an API key is available.
+    """
+
+    def __init__(self, encoder, schema: Schema):
+        self.encoder = encoder
+        self.schema = schema
+
+    def check_v2t(self, image_path: str, category: str, field: str, value: str) -> bool:
+        domain = self.schema.domain(field)
+        if not domain:
+            return True
+        img, ok = self.encoder.encode_images([image_path])
+        if not ok[0]:
+            return True  # cannot check -> do not veto on a read failure
+        embs = []
+        for v in domain:
+            e = self.encoder.encode_texts(text_views.field_caption_templates(category, field, v)).mean(axis=0)
+            embs.append(e / (np.linalg.norm(e) + 1e-12))
+        pred = domain[int(np.argmax(np.stack(embs) @ img[0]))]
+        self.encoder.save_cache()
+        return pred == self.schema.normalize(field, value)
+
+    def check_t2v(self, old_image_path: str, new_image_path: str, caption: str) -> bool:
+        t = self.encoder.encode_texts([caption])[0]
+        imgs, ok = self.encoder.encode_images([old_image_path, new_image_path])
+        self.encoder.save_cache()
+        if not ok[1]:
+            return False  # a candidate we cannot independently read is not trusted
+        old_s = float(imgs[0] @ t) if ok[0] else -1.0
+        return float(imgs[1] @ t) > old_s

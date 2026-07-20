@@ -5,7 +5,7 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 
 - **Branch:** `phase1-critical-fixes`
 - **Started:** 2026-07-17
-- **Last updated:** 2026-07-21 — Phase 4.2 done (pyproject + README + CI); awaiting checkpoint review
+- **Last updated:** 2026-07-21 — Phase 3b done (model-agnostic encoder + SigLIP independent verifier); awaiting checkpoint review
 - **Rule of engagement:** stop at each milestone checkpoint for user review before
   the next phase begins.
 
@@ -18,10 +18,10 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 | 0. Environment + dataset bootstrap | ✅ done | — |
 | 1. Fix what is wrong (1.1–1.8) | ✅ done | **Milestone 1 reported, committed** |
 | 2. Paper alignment (Eq. 18/19/22/27–29, C) | ✅ done (2.7 cost-minimal partial) | **Milestone 2 reached** (2a ✅ / 2b ✅ / 2c ✅) |
-| 3. Recall & coverage (probes, fusion) | 🔶 3.1/3.2/3.4/3.5 + 3.6(non-VLM) done; 3.3/3.6(VLM) pending | Milestone 3 (3a ✅) |
+| 3. Recall & coverage (probes, fusion) | ✅ 3.1–3.5 done; 3.6(VLM audit) pending | Milestone 3 (3a ✅ / 3b ✅) |
 | 4. Real-world readiness | 🔶 4.2 done (pkg/README/CI/tests); 4.1/4.3/4.4 pending | — |
 | 5. Evaluation completeness | 🔶 5.5 groundwork (seeds, product-level CIs) | — |
-| 6. Extensions | ⛔ not started (VLM API key pending from user) | Milestone 4 |
+| 6. Extensions | 🔶 6.4 partial (SigLIP independent verifier); rest pending (VLM key) | Milestone 4 |
 
 ---
 
@@ -243,9 +243,34 @@ Landed early in Phase 1: 3.1 probes, 3.2 ensembling+category conditioning,
     precision 0.79→0.89 (+10pts) for a 4pt recall cost, best F1 (0.885).
   - Fusion is available but NOT yet the default in `detect`/`repair` (keeps
     Milestone 1 numbers comparable); flip is a one-liner when adopted.
-- **3b (next): encoder upgrade path (3.3)** — evaluate SigLIP / larger CLIP
-  behind the encoder interface, selecting by per-field probe accuracy.
-- **3.6 VLM audits + 6.4 verifier: blocked on API key.**
+- **3b ✅ (2026-07-21): model-agnostic encoder + SigLIP independent verifier.**
+  - `tiger/encoders.py` generalised to any CLIP/SigLIP-family model via
+    `AutoModel`/`AutoProcessor` (SigLIP text uses `padding=max_length`); CLIP
+    path regression-checked. SigLIP deps (sentencepiece, protobuf) added to the
+    `clip`/`dev` extras.
+  - **Encoder comparison (3.3, `tiger.cli compare-encoders`)** — per-field probe
+    accuracy on the clean catalogue, the review's selection criterion:
+    | field | CLIP-B/32 | SigLIP-B/16 |
+    | --- | --- | --- |
+    | color | **0.825** | 0.796 |
+    | material | 0.117 | 0.067 |
+    | pattern | 0.950 | **1.000** |
+    Verdict: SigLIP is **not** a clear upgrade on synthetic data (mixed), and
+    material is hopeless for **both** — confirming material_flip's low recall is
+    a data limitation (invisible on silhouettes), not an encoder one. CLIP stays
+    the reported baseline, as the review instructed.
+  - **Independent verifier (6.4 partial, `tiger/verify.py::IndependentVerifier`,
+    `tiger.cli repair --independent`)** — SigLIP cross-checks each repair
+    (V2T: its own colour probe must predict the patched value; T2V: it must also
+    score the new image above the old). Wired into the loop via `independent_ok`;
+    a veto → rejection → escalation. Unit-tested to both confirm and veto.
+  - **Honest finding:** on seed 7 SigLIP agreed with all 15 CLIP repairs,
+    **including the wrong-direction `hats_000`** — because the swapped image is
+    genuinely blue, so both encoders agree "text now matches image." A second
+    image-text encoder therefore **cannot** catch same-category-swap
+    wrong-direction repairs; only a product-identity-aware VLM judge (full 6.4)
+    can. The `independent_ok` hook accepts that VLM the same way once a key lands.
+- **3.6 VLM audits + full 6.4 VLM judge: still blocked on API key.**
 
 ## Phase 4 — Real-World Readiness 🔶
 
@@ -296,6 +321,11 @@ claim; needs second encoder + VLM judge (key pending).
   install verified (68 tests, no heavy deps). Chosen over 3b because material
   isn't visible on synthetic silhouettes (encoder upgrade only pays off on real
   photos, 4.1), whereas reproducibility is a Must and key-independent.
-- *(next, user's choice)* candidates: **3b** SigLIP encoder eval (3.3),
-  **5.1** repair-quality metrics with independent encoder + held-out original,
-  **4.1** real-data (ABO) onboarding. VLM-gated: 3.6 audits, 6.4 verifier.
+- **2026-07-21 · Checkpoint 3b** — encoder made model-agnostic; CLIP vs SigLIP
+  probe-accuracy comparison (CLIP kept as baseline; material limited by data not
+  encoder); SigLIP wired as independent verifier, shown to veto in tests but
+  unable to catch same-category-swap wrong-direction repairs (needs VLM). Awaiting review.
+- *(next, user's choice)* candidates: **5.1** repair-quality metrics with
+  independent-encoder CLIPScore + held-out-original protocol (SigLIP now
+  available for this), **4.1** real-data (ABO) onboarding, **4.3** robustness
+  (corrupted/EXIF images, provenance). VLM-gated: 3.6 audits, full 6.4 judge.

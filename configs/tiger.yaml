@@ -9,9 +9,15 @@ data:
   schema: "configs/schema.yaml"
 
 models:
-  clip_model_name: "openai/clip-vit-base-patch32"
+  clip_model_name: "openai/clip-vit-base-patch32"   # reported baseline (do not change)
   device: "cpu"
   batch_size: 32
+  # candidate encoders for the upgrade-path comparison (roadmap 3.3) and the
+  # independent verifier (roadmap 6.4, partial). Second family = SigLIP.
+  compare_encoders:
+    - "openai/clip-vit-base-patch32"
+    - "google/siglip-base-patch16-224"
+  independent_verifier: "google/siglip-base-patch16-224"   # "" to disable
 
 # Synthetic sample catalogue (roadmap 4.2 bundled dataset; replaces lost toy data)
 synthgen:

@@ -271,6 +271,28 @@ def cmd_route(cfg: dict, args) -> None:
     print(f"wrote {out}")
 
 
+def cmd_compare_encoders(cfg: dict, args) -> None:
+    """Phase 3.3: per-field probe accuracy per encoder on the clean catalogue."""
+    from tiger.eval import encoder_compare as ec
+
+    schema = load_schema(ROOT / cfg["data"]["schema"])
+    p = _paths(cfg)
+    df = pd.read_parquet(p["sample"] / "products.parquet")
+    fields = [f for f in cfg.get("sieve", {}).get("probes", {}).get("fields", []) if f in schema.checkable_fields()]
+    names = cfg.get("models", {}).get("compare_encoders", [cfg["models"]["clip_model_name"]])
+
+    encoders = {n: ClipEncoder(n, device=cfg["models"].get("device", "cpu"),
+                               batch_size=int(cfg["models"].get("batch_size", 32)),
+                               cache_dir=p["cache"]) for n in names}
+    results = ec.compare(encoders, df, schema, fields)
+    print(f"=== per-field probe accuracy on {len(df)} clean products ===")
+    print(ec.format_comparison(results, fields))
+    (p["outputs"] / "encoder_comparison.json").write_text(
+        json.dumps(results, indent=2, default=float), encoding="utf-8")
+    print(f"\nbaseline (reported): {cfg['models']['clip_model_name']}")
+    print(f"wrote {p['outputs'] / 'encoder_comparison.json'}")
+
+
 def cmd_calibrate_fusion(cfg: dict, args) -> None:
     """Phase 3.4/3.6: tune per-signal margins to a precision floor on labelled
     CALIBRATION-split noise runs; quarantine signals that miss the floor."""
@@ -350,8 +372,19 @@ def cmd_repair(cfg: dict, args) -> None:
 
     enc = _encoder(cfg)
     max_passes = int(cfg.get("verify", {}).get("max_passes", 2))
+
+    independent = None
+    iv_name = cfg.get("models", {}).get("independent_verifier", "")
+    if getattr(args, "independent", False) and iv_name:
+        iv_enc = ClipEncoder(iv_name, device=cfg["models"].get("device", "cpu"),
+                             batch_size=int(cfg["models"].get("batch_size", 32)),
+                             cache_dir=_paths(cfg)["cache"])
+        independent = verify_mod.IndependentVerifier(iv_enc, schema)
+        print(f"independent verifier: {iv_name}")
+
     repaired, report = repair_mod.run_repair_cycle(noisy, enc, schema, thr, loo_stats, vcal,
-                                                   model, cfg, ROOT, max_passes=max_passes)
+                                                   model, cfg, ROOT, max_passes=max_passes,
+                                                   independent=independent)
 
     p["outputs"].mkdir(parents=True, exist_ok=True)
     repaired.to_parquet(p["processed"] / f"repaired_report_{tag}.parquet", index=False)
@@ -434,11 +467,13 @@ def main() -> None:
     ap = argparse.ArgumentParser(prog="tiger")
     ap.add_argument("command", choices=["synthgen", "noise", "calibrate", "detect", "evaluate",
                                         "analyze", "train-arbiter", "route", "repair", "sweep",
-                                        "calibrate-fusion", "ablate"])
+                                        "calibrate-fusion", "ablate", "compare-encoders"])
     ap.add_argument("--config", default="configs/tiger.yaml")
     ap.add_argument("--seed", type=int, default=None, help="noise seed override")
     ap.add_argument("--seeds", default="7,8,9,10,11", help="sweep: comma-separated noise seeds")
     ap.add_argument("--split", default="report", choices=["report", "calibration"])
+    ap.add_argument("--independent", action="store_true",
+                    help="repair: cross-check each repair with the independent verifier encoder (6.4)")
     args = ap.parse_args()
 
     cfg = load_cfg(args.config)
@@ -455,6 +490,7 @@ def main() -> None:
         "sweep": cmd_sweep,
         "calibrate-fusion": cmd_calibrate_fusion,
         "ablate": cmd_ablate,
+        "compare-encoders": cmd_compare_encoders,
     }[args.command](cfg, args)
 
 

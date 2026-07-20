@@ -58,7 +58,8 @@ def _tau_for(thr: sieve_mod.SieveThresholds, category: str) -> float:
 def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema,
                      thr: sieve_mod.SieveThresholds, loo_stats: dict,
                      vcal: verify_mod.VerifyCalibration, model: arbiter_mod.ArbiterModel,
-                     cfg: dict, root: Path, max_passes: int = 2) -> tuple[pd.DataFrame, dict]:
+                     cfg: dict, root: Path, max_passes: int = 2,
+                     independent=None) -> tuple[pd.DataFrame, dict]:
     working = working.reset_index(drop=True).copy()
     outcomes: dict[str, RepairOutcome] = {}
 
@@ -131,8 +132,13 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
                     continue
                 new_caption = text_views.full_caption(category, pr.attrs)
                 c_after = float(image_emb[i] @ encoder.encode_texts([new_caption])[0])
+                indep = None
+                if independent is not None:
+                    fld = next(iter(plan.patch))
+                    indep = independent.check_v2t(str((root / flagged.at[i, "image_path"]).resolve()),
+                                                  category, fld, plan.patch[fld])
                 verdict = verify_mod.verify_repair(row_id, category, pr.attrs, c_before, c_after,
-                                                   tau, eps, schema)
+                                                   tau, eps, schema, independent_ok=indep)
                 entry = {"pass": pass_i, "direction": "V2T", "patch": plan.patch,
                          "verdict": verdict.to_dict()}
                 if verdict.accepted:
@@ -157,8 +163,13 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
                     continue
                 c_after = float(new_img_emb[0] @ caption_emb[i])
                 attrs = text_views.parse_attrs(flagged.at[i, "attributes"])
+                indep = None
+                if independent is not None:
+                    indep = independent.check_t2v(
+                        str((root / flagged.at[i, "image_path"]).resolve()),
+                        str(cand_path), text_views.full_caption(category, attrs))
                 verdict = verify_mod.verify_repair(row_id, category, attrs, c_before, c_after,
-                                                   tau, eps, schema)
+                                                   tau, eps, schema, independent_ok=indep)
                 entry = {"pass": pass_i, "direction": "T2V",
                          "candidate_product": plan.candidate_product_id,
                          "verdict": verdict.to_dict()}
