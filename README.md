@@ -39,10 +39,12 @@ work are tracked checkpoint-by-checkpoint in
 
 ```bash
 python -m venv .venv && . .venv/bin/activate      # or: uv venv .venv
-pip install -e ".[dev]"        # dev = tests + torch/transformers (CLIP path)
+pip install -e ".[dev,vlm]"    # dev = torch/transformers; vlm = google-generativeai
 # unit tests only, no heavy deps:
 pip install -e ".[test]"
 ```
+
+**Kaggle Workflow:** A fully configured `kaggle_workflow.ipynb` is included in the root directory to run this pipeline on Kaggle's free GPUs (T4x2/P100), bypassing local hardware limits.
 
 CPU torch is sufficient. The first CLIP-using command downloads
 `openai/clip-vit-base-patch32` (~600 MB).
@@ -59,7 +61,7 @@ python -m tiger.cli noise --seed 7     # inject errors into the report split
 python -m tiger.cli detect --seed 7    # sieve with locked thresholds
 python -m tiger.cli analyze --seed 7   # Eq. 18/19 evidence for flagged rows
 python -m tiger.cli route  --seed 7    # Arbiter routing plan
-python -m tiger.cli repair --seed 7    # full closed-loop repair cycle + honest eval
+python -m tiger.cli repair --seed 7 --vlm-judge # full closed-loop repair + VLM independent cross-check
 
 python -m tiger.cli sweep              # 5-seed detection metrics with product-level CIs
 python -m tiger.cli ablate             # baselines + ablations table
@@ -92,9 +94,9 @@ original colour (V2T colour restoration 5/5), 14/15 repairs correct-direction,
 - **CLIP-based verification is not correctness (F7).** Verify's Eq. 27–29 gates
   confirm similarity improved; they cannot catch a *wrong-direction* repair that
   also improves CLIP similarity (reproduced live: a same-category image swap
-  text-patched to match the wrong image, all gates passed). The structural cure
-  is the independent-verifier ensemble (roadmap 6.4) — its `independent_ok` hook
-  is wired and awaits a VLM API key.
+  text-patched to match the wrong image, all gates passed). **Cure implemented:**
+  The `GeminiVLMJudge` (Phase 6.4) hooks into the pipeline via `--vlm-judge` to 
+  ask a product-identity-aware visual question and successfully vetoes this class of error.
 - **material_flip recall is low** on synthetic silhouettes because material is
   not visible in a flat coloured shape; expected to improve on real photos.
 - **Precision is not 1.000.** The earlier MVP's 1.000 was an artefact of

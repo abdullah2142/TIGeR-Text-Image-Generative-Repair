@@ -24,8 +24,10 @@ dependencies = [
 [project.optional-dependencies]
 # SigLIP's tokenizer needs sentencepiece + protobuf; CLIP does not.
 clip = ["torch", "transformers", "sentencepiece", "protobuf"]
+# Gemini VLM judge (roadmap 6.4) — free-tier API, no GPU required.
+vlm = ["google-generativeai>=0.7"]
 test = ["pytest"]
-dev = ["pytest", "torch", "transformers", "sentencepiece", "protobuf"]
+dev = ["pytest", "torch", "transformers", "sentencepiece", "protobuf", "google-generativeai>=0.7"]
 
 [project.scripts]
 tiger = "tiger.cli:main"

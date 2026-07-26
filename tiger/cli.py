@@ -375,7 +375,22 @@ def cmd_repair(cfg: dict, args) -> None:
 
     independent = None
     iv_name = cfg.get("models", {}).get("independent_verifier", "")
-    if getattr(args, "independent", False) and iv_name:
+    if getattr(args, "vlm_judge", False):
+        # Gemini VLM judge (roadmap 6.4): product-identity-aware, catches
+        # same-category wrong-direction repairs that encoder-only checks miss.
+        from tiger.vlm_judge import GeminiVLMJudge
+        _judge = GeminiVLMJudge.from_env(verbose=True)
+        print(f"VLM judge: {_judge.model_name} (Gemini)")
+
+        class _JudgeAdapter:
+            """Wrap GeminiVLMJudge to match IndependentVerifier's call interface."""
+            def check_v2t(self, image_path, category, field, value):
+                return _judge.check_v2t(image_path, category, field, value)
+            def check_t2v(self, old_image_path, new_image_path, caption):
+                return _judge.check_t2v(old_image_path, new_image_path, caption)
+
+        independent = _JudgeAdapter()
+    elif getattr(args, "independent", False) and iv_name:
         iv_enc = ClipEncoder(iv_name, device=cfg["models"].get("device", "cpu"),
                              batch_size=int(cfg["models"].get("batch_size", 32)),
                              cache_dir=_paths(cfg)["cache"])
@@ -474,6 +489,8 @@ def main() -> None:
     ap.add_argument("--split", default="report", choices=["report", "calibration"])
     ap.add_argument("--independent", action="store_true",
                     help="repair: cross-check each repair with the independent verifier encoder (6.4)")
+    ap.add_argument("--vlm-judge", action="store_true",
+                    help="repair: cross-check each repair with the Gemini VLM judge (6.4, reads GEMINI_API_KEY from .env)")
     args = ap.parse_args()
 
     cfg = load_cfg(args.config)

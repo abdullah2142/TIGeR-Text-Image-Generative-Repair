@@ -27,7 +27,8 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 
 ## Context and decisions taken (with user approval)
 
-1. **Original toy dataset is lost.** It lived on `G:\Uni Work\tiger\` (another
+1. **Hardware Limitations:** The local environment is insufficient for the heavy CLIP inference required (runs taking > 1 hour on CPU). To unlock Phase 4 (real data) and Phase 6 (generative models), **all execution is being ported to Kaggle** (free T4x2/P100 GPUs) via a cell-by-cell notebook workflow.
+2. **Original toy dataset is lost.** It lived on `G:\Uni Work\tiger\` (another
    machine) and `data/` here was empty. Decision: generate a *seeded synthetic
    catalogue* bundled in the repo (`data/sample/`, 240 products, 4 categories,
    rendered studio images). Old numbers are therefore not directly comparable —
