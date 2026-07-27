@@ -109,7 +109,7 @@ class GeminiVLMJudge:
     def __init__(
         self,
         api_key: str | None = None,
-        model_name: str = "gemini-3.5-flash",
+        model_name: str = "gemini-3.5-flash-lite",
         rpm_limit: int = 15,
         verbose: bool = False,
     ):
@@ -143,7 +143,10 @@ class GeminiVLMJudge:
     # rate limiter
     # ------------------------------------------------------------------
 
-    def _wait(self) -> None:
+    def _wait(self, override_gap: float = 0.0) -> None:
+        if override_gap > 0:
+            time.sleep(override_gap)
+            return
         elapsed = time.monotonic() - self._last_call
         gap = self._min_interval - elapsed
         if gap > 0:
@@ -151,21 +154,28 @@ class GeminiVLMJudge:
 
     def _call(self, parts: list) -> bool:
         """Send parts to Gemini, return True if the answer is YES."""
-        self._wait()
-        try:
-            resp = self._model.generate_content(parts)
-            self._last_call = time.monotonic()
-            text = resp.text.strip().upper()
-            answer = text.startswith("YES")
-            if self.verbose:
-                print(f"[GeminiVLMJudge] raw='{resp.text.strip()}' -> {answer}")
-            return answer
-        except Exception as exc:  # noqa: BLE001
-            # On API error, do NOT veto — avoid blocking all repairs on a transient error.
-            # Log and return True (pass-through) so only our structural gates decide.
-            print(f"[GeminiVLMJudge] API error (non-fatal, pass-through): {exc}")
-            self._last_call = time.monotonic()
-            return True
+        for attempt in range(3):
+            self._wait()
+            try:
+                resp = self._model.generate_content(parts)
+                self._last_call = time.monotonic()
+                text = resp.text.strip().upper()
+                answer = text.startswith("YES")
+                if self.verbose:
+                    print(f"[GeminiVLMJudge] raw='{resp.text.strip()}' -> {answer}")
+                return answer
+            except Exception as exc:  # noqa: BLE001
+                err_str = str(exc)
+                if "429" in err_str and attempt < 2:
+                    print(f"[GeminiVLMJudge] 429 Rate Limit hit. Retrying in 20s... (attempt {attempt+1}/3)")
+                    self._last_call = time.monotonic()
+                    self._wait(override_gap=20.0)
+                    continue
+                # On other API error (or out of retries), do NOT veto — avoid blocking all repairs on a transient error.
+                # Log and return True (pass-through) so only our structural gates decide.
+                print(f"[GeminiVLMJudge] API error (non-fatal, pass-through): {exc}")
+                self._last_call = time.monotonic()
+                return True
 
     # ------------------------------------------------------------------
     # public interface  (mirrors IndependentVerifier in verify.py)
