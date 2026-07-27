@@ -138,9 +138,9 @@ def cmd_detect(cfg: dict, args) -> None:
     flagged = sieve_mod.apply_thresholds(sig, thr)
 
     import numpy as np
+    p["outputs"].mkdir(parents=True, exist_ok=True)
     np.savez_compressed(p["outputs"] / f"sieve_{tag}_arrays.npz", **arrays)
 
-    p["outputs"].mkdir(parents=True, exist_ok=True)
     out = p["outputs"] / f"sieve_{tag}.parquet"
     flagged.to_parquet(out, index=False)
     print(f"wrote {out}")
