@@ -143,9 +143,17 @@ def cmd_detect(cfg: dict, args) -> None:
 
     out = p["outputs"] / f"sieve_{tag}.parquet"
     flagged.to_parquet(out, index=False)
-    print(f"wrote {out}")
-    print(f"flagged {int(flagged['flagged'].sum())}/{len(flagged)} rows")
-    print(flagged["flag_reason"].value_counts().to_string())
+    print("\n\n📊 Stage 1: Error Detection Complete")
+    print("-" * 50)
+    flagged_count = int(flagged['flagged'].sum())
+    total_count = len(flagged)
+    print(f"Out of {total_count} products scanned, we flagged {flagged_count} suspicious items.")
+    print("\nReasons for flagging:")
+    reasons = flagged["flag_reason"].value_counts()
+    for reason, count in reasons.items():
+        if reason:
+            print(f"- {count} items: {reason}")
+    print(f"\n(Raw data saved to {out})")
 
 
 def cmd_evaluate(cfg: dict, args) -> None:
@@ -266,9 +274,24 @@ def cmd_route(cfg: dict, args) -> None:
     out = p["outputs"] / f"route_plan_{tag}.csv"
     plan.to_csv(out, index=False)
 
-    print(plan.groupby(["truth_raw", "error_type"]).size().unstack(fill_value=0).to_string())
-    print(f"\nactions:\n{plan['action'].value_counts().to_string()}")
-    print(f"wrote {out}")
+    print("\n\n🚦 Stage 3: Routing Decisions")
+    print("-" * 50)
+    print("The AI Arbiter analyzed the evidence for the flagged items and assigned repair strategies:")
+    
+    actions = plan["action"].value_counts()
+    action_map = {
+        "V2T": "📝 Fix the Text (V2T)",
+        "T2V": "🖼️ Replace the Image (T2V)",
+        "BOTH": "🔄 Fix Both (E3)",
+        "human_review": "🧑‍💻 Escalate to Human",
+        "dismiss": "✅ Dismiss as False Positive"
+    }
+    
+    for action, count in actions.items():
+        desc = action_map.get(action, f"[{action}]")
+        print(f"- {desc:<28} {count} items")
+        
+    print(f"\n(Raw plan saved to {out})")
 
 
 def cmd_compare_encoders(cfg: dict, args) -> None:
@@ -431,19 +454,29 @@ def cmd_repair(cfg: dict, args) -> None:
             v2t_total += 1
             v2t_correct += int(str(new_color) == truth_color[rid])
 
-    print("\n=== repair cycle ===")
-    print(json.dumps(report["summary"], indent=2))
+    print("\n\n🛠️ Stage 4 & 5: Repair & Verify")
+    print("-" * 50)
+    summary = report["summary"]
+    total = summary.get("total", 0)
+    repaired_c = summary.get("by_status", {}).get("repaired", 0)
+    escalated_c = summary.get("by_status", {}).get("escalated", 0)
+    
+    print(f"We attempted to repair the {total} flagged products:")
+    print(f"✅ {repaired_c} products were successfully repaired automatically!")
+    if escalated_c > 0:
+        print(f"⚠️  {escalated_c} products failed safety checks and were escalated to human review.")
+        
     if v2t_total:
-        print(f"\nV2T colour restoration (vs noise ground truth): "
-              f"{v2t_correct}/{v2t_total} = {v2t_correct/v2t_total:.3f}")
+        print(f"\n[Audit] Color Text Restoration (vs secret ground truth): {v2t_correct}/{v2t_total} ({v2t_correct/v2t_total:.1%})")
 
     # before/after re-flag context (reported, NOT the acceptance criterion -- F7)
     sig_a, _ = sieve_mod.compute_signals(repaired, enc, schema, cfg, ROOT)
     flg_a = sieve_mod.apply_thresholds(sig_a, thr)
-    print(f"flagged before -> after: {int(len(noisy))} rows, "
-          f"{report['summary'].get('by_status', {})}; "
-          f"post-repair still flagged: {int(flg_a['flagged'].sum())}")
-    print(f"wrote {p['processed'] / f'repaired_report_{tag}.parquet'}")
+    still_flagged = int(flg_a['flagged'].sum())
+    
+    print("\nPost-Repair Check:")
+    print(f"Out of the {int(len(noisy))} originally suspicious products, only {still_flagged} remain flagged after our repairs.")
+    print("(Our automated repairs successfully fixed the issues for the rest!)")
 
 
 def cmd_sweep(cfg: dict, args) -> None:

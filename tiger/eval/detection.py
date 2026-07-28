@@ -111,26 +111,40 @@ def evaluate(df: pd.DataFrame, n_bootstrap: int = 2000, seed: int = 0) -> dict:
 def format_report(res: dict) -> str:
     lines = []
     c = res["confusion"]
-    lines.append(f"rows={res['n_rows']}  products={res['n_products']}")
-    lines.append(f"TP={c['tp']} FP={c['fp']} TN={c['tn']} FN={c['fn']}")
-    pw, rw = res["precision_wilson95"], res["recall_wilson95"]
-    lines.append(f"precision={res['precision']:.3f} [{pw[0]:.3f},{pw[1]:.3f}]  "
-                 f"recall={res['recall']:.3f} [{rw[0]:.3f},{rw[1]:.3f}]  f1={res['f1']:.3f}")
-    if "bootstrap95_product_level" in res:
-        b = res["bootstrap95_product_level"]
-        lines.append(f"product-level bootstrap95: P=[{b['precision'][0]:.3f},{b['precision'][1]:.3f}] "
-                     f"R=[{b['recall'][0]:.3f},{b['recall'][1]:.3f}] F1=[{b['f1'][0]:.3f},{b['f1'][1]:.3f}]")
-    lines.append("recall by error type:")
-    for label, v in sorted(res["recall_by_label"].items()):
-        w = v["wilson95"]
-        lines.append(f"  {label:15s} {v['caught']:3d}/{v['total']:<3d} = {v['recall']:.3f} [{w[0]:.3f},{w[1]:.3f}]")
-    lines.append("recall by subtype:")
-    for sub, v in sorted(res["recall_by_subtype"].items()):
-        lines.append(f"  {sub:22s} {v['caught']:3d}/{v['total']:<3d} = {v['recall']:.3f}")
-    lines.append("per-signal precision:")
-    for sig, v in res["signal_precision"].items():
-        if v["fired"]:
-            lines.append(f"  {sig:26s} fired={v['fired']:3d}  precision={v['precision']:.3f}")
-        else:
-            lines.append(f"  {sig:26s} fired=  0")
+    
+    total_products = res['n_products']
+    flagged = c['tp'] + c['fp']
+    missed = c['fn']
+    false_alarms = c['fp']
+    
+    lines.append("\n\n📊 Detection Performance Report")
+    lines.append("-" * 50)
+    lines.append(f"Out of {total_products} products, we flagged {flagged} suspicious items.")
+    lines.append(f"(We successfully caught {c['tp']} real errors, missed {missed}, and accidentally flagged {false_alarms} clean products).")
+    
+    lines.append("\nOverall Accuracy:")
+    lines.append(f"- Precision: {res['precision']*100:.1f}% (When we flag an error, we are correct {res['precision']*100:.1f}% of the time)")
+    lines.append(f"- Recall:    {res['recall']*100:.1f}% (We successfully caught {res['recall']*100:.1f}% of all real errors)")
+    
+    lines.append("\nHow well did we catch specific errors?")
+    
+    # Map raw subtype names to readable strings
+    subtype_map = {
+        "swap_image": "Wrong Image Entirely",
+        "swap_image_same_category": "Wrong Image (Same Category)",
+        "color_flip": "Wrong Color",
+        "near_color_flip": "Slightly Wrong Color",
+        "material_flip": "Wrong Material",
+        "attribute_drop": "Missing Attribute",
+        "title_contradiction": "Title/Attribute Mismatch",
+        "missing_image": "Missing Image",
+        "mixed": "Mixed (Multiple Errors)"
+    }
+    
+    for sub, v in sorted(res.get("recall_by_subtype", {}).items()):
+        if sub == "clean":
+            continue
+        readable_name = subtype_map.get(sub, sub)
+        lines.append(f"- {readable_name:<28}: Caught {v['caught']}/{v['total']} ({v['recall']*100:.1f}%)")
+        
     return "\n".join(lines)
