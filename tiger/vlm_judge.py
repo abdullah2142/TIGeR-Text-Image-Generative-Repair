@@ -119,6 +119,9 @@ class GeminiVLMJudge:
             raise EnvironmentError(
                 "GEMINI_API_KEY not found. Set it in .env or pass api_key= explicitly."
             )
+        import warnings
+        warnings.filterwarnings("ignore", category=FutureWarning, module="wrapt")
+
         try:
             import google.generativeai as genai  # type: ignore
         except ImportError as exc:

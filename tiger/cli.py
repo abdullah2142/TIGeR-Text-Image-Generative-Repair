@@ -483,12 +483,31 @@ def cmd_sweep(cfg: dict, args) -> None:
     print(f"\nwrote {out}")
 
 
+def cmd_generate(cfg: dict, args) -> None:
+    """Standalone generative model test."""
+    from tiger.generator import StableDiffusionGenerator
+    import sys
+    from pathlib import Path
+    
+    if not args.caption:
+        print("Error: --caption is required for generate command")
+        sys.exit(1)
+        
+    out_path = Path(args.output) if args.output else Path("data/outputs/generated_test.jpg")
+    generator = StableDiffusionGenerator(device=cfg["models"].get("device", "cuda"))
+    print(f"Generating image for caption: '{args.caption}'")
+    generator.generate(args.caption, out_path)
+    print(f"Saved to {out_path}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(prog="tiger")
     ap.add_argument("command", choices=["synthgen", "noise", "calibrate", "detect", "evaluate",
                                         "analyze", "train-arbiter", "route", "repair", "sweep",
-                                        "calibrate-fusion", "ablate", "compare-encoders"])
+                                        "calibrate-fusion", "ablate", "compare-encoders", "generate"])
     ap.add_argument("--config", default="configs/tiger.yaml")
+    ap.add_argument("--caption", type=str, help="caption for the standalone generate command")
+    ap.add_argument("--output", type=str, help="output path for the standalone generate command")
     ap.add_argument("--seed", type=int, default=None, help="noise seed override")
     ap.add_argument("--seeds", default="7,8,9,10,11", help="sweep: comma-separated noise seeds")
     ap.add_argument("--split", default="report", choices=["report", "calibration"])
@@ -515,6 +534,7 @@ def main() -> None:
         "calibrate-fusion": cmd_calibrate_fusion,
         "ablate": cmd_ablate,
         "compare-encoders": cmd_compare_encoders,
+        "generate": cmd_generate,
     }[args.command](cfg, args)
 
 

@@ -5,7 +5,15 @@ from pathlib import Path
 class StableDiffusionGenerator:
     def __init__(self, device: str = "cuda", model_id: str = "runwayml/stable-diffusion-v1-5"):
         try:
+            import warnings
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            
             from diffusers import StableDiffusionPipeline
+            import diffusers
+            import transformers
+            diffusers.logging.set_verbosity_error()
+            transformers.logging.set_verbosity_error()
+            
             import torch
         except ImportError:
             raise ImportError("Please install diffusers to use generative fallback: pip install -e '.[gen]'")
