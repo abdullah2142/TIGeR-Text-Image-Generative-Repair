@@ -59,7 +59,7 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
                      thr: sieve_mod.SieveThresholds, loo_stats: dict,
                      vcal: verify_mod.VerifyCalibration, model: arbiter_mod.ArbiterModel,
                      cfg: dict, root: Path, max_passes: int = 2,
-                     independent=None) -> tuple[pd.DataFrame, dict]:
+                     independent=None, generator=None) -> tuple[pd.DataFrame, dict]:
     working = working.reset_index(drop=True).copy()
     outcomes: dict[str, RepairOutcome] = {}
 
@@ -109,7 +109,8 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
                 continue
 
             plan = solver_mod.plan_repair(ev, route, flagged.loc[i].to_dict(), pool,
-                                          cat_ids, caption_emb[i], schema)
+                                          cat_ids, caption_emb[i], schema,
+                                          generator=generator, root_path=root)
             if not plan.plannable:
                 finalize(row_id, "escalated", pass_i,
                          {"pass": pass_i, "action": "human_review",

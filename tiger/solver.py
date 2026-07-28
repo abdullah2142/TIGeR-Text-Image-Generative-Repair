@@ -164,7 +164,7 @@ def _corrected_value(field: str, ev: dict) -> str:
 
 def plan_repair(ev: dict, route, sieve_row: dict, pool: CandidatePool,
                 cat_ids: np.ndarray, caption_emb: np.ndarray, schema: Schema,
-                same_category_only: bool = True) -> RepairPlan:
+                same_category_only: bool = True, generator=None, root_path=None) -> RepairPlan:
     """Build a concrete repair payload from evidence + route."""
     row_id = str(ev.get("row_id", ""))
     category = str(ev.get("category", ""))
@@ -196,7 +196,20 @@ def plan_repair(ev: dict, route, sieve_row: dict, pool: CandidatePool,
                                  category_ids=cat_ids if same_category_only else None,
                                  category=category if same_category_only else None)
         if res is None:
-            return RepairPlan(row_id, "T2V", plannable=False, notes="no candidate image in pool")
+            if generator is not None and root_path is not None:
+                # Generative Fallback
+                caption = str(sieve_row.get("canonical_text", ""))
+                if not caption:
+                    caption = str(sieve_row.get("title", ""))
+                gen_path = root_path / "data" / "sample" / "images" / "generated" / f"{row_id}.jpg"
+                generator.generate(caption, gen_path)
+                rel_path = f"data/sample/images/generated/{row_id}.jpg"
+                
+                return RepairPlan(row_id, "T2V", candidate_product_id="GENERATED",
+                                  candidate_image_path=rel_path, cost=2.0,
+                                  notes="T2V fallback: synthesized new image from text")
+            else:
+                return RepairPlan(row_id, "T2V", plannable=False, notes="no candidate image in pool")
         j, _ = res
         return RepairPlan(row_id, "T2V",
                           candidate_image_path=str(pool.image_paths[j]),

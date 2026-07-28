@@ -26,8 +26,10 @@ dependencies = [
 clip = ["torch", "transformers", "sentencepiece", "protobuf"]
 # Gemini VLM judge (roadmap 6.4) — free-tier API, no GPU required.
 vlm = ["google-generativeai>=0.7"]
+# Stable Diffusion fallback (roadmap 6.5)
+gen = ["diffusers", "accelerate"]
 test = ["pytest"]
-dev = ["pytest", "torch", "transformers", "sentencepiece", "protobuf", "google-generativeai>=0.7"]
+dev = ["pytest", "torch", "transformers", "sentencepiece", "protobuf", "google-generativeai>=0.7", "diffusers", "accelerate"]
 
 [project.scripts]
 tiger = "tiger.cli:main"

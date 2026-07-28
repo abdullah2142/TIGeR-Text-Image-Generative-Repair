@@ -397,9 +397,14 @@ def cmd_repair(cfg: dict, args) -> None:
         independent = verify_mod.IndependentVerifier(iv_enc, schema)
         print(f"independent verifier: {iv_name}")
 
+    generator = None
+    if getattr(args, "generative_fallback", False):
+        from tiger.generator import StableDiffusionGenerator
+        generator = StableDiffusionGenerator(device=cfg["models"].get("device", "cuda"))
+        
     repaired, report = repair_mod.run_repair_cycle(noisy, enc, schema, thr, loo_stats, vcal,
                                                    model, cfg, ROOT, max_passes=max_passes,
-                                                   independent=independent)
+                                                   independent=independent, generator=generator)
 
     p["outputs"].mkdir(parents=True, exist_ok=True)
     repaired.to_parquet(p["processed"] / f"repaired_report_{tag}.parquet", index=False)
@@ -491,6 +496,8 @@ def main() -> None:
                     help="repair: cross-check each repair with the independent verifier encoder (6.4)")
     ap.add_argument("--vlm-judge", action="store_true",
                     help="repair: cross-check each repair with the Gemini VLM judge (6.4, reads GEMINI_API_KEY from .env)")
+    ap.add_argument("--generative-fallback", action="store_true",
+                    help="repair: use Stable Diffusion to generate missing images (requires diffusers)")
     args = ap.parse_args()
 
     cfg = load_cfg(args.config)
