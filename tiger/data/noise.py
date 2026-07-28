@@ -260,7 +260,7 @@ def inject(df_clean: pd.DataFrame, schema: Schema, noise_cfg: dict) -> NoiseResu
                 df.loc[idx] = trial  # restore before re-draw
             if rec is None:
                 continue  # could not inject after redraws; row stays clean
-
+                
             df.at[idx, "noise_label"] = rec.label
             df.at[idx, "noise_subtype"] = rec.subtype
             df.at[idx, "noise_field"] = rec.field
@@ -269,6 +269,24 @@ def inject(df_clean: pd.DataFrame, schema: Schema, noise_cfg: dict) -> NoiseResu
             df.at[idx, "noise_donor_row_id"] = rec.donor_row_id
             df.at[idx, "noise_donor_product_id"] = rec.donor_product_id
             audit_records.append(rec)
+            
+    # Force corruption of the unique product
+    forced_idx = df[df["product_id"] == "forced_gen_000"].index
+    if len(forced_idx) > 0:
+        idx = forced_idx[0]
+        row = df.loc[idx]
+        df.at[idx, "is_image_missing"] = True
+        df.at[idx, "noise_label"] = "missing_image"
+        df.at[idx, "noise_subtype"] = "missing_image"
+        df.at[idx, "noise_field"] = "image"
+        df.at[idx, "noise_old_value"] = str(row["image_path"])
+        df.at[idx, "noise_new_value"] = ""
+        df.at[idx, "noise_donor_row_id"] = ""
+        df.at[idx, "noise_donor_product_id"] = ""
+        audit_records.append(InjectionRecord(
+            str(row["row_id"]), str(row["product_id"]), "missing_image",
+            "missing_image", field="image", old_value=str(row["image_path"]), new_value=""
+        ))
 
     # ---------- self-verification pass: no no-op noise, no corrupted cleans ----------
     check_cols = ["title", "attributes", "canonical_text", "image_path", "is_image_missing"]

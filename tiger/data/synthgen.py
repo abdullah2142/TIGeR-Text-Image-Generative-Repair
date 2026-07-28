@@ -229,6 +229,25 @@ def generate(
                 "is_image_missing": False,
                 "is_text_missing": False,
             })
+            
+    # Force a completely unique product to guarantee a Generative Fallback path
+    unique_id = "forced_gen_000"
+    unique_img = f"{out_dir}/images/{unique_id}.jpg"
+    render_product_image(images_dir / f"{unique_id}.jpg", "shirts", "magenta", "solid", rng, size=image_size)
+    
+    unique_attrs = {"color": "magenta", "material": "velvet", "pattern": "solid", "size": "L", "brand": "GenerativeLabs"}
+    unique_title = "Magenta Velvet Vintage spacesuit"
+    rows.append({
+        "row_id": unique_id,
+        "product_id": unique_id,
+        "title": unique_title,
+        "category": "shirts",
+        "attributes": json.dumps(unique_attrs, ensure_ascii=False),
+        "canonical_text": text_views.canonical_text(unique_title, "shirts", unique_attrs),
+        "image_path": unique_img,
+        "is_image_missing": False,
+        "is_text_missing": False,
+    })
 
     df = pd.DataFrame(rows)
 
