@@ -326,7 +326,9 @@ claim; needs second encoder + VLM judge (key pending).
   probe-accuracy comparison (CLIP kept as baseline; material limited by data not
   encoder); SigLIP wired as independent verifier, shown to veto in tests but
   unable to catch same-category-swap wrong-direction repairs (needs VLM). Awaiting review.
+- **2026-07-28 · Checkpoint 6.4** — Integrated Gemini VLM Judge (Phase 6.4) to catch wrong-direction T2V/V2T repairs that encoder-only signals miss.
+- **2026-07-28 · Checkpoint 6.5** — Implemented Generative Fallback (Phase 6.5) using Stable Diffusion v1.5 to synthesize replacement images when the catalogue lacks a suitable candidate. Added `tiger/generator.py` and wired into `solver.py` via `plan_repair()`.
+- **2026-07-28 · UX Overhaul** — Refactored terminal outputs across the pipeline to replace debug matrices and JSON dumps with layman-friendly, emoji-guided English summaries. Added a standalone `generate` CLI command for testing.
 - *(next, user's choice)* candidates: **5.1** repair-quality metrics with
-  independent-encoder CLIPScore + held-out-original protocol (SigLIP now
-  available for this), **4.1** real-data (ABO) onboarding, **4.3** robustness
-  (corrupted/EXIF images, provenance). VLM-gated: 3.6 audits, full 6.4 judge.
+  independent-encoder CLIPScore + held-out-original protocol, **4.1** real-data (ABO) onboarding, **4.3** robustness
+  (corrupted/EXIF images, provenance).

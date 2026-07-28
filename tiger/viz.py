@@ -37,6 +37,19 @@ def plot_repair_stages(seed: int = 7, out_file: str = None):
         grouped[subtype].append(pid)
         
     pids = []
+    
+    # Priority 1: Force include the Generative Fallback image if one exists
+    for pid in repaired_pids:
+        log = report.get("outcomes", {}).get(pid, {}).get("log", [])
+        if any(entry.get("candidate_product") == "GENERATED" for entry in log):
+            pids.append(pid)
+            # Remove from grouped so we don't duplicate
+            for sub, lst in grouped.items():
+                if pid in lst:
+                    lst.remove(pid)
+            break
+            
+    # Priority 2: Fill the rest up to 6 with diverse error types
     while len(pids) < 6 and grouped:
         for subtype in list(grouped.keys()):
             if grouped[subtype]:
