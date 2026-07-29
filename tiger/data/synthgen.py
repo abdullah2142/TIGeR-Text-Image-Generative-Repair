@@ -44,6 +44,7 @@ COLOR_RGB = {
     "brown": (125, 82, 48),
     "orange": (235, 130, 40),
     "gray": (128, 130, 132),
+    "magenta": (255, 0, 255),
 }
 
 MATERIALS = {
@@ -256,7 +257,7 @@ def generate(
     rng.shuffle(products)
     n_cal = int(len(products) * calibration_fraction)
     cal_set = set(products[:n_cal])
-    df["split"] = df["product_id"].map(lambda p: "calibration" if p in cal_set else "report")
+    df["split"] = df["product_id"].map(lambda p: "report" if p == "forced_gen_000" else ("calibration" if p in cal_set else "report"))
 
     df.to_parquet(out / "products.parquet", index=False)
     meta = {
