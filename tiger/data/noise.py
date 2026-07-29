@@ -270,22 +270,24 @@ def inject(df_clean: pd.DataFrame, schema: Schema, noise_cfg: dict) -> NoiseResu
             df.at[idx, "noise_donor_product_id"] = rec.donor_product_id
             audit_records.append(rec)
             
-    # Force corruption of the unique product
+    # Force corruption of the unique product (clear image_path + set missing flag)
     forced_idx = df[df["product_id"] == "forced_gen_000"].index
     if len(forced_idx) > 0:
         idx = forced_idx[0]
         row = df.loc[idx]
+        old_path = str(row["image_path"])
+        df.at[idx, "image_path"] = ""          # must be blanked so self-verify sees a change
         df.at[idx, "is_image_missing"] = True
         df.at[idx, "noise_label"] = "missing_image"
         df.at[idx, "noise_subtype"] = "missing_image"
-        df.at[idx, "noise_field"] = "image"
-        df.at[idx, "noise_old_value"] = str(row["image_path"])
+        df.at[idx, "noise_field"] = "image_path"
+        df.at[idx, "noise_old_value"] = old_path
         df.at[idx, "noise_new_value"] = ""
         df.at[idx, "noise_donor_row_id"] = ""
         df.at[idx, "noise_donor_product_id"] = ""
         audit_records.append(InjectionRecord(
             str(row["row_id"]), str(row["product_id"]), "missing_image",
-            "missing_image", field="image", old_value=str(row["image_path"]), new_value=""
+            "missing_image", field="image_path", old_value=old_path, new_value=""
         ))
 
     # ---------- self-verification pass: no no-op noise, no corrupted cleans ----------

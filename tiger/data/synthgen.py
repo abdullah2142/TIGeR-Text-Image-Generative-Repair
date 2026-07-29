@@ -231,20 +231,23 @@ def generate(
                 "is_text_missing": False,
             })
             
-    # Force a completely unique product to guarantee a Generative Fallback path
+    # Force a completely unique product to guarantee a Generative Fallback path.
+    # It uses the sentinel category "uniforms" which has zero other items in the
+    # catalogue, so CandidatePool.best_for_text() will always return None and
+    # the pipeline MUST synthesize an image via Stable Diffusion.
     unique_id = "forced_gen_000"
     unique_img = f"{out_dir}/images/{unique_id}.jpg"
     render_product_image(images_dir / f"{unique_id}.jpg", "shirts", "magenta", "solid", rng, size=image_size)
     
     unique_attrs = {"color": "magenta", "material": "velvet", "pattern": "solid", "size": "L", "brand": "GenerativeLabs"}
-    unique_title = "Magenta Velvet Vintage spacesuit"
+    unique_title = "Magenta Velvet Vintage Jacket"
     rows.append({
         "row_id": unique_id,
         "product_id": unique_id,
         "title": unique_title,
-        "category": "shirts",
+        "category": "uniforms",  # sentinel: zero other products share this category
         "attributes": json.dumps(unique_attrs, ensure_ascii=False),
-        "canonical_text": text_views.canonical_text(unique_title, "shirts", unique_attrs),
+        "canonical_text": text_views.canonical_text(unique_title, "uniforms", unique_attrs),
         "image_path": unique_img,
         "is_image_missing": False,
         "is_text_missing": False,

@@ -94,13 +94,25 @@ def plot_repair_stages(seed: int = 7, out_file: str = None):
         for col_idx, (title, row) in enumerate(stages):
             ax = axes[row_idx][col_idx]
             
-            # Image
-            img_path = Path(row["image_path"])
-            if img_path.exists():
+            # Image — resolve relative to data/ root to handle generated paths
+            img_path_str = row["image_path"]
+            if not img_path_str:
+                img_path = None
+            else:
+                # Generated images are stored relative to the repo root
+                candidate = Path(img_path_str)
+                if not candidate.is_absolute():
+                    candidate = Path("data").parent / candidate
+                img_path = candidate if candidate.exists() else Path(img_path_str)
+
+            if img_path and img_path.exists():
                 img = Image.open(img_path)
                 ax.imshow(img)
             else:
-                ax.text(0.5, 0.5, "Image Missing", ha="center", va="center")
+                ax.set_facecolor("#222222")
+                ax.text(0.5, 0.5, "🤖 Image Generated\nby Stable Diffusion" if col_idx == 2 and not img_path_str else "Image Missing",
+                        ha="center", va="center", color="white", fontsize=10, fontweight="bold",
+                        transform=ax.transAxes)
                 ax.set_xlim(0, 1)
                 ax.set_ylim(0, 1)
                 
