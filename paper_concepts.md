@@ -28,3 +28,14 @@ Traditional curation pipelines fail when attempting to repair an image (E1) if a
 ## 5. Independent Semantic Verification (VLM Judge)
 Encoder-only models (like CLIP and SigLIP) suffer from "bag-of-words" blindness, often failing to recognize spatial relationships or deep semantic intent (e.g., swapping a left-facing shoe for a right-facing shoe).
 - **Mechanism**: TIGeR employs an independent Vision-Language Model (Gemini) as a final semantic safety checkpoint to audit repairs before they are committed to the dataset, catching "wrong-direction" repairs that pass encoder-only thresholds.
+## 6. Compound AI System Architecture
+TIGeR is not a single monolithic model; it is designed as a **Compound AI System** where four specialized models interact to create a closed-loop repair pipeline:
+1. **The Evidence Gatherer (CLIP / SigLIP)**: A Vision-Language Encoder used to rapidly calculate baseline similarities and perform the LOO masking.
+2. **The Router (XGBoost)**: The mathematical Arbiter. It ingests the evidence vectors from the encoder and routes the product to the correct repair strategy using the strict γ-gate.
+3. **The Synthesizer (Stable Diffusion v1.5)**: The Generative Fallback model that wakes up to draw mathematically perfect replacement images when the catalogue lacks a valid candidate.
+4. **The Auditor (Gemini VLM Judge)**: The final semantic safety checkpoint. It audits the repaired image and text pair to ensure they logically align before committing the data to the database, catching edge-case hallucinations that encoder-only models miss.
+
+## 7. Category-Specific Dynamic Thresholding (The Sieve)
+A major flaw in naive dataset filtering is using a single, global similarity threshold across all data. 
+- **The Problem**: Different product categories naturally have different baseline similarities. A "clean" photo of a simple white shirt will naturally have a higher CLIP score than a "clean" photo of a highly complex, multi-colored handbag. A global threshold would aggressively false-flag all the handbags.
+- **The Solution**: TIGeR utilizes a pre-calibration Sieve. It scans a subset of the dataset to learn the natural Gaussian distribution of similarity scores for *each individual category*. It then establishes dynamic, category-specific thresholds, ensuring error detection is equally sensitive across both simple and complex domains.
