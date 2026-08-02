@@ -101,6 +101,28 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
             route = arbiter_mod.route(ev, model, cfg)
 
             if route.action in TERMINAL_ACTIONS:
+                # Generative Fallback: intercept "acquire_image" when we have a generator
+                if route.action == "acquire_image" and generator is not None:
+                    caption = str(flagged.at[i, "canonical_text"])
+                    if not caption:
+                        caption = str(flagged.at[i, "title"])
+                    gen_path = root / "data" / "sample" / "images" / "generated" / f"{row_id}.jpg"
+                    generator.generate(caption, gen_path)
+                    rel_path = f"data/sample/images/generated/{row_id}.jpg"
+                    
+                    # Update working df with the generated image
+                    working.loc[working["row_id"].astype(str) == row_id, "image_path"] = rel_path
+                    working.loc[working["row_id"].astype(str) == row_id, "is_image_missing"] = False
+                    oc = outcomes.setdefault(row_id, RepairOutcome(row_id, "pending"))
+                    oc.log.append({"pass": pass_i, "direction": "T2V",
+                                   "candidate_product": "GENERATED",
+                                   "action": "generative_fallback",
+                                   "reason": "synthesized missing image via Stable Diffusion"})
+                    oc.final_status = "repaired"
+                    oc.passes_used = pass_i
+                    any_committed = True
+                    continue
+                    
                 status = {"dismiss": "dismissed", "acquire_image": "acquire_image"}.get(
                     route.action, "escalated")
                 finalize(row_id, status, pass_i,
