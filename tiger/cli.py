@@ -21,7 +21,7 @@ import yaml
 from tiger import sieve as sieve_mod
 from tiger.data import noise as noise_mod
 from tiger.data import synthgen
-from tiger.data import abo_import
+from tiger.data import fashion_import
 from tiger.encoders import ClipEncoder
 from tiger.eval import detection as det_eval
 from tiger.schema import load_schema
@@ -65,18 +65,18 @@ def cmd_synthgen(cfg: dict, args) -> None:
     print(df.groupby(["category", "split"]).size().to_string())
 
 
-def cmd_import_abo(cfg: dict, args) -> None:
+def cmd_import_fashion(cfg: dict, args) -> None:
     schema = load_schema(ROOT / cfg["data"]["schema"])
     if not args.source:
-        print("Error: --source directory is required for import-abo command")
+        print("Error: --source directory is required for import-fashion command")
         import sys
         sys.exit(1)
         
     source_dir = Path(args.source).resolve()
     out_dir = ROOT / cfg["data"]["sample_dir"]
     
-    print(f"Importing Amazon Berkeley Objects from {source_dir}...")
-    df = abo_import.import_abo(
+    print(f"Importing Fashion Product Images from {source_dir}...")
+    df = fashion_import.import_fashion(
         source_dir, 
         out_dir, 
         schema, 
@@ -557,11 +557,11 @@ def cmd_generate(cfg: dict, args) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(prog="tiger")
-    ap.add_argument("command", choices=["synthgen", "import-abo", "noise", "calibrate", "detect", "evaluate",
+    ap.add_argument("command", choices=["synthgen", "import-fashion", "noise", "calibrate", "detect", "evaluate",
                                         "analyze", "train-arbiter", "route", "repair", "sweep",
                                         "calibrate-fusion", "ablate", "compare-encoders", "generate"])
     ap.add_argument("--config", default="configs/tiger.yaml")
-    ap.add_argument("--source", type=str, help="source directory for the import-abo command")
+    ap.add_argument("--source", type=str, help="source directory for the import-fashion command")
     ap.add_argument("--caption", type=str, help="caption for the standalone generate command")
     ap.add_argument("--output", type=str, help="output path for the standalone generate command")
     ap.add_argument("--seed", type=int, default=None, help="noise seed override")
@@ -578,7 +578,7 @@ def main() -> None:
     cfg = load_cfg(args.config)
     {
         "synthgen": cmd_synthgen,
-        "import-abo": cmd_import_abo,
+        "import-fashion": cmd_import_fashion,
         "noise": cmd_noise,
         "calibrate": cmd_calibrate,
         "detect": cmd_detect,
