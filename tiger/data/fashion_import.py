@@ -48,14 +48,22 @@ def import_fashion(source_dir: Path, out_dir: Path, schema: Schema, max_items: i
     """Read styles.csv, filter, standardize, and output products.parquet."""
     rng = random.Random(seed)
     
-    csv_path = source_dir / "styles.csv"
-    if not csv_path.exists():
-        raise FileNotFoundError(f"Could not find styles.csv in {source_dir}. Did you mount the dataset?")
+    # Kaggle dataset folder structures vary wildly. Find styles.csv recursively.
+    csv_candidates = list(source_dir.rglob("styles.csv"))
+    if not csv_candidates:
+        raise FileNotFoundError(f"Could not find styles.csv anywhere in {source_dir}. Did you mount the correct dataset?")
+    csv_path = csv_candidates[0]
         
     logging.info(f"Loading {csv_path}...")
     
     # Read CSV, dropping rows with malformed lines (oneline error in the Kaggle dataset)
     df_raw = pd.read_csv(csv_path, on_bad_lines='skip')
+    
+    # Find the actual images directory
+    # It might be next to styles.csv, or under fashion-dataset/images, etc.
+    image_dirs = list(source_dir.rglob("images"))
+    if not image_dirs:
+        raise FileNotFoundError(f"Could not find an 'images' folder anywhere in {source_dir}.")
     
     rows = []
     
@@ -79,8 +87,15 @@ def import_fashion(source_dir: Path, out_dir: Path, schema: Schema, max_items: i
         if not product_id:
             continue
             
-        img_path = (source_dir / "images" / f"{product_id}.jpg").resolve()
-        if not img_path.exists():
+        # Find which of the possible images/ directories contains this product's image
+        img_path = None
+        for img_dir in image_dirs:
+            candidate = (img_dir / f"{product_id}.jpg").resolve()
+            if candidate.exists():
+                img_path = candidate
+                break
+                
+        if img_path is None:
             continue # Only include products where the image is actually present
             
         # 4. Extract Attributes mapping to our schema
