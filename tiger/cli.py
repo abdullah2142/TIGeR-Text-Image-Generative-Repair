@@ -9,6 +9,8 @@ Usage (from repo root, venv active):
   python -m tiger.cli evaluate [--seed N]          # detection metrics with product-level CIs
 """
 
+from __future__ import annotations
+
 # ---- Silence ALL noisy library output before importing anything ----
 import os, warnings, logging
 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
@@ -23,8 +25,6 @@ warnings.filterwarnings("ignore", message=".*google.generativeai.*")
 for _lib in ("transformers", "diffusers", "torch", "PIL", "huggingface_hub",
              "accelerate", "safetensors", "filelock", "urllib3"):
     logging.getLogger(_lib).setLevel(logging.ERROR)
-
-from __future__ import annotations
 
 import argparse
 import json
