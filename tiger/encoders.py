@@ -55,6 +55,8 @@ class ClipEncoder:
         if self._model is None:
             import torch  # noqa: F401
             from transformers import AutoModel, AutoProcessor
+            import transformers
+            transformers.logging.set_verbosity_error()
 
             self._model = AutoModel.from_pretrained(self.model_name)
             self._model.eval().to(self.device)

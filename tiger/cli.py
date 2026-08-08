@@ -9,6 +9,21 @@ Usage (from repo root, venv active):
   python -m tiger.cli evaluate [--seed N]          # detection metrics with product-level CIs
 """
 
+# ---- Silence ALL noisy library output before importing anything ----
+import os, warnings, logging
+os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
+os.environ["TRANSFORMERS_NO_ADVISORY_WARNINGS"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning, module="torch")
+warnings.filterwarnings("ignore", category=UserWarning, module="diffusers")
+warnings.filterwarnings("ignore", category=UserWarning, module="transformers")
+warnings.filterwarnings("ignore", message=".*Flax classes are deprecated.*")
+warnings.filterwarnings("ignore", message=".*google.generativeai.*")
+for _lib in ("transformers", "diffusers", "torch", "PIL", "huggingface_hub",
+             "accelerate", "safetensors", "filelock", "urllib3"):
+    logging.getLogger(_lib).setLevel(logging.ERROR)
+
 from __future__ import annotations
 
 import argparse

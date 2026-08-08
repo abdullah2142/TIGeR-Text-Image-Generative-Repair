@@ -9,6 +9,7 @@ class StableDiffusionGenerator:
             os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
             import warnings
             warnings.filterwarnings("ignore", category=FutureWarning)
+            warnings.filterwarnings("ignore", message=".*Flax classes.*")
             
             from diffusers import StableDiffusionPipeline
             import diffusers
@@ -16,11 +17,15 @@ class StableDiffusionGenerator:
             diffusers.logging.set_verbosity_error()
             transformers.logging.set_verbosity_error()
             
+            import logging as _logging
+            _logging.getLogger("diffusers").setLevel(_logging.ERROR)
+            _logging.getLogger("transformers").setLevel(_logging.ERROR)
+            _logging.getLogger("huggingface_hub").setLevel(_logging.ERROR)
+            
             import torch
         except ImportError:
             raise ImportError("Please install diffusers to use generative fallback: pip install -e '.[gen]'")
             
-        print(f"Loading Generative Fallback Model: {model_id} (quiet mode)...")
         self.device = device
         dtype = torch.float16 if "cuda" in device else torch.float32
         

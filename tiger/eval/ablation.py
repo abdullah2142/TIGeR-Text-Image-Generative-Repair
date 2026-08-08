@@ -8,6 +8,8 @@ each (A3.1: aggregate F1 hides dead classes). Configurations:
   global_only     -- CLIP low-similarity gate alone (F2 shows its ceiling)
   probes_only     -- per-field contrastive probes alone
   text_only       -- schema/contradiction checks alone (no CLIP)
+  no_loo          -- everything EXCEPT LOO masking probes
+  no_arbiter      -- full detection but random routing (no trained Arbiter)
   full            -- all signals OR-fused (default apply_thresholds)
   full_fusion     -- full + precision-floor-calibrated per-signal margins (3.4)
 
@@ -26,6 +28,8 @@ CONFIGS = {
     "global_only": ["flag_low_sim", "flag_missing_image", "flag_missing_text"],
     "probes_only": ["flag_probe_color", "flag_probe_material", "flag_probe_pattern"],
     "text_only": ["flag_text_out_of_domain", "flag_title_contradiction"],
+    "no_loo": ["flag_low_sim", "flag_missing_image", "flag_missing_text",
+               "flag_text_out_of_domain", "flag_title_contradiction"],
     "full": None,  # all SIGNAL_FLAGS
 }
 
@@ -69,14 +73,59 @@ def run_ablations(signals_frames: list[pd.DataFrame], thr, fusion=None, seed: in
 
 
 def format_ablations(results: dict) -> str:
-    order = ["random@budget", "text_only", "global_only", "probes_only", "full", "full_fusion"]
+    order = ["random@budget", "text_only", "global_only", "probes_only", "no_loo", "full", "full_fusion"]
     labels = sorted(set().union(*[r["recall_by_label"].keys() for r in results.values()]))
-    header = f"{'config':16s} {'P':>6s} {'R':>6s} {'F1':>6s}  " + "  ".join(f"{l[:10]:>10s}" for l in labels)
-    lines = [header, "-" * len(header)]
+
+    lines = []
+    lines.append("")
+    lines.append("📊 Ablation Study: Which components matter?")
+    lines.append("=" * 70)
+    lines.append("")
+    lines.append(f"{'Configuration':<20s} {'Precision':>10s} {'Recall':>8s} {'F1':>8s}")
+    lines.append("-" * 50)
+    
+    friendly_names = {
+        "random@budget": "Random Baseline",
+        "text_only": "Text Checks Only",
+        "global_only": "CLIP Score Only",
+        "probes_only": "LOO Probes Only",
+        "no_loo": "No LOO Masking",
+        "full": "Full System",
+        "full_fusion": "Full + Fusion Gate",
+    }
+
     for name in order:
         if name not in results:
             continue
         r = results[name]
-        rec = "  ".join(f"{r['recall_by_label'].get(l, {}).get('recall', float('nan')):>10.2f}" for l in labels)
-        lines.append(f"{name:16s} {r['precision']:6.3f} {r['recall']:6.3f} {r['f1']:6.3f}  {rec}")
+        label = friendly_names.get(name, name)
+        lines.append(f"{label:<20s} {r['precision']:>10.3f} {r['recall']:>8.3f} {r['f1']:>8.3f}")
+
+    lines.append("")
+    lines.append("Per-Error-Type Recall:")
+    lines.append("-" * 70)
+    header = f"{'Configuration':<20s} " + "  ".join(f"{l[:12]:>12s}" for l in labels)
+    lines.append(header)
+    lines.append("-" * len(header))
+    for name in order:
+        if name not in results:
+            continue
+        r = results[name]
+        label = friendly_names.get(name, name)
+        rec = "  ".join(f"{r['recall_by_label'].get(l, {}).get('recall', float('nan')):>12.3f}" for l in labels)
+        lines.append(f"{label:<20s} {rec}")
+
+    lines.append("")
+    lines.append("Key Takeaways:")
+    # Calculate takeaways
+    if "full" in results and "global_only" in results:
+        delta = results["full"]["f1"] - results["global_only"]["f1"]
+        lines.append(f"  • Full system vs CLIP-only: +{delta:.3f} F1 improvement")
+    if "full" in results and "no_loo" in results:
+        delta = results["full"]["f1"] - results["no_loo"]["f1"]
+        lines.append(f"  • Adding LOO Masking: +{delta:.3f} F1 improvement")
+    if "full" in results and "random@budget" in results:
+        delta = results["full"]["f1"] - results["random@budget"]["f1"]
+        lines.append(f"  • Full system vs Random: +{delta:.3f} F1 improvement")
+    
     return "\n".join(lines)
