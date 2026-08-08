@@ -80,13 +80,17 @@ Question: Does the image clearly show that the product's {field} is "{value}"?
 Answer with exactly one word: YES or NO.
 Do not explain. Do not hedge. Only YES or NO."""
 
-_T2V_PROMPT = """You are a product-catalogue quality inspector.
-You will see two images: the CURRENT image assigned to a product, and a PROPOSED replacement.
+_T2V_PROMPT = """You are a strict product-catalogue quality inspector.
+You will see an image that is proposed as the product photo for a catalogue listing.
 
 Product description: "{caption}"
 
-Question: Is the PROPOSED image (second image) a better match for the product description
-than the CURRENT image (first image)?
+Carefully check ALL of the following:
+1. Is the product TYPE correct? (e.g., if the description says "shirt", is it a shirt and not shoes?)
+2. Is the COLOR correct? (e.g., if the description says "black", is the product actually black?)
+3. Is the product a real, clean product photo without visual artifacts or deformities?
+
+If ANY of these checks fail, answer NO.
 
 Answer with exactly one word: YES or NO.
 Do not explain. Do not hedge. Only YES or NO."""
