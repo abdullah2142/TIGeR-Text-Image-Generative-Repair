@@ -409,6 +409,57 @@ def cmd_ablate(cfg: dict, args) -> None:
     print(f"\nwrote {out}")
 
 
+def cmd_ablate_repair(cfg: dict, args) -> None:
+    """Phase 5.4 (Repair side): ablations over repair configurations."""
+    import numpy as np
+    from tiger import arbiter as arbiter_mod
+    from tiger import verify as verify_mod
+    from tiger.eval import repair_ablation
+
+    schema = load_schema(ROOT / cfg["data"]["schema"])
+    p = _paths(cfg)
+    seed = args.seed if args.seed is not None else cfg.get("noise", {}).get("seed", 7)
+    tag = _tag("report", seed)
+    noisy = pd.read_parquet(p["processed"] / f"noisy_report_{tag}.parquet")
+
+    thr = sieve_mod.SieveThresholds.from_json(
+        (ROOT / "data/thresholds/tiger_locked_thresholds.json").read_text(encoding="utf-8"))
+    loo_stats = json.loads((ROOT / "data/thresholds/tiger_loo_calibration.json").read_text(encoding="utf-8"))
+    vcal = verify_mod.load_calibration(ROOT / "data/thresholds/tiger_verify_calibration.json")
+    model = arbiter_mod.ArbiterModel.from_json(
+        (ROOT / "data/thresholds/tiger_arbiter_model.json").read_text(encoding="utf-8"))
+
+    enc = _encoder(cfg)
+    
+    # Initialize optional components
+    independent = None
+    if getattr(args, "vlm_judge", False):
+        from tiger.vlm_judge import GeminiVLMJudge
+        _judge = GeminiVLMJudge.from_env(verbose=False)
+        class _JudgeAdapter:
+            def check_v2t(self, image_path, category, field, value): return _judge.check_v2t(image_path, category, field, value)
+            def check_t2v(self, old_image_path, new_image_path, caption): return _judge.check_t2v(old_image_path, new_image_path, caption)
+        independent = _JudgeAdapter()
+
+    generator = None
+    if getattr(args, "generative_fallback", False):
+        from tiger.generator import StableDiffusionGenerator
+        generator = StableDiffusionGenerator(device=cfg["models"].get("device", "cuda"))
+        
+    sample_size = int(getattr(args, "sample", 20))
+
+    results = repair_ablation.run_repair_ablations(
+        noisy, enc, schema, thr, loo_stats, vcal, model, cfg, ROOT,
+        generator=generator, vlm_judge=independent, sample_size=sample_size
+    )
+    
+    print(repair_ablation.format_repair_ablations(results))
+    
+    out = p["outputs"] / "repair_ablations.json"
+    out.write_text(json.dumps(results, indent=2, default=float), encoding="utf-8")
+    print(f"\nwrote {out}")
+
+
 def cmd_repair(cfg: dict, args) -> None:
     """Phase 2.5: end-to-end detect->diagnose->route->plan->apply->verify cycle."""
     import numpy as np
@@ -574,13 +625,14 @@ def main() -> None:
     ap = argparse.ArgumentParser(prog="tiger")
     ap.add_argument("command", choices=["synthgen", "import-fashion", "noise", "calibrate", "detect", "evaluate",
                                         "analyze", "train-arbiter", "route", "repair", "sweep",
-                                        "calibrate-fusion", "ablate", "compare-encoders", "generate"])
+                                        "calibrate-fusion", "ablate", "ablate-repair", "compare-encoders", "generate"])
     ap.add_argument("--config", default="configs/tiger.yaml")
     ap.add_argument("--source", type=str, help="source directory for the import-fashion command")
     ap.add_argument("--caption", type=str, help="caption for the standalone generate command")
     ap.add_argument("--output", type=str, help="output path for the standalone generate command")
     ap.add_argument("--seed", type=int, default=None, help="noise seed override")
     ap.add_argument("--seeds", default="7,8,9,10,11", help="sweep: comma-separated noise seeds")
+    ap.add_argument("--sample", type=int, default=20, help="ablate-repair: number of noisy items to sample (default: 20)")
     ap.add_argument("--split", default="report", choices=["report", "calibration"])
     ap.add_argument("--independent", action="store_true",
                     help="repair: cross-check each repair with the independent verifier encoder (6.4)")
@@ -605,6 +657,7 @@ def main() -> None:
         "sweep": cmd_sweep,
         "calibrate-fusion": cmd_calibrate_fusion,
         "ablate": cmd_ablate,
+        "ablate-repair": cmd_ablate_repair,
         "compare-encoders": cmd_compare_encoders,
         "generate": cmd_generate,
     }[args.command](cfg, args)
