@@ -46,11 +46,34 @@ def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schem
                          cfg: dict, root: Path, generator=None, vlm_judge=None,
                          sample_size: int = 20) -> dict:
     
-    # 1. Sample the dataset so it doesn't take 5 hours
-    # We want to sample rows that we KNOW are corrupted (based on split/seed) or just random
-    noisy_sample = noisy_df.sample(n=min(sample_size, len(noisy_df)), random_state=42).reset_index(drop=True)
+    # 1. Sample the dataset intelligently: grab ALL corrupted rows + some clean
+    #    context rows so the repair pipeline has real material to work with.
+    #    The old code sampled randomly and grabbed mostly clean rows.
+    if "noise_label" in noisy_df.columns:
+        noisy_rows = noisy_df[noisy_df["noise_label"] != "clean"]
+        clean_rows = noisy_df[noisy_df["noise_label"] == "clean"]
+        
+        # Take up to sample_size corrupted rows
+        n_noisy = min(sample_size, len(noisy_rows))
+        sampled_noisy = noisy_rows.sample(n=n_noisy, random_state=42)
+        
+        # Pad with clean rows so the Sieve has context (clean neighbours)
+        # We need roughly 2x clean rows as noisy for realistic detection
+        n_clean = min(n_noisy * 2, len(clean_rows))
+        sampled_clean = clean_rows.sample(n=n_clean, random_state=42)
+        
+        noisy_sample = pd.concat([sampled_noisy, sampled_clean], ignore_index=True)
+        print(f"  Sampled {n_noisy} corrupted + {n_clean} clean = {len(noisy_sample)} total rows")
+    else:
+        noisy_sample = noisy_df.sample(n=min(sample_size * 3, len(noisy_df)), random_state=42).reset_index(drop=True)
+        print(f"  Sampled {len(noisy_sample)} rows (no noise_label column found)")
     
-    audit_path = root / cfg["data"]["processed_dir"] / f"noise_audit_report_seed{cfg.get('noise', {}).get('seed', 7)}.csv"
+    # Build ground-truth lookup from the noise audit log
+    seed = cfg.get("noise", {}).get("seed", 7)
+    audit_path = root / cfg["data"]["processed_dir"] / f"noise_audit_seed{seed}.csv"
+    if not audit_path.exists():
+        # Try alternate naming convention
+        audit_path = root / cfg["data"]["processed_dir"] / f"noise_audit_report_seed{seed}.csv"
     audit = pd.read_csv(audit_path) if audit_path.exists() else pd.DataFrame()
     truth_color = {}
     if not audit.empty:
