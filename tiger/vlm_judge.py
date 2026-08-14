@@ -14,8 +14,8 @@ Why this matters (F7 / roadmap 6.4):
 Architecture:
     - V2T repairs: we ask Gemini to look at the image and tell us whether the
       repaired attribute value (e.g. "colour: blue") is correct for what it sees.
-    - T2V repairs: we ask Gemini to compare the old and new images and confirm that
-      the new image is a better match for the product's text description.
+    - T2V repairs: we ask Gemini to look at the proposed replacement image and
+      confirm that it matches the product's text description.
 
 API:
     Requires GEMINI_API_KEY in the environment (loaded from .env at repo root).
@@ -77,11 +77,11 @@ The system proposes to set the attribute **{field}** to **"{value}"** for this p
 
 Question: Does the image clearly show that the product's {field} is "{value}"?
 
-Answer with exactly one word: YES or NO.
-Do not explain. Do not hedge. Only YES or NO."""
+YOUR ENTIRE RESPONSE MUST BE EXACTLY ONE WORD: YES or NO.
+Do not explain. Do not reason. Do not hedge. Do not output anything other than YES or NO."""
 
 _T2V_PROMPT = """You are a strict product-catalogue quality inspector.
-You will see an image that is proposed as the product photo for a catalogue listing.
+You will see a single image that is proposed as the product photo for a catalogue listing.
 
 Product description: "{caption}"
 
@@ -92,8 +92,8 @@ Carefully check ALL of the following:
 
 If ANY of these checks fail, answer NO.
 
-Answer with exactly one word: YES or NO.
-Do not explain. Do not hedge. Only YES or NO."""
+YOUR ENTIRE RESPONSE MUST BE EXACTLY ONE WORD: YES or NO.
+Do not explain. Do not reason. Do not hedge. Do not output anything other than YES or NO."""
 
 
 # ---------------------------------------------------------------------------
@@ -135,6 +135,7 @@ class GeminiVLMJudge:
             ) from exc
 
         genai.configure(api_key=key)
+        self._gen_config = genai.GenerationConfig(max_output_tokens=5)
         self._model = genai.GenerativeModel(model_name)
         self._min_interval = 60.0 / rpm_limit   # seconds between calls
         self._last_call = 0.0
@@ -164,10 +165,22 @@ class GeminiVLMJudge:
         for attempt in range(3):
             self._wait()
             try:
-                resp = self._model.generate_content(parts)
+                resp = self._model.generate_content(
+                    parts, generation_config=self._gen_config
+                )
                 self._last_call = time.monotonic()
                 text = resp.text.strip().upper()
-                answer = text.startswith("YES")
+                # Robust parsing: check both the first and last word,
+                # so verbose responses like "... Therefore: YES" are
+                # correctly parsed instead of being wrongly vetoed.
+                words = text.split()
+                answer = False
+                if words:
+                    first, last = words[0], words[-1]
+                    if first in ("YES", "YES."):
+                        answer = True
+                    elif last in ("YES", "YES."):
+                        answer = True
                 if self.verbose:
                     print(f"[GeminiVLMJudge] raw='{resp.text.strip()}' -> {answer}")
                 return answer
@@ -207,24 +220,24 @@ class GeminiVLMJudge:
         return self._call(parts)
 
     def check_t2v(self, old_image_path: str, new_image_path: str, caption: str) -> bool:
-        """Ask Gemini whether `new_image_path` is a better product match than `old_image_path`.
+        """Ask Gemini whether `new_image_path` matches the product description.
 
-        Returns True  → VLM agrees the swap is an improvement.
+        Only the *proposed* (new) image is sent to Gemini.  The old image is
+        intentionally excluded: sending two images confused the model (it would
+        produce verbose "I see two images" responses instead of YES/NO), and
+        the prompt already evaluates the image standalone against the caption.
+
+        Returns True  → VLM agrees the image matches the description.
         Returns False → VLM disagrees, repair is vetoed.
         """
-        try:
-            old_b64 = _img_to_b64(old_image_path)
-        except OSError:
-            old_b64 = None
         try:
             new_b64 = _img_to_b64(new_image_path)
         except OSError:
             return False   # cannot read the proposed replacement → veto it
 
         import google.generativeai as genai  # type: ignore
-        parts = []
-        if old_b64:
-            parts.append({"inline_data": {"mime_type": _mime(old_image_path), "data": old_b64}})
-        parts.append({"inline_data": {"mime_type": _mime(new_image_path), "data": new_b64}})
-        parts.append(_T2V_PROMPT.format(caption=caption))
+        parts = [
+            {"inline_data": {"mime_type": _mime(new_image_path), "data": new_b64}},
+            _T2V_PROMPT.format(caption=caption),
+        ]
         return self._call(parts)

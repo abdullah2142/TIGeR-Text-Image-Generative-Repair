@@ -329,6 +329,18 @@ claim; needs second encoder + VLM judge (key pending).
 - **2026-07-28 · Checkpoint 6.4** — Integrated Gemini VLM Judge (Phase 6.4) to catch wrong-direction T2V/V2T repairs that encoder-only signals miss.
 - **2026-07-28 · Checkpoint 6.5** — Implemented Generative Fallback (Phase 6.5) using Stable Diffusion v1.5 to synthesize replacement images when the catalogue lacks a suitable candidate. Added `tiger/generator.py` and wired into `solver.py` via `plan_repair()`.
 - **2026-07-28 · UX Overhaul** — Refactored terminal outputs across the pipeline to replace debug matrices and JSON dumps with layman-friendly, emoji-guided English summaries. Added a standalone `generate` CLI command for testing.
-- *(next, user's choice)* candidates: **5.1** repair-quality metrics with
+- **2026-08-14 · VLM Judge Bugfixes** — Fixed three bugs in `tiger/vlm_judge.py` observed during Kaggle run analysis:
+  (1) **Response parsing:** `startswith("YES")` missed verbose responses ending with YES; now checks first *and* last word.
+  (2) **T2V image confusion:** `check_t2v` sent both old and new images, but the prompt said "you will see an image" (singular), causing Gemini to produce confused multi-image reasoning. Now only sends the proposed replacement image.
+  (3) **Token limit:** Added `max_output_tokens=5` via `GenerationConfig` to physically prevent verbose output.
+  (4) **Stronger prompts:** Upgraded constraint wording from "Answer with exactly one word" to "YOUR ENTIRE RESPONSE MUST BE EXACTLY ONE WORD".
+  Impact from a pre-fix rerun: YES approvals 2→5, repairs 16→19 (+19%). Full benefit requires re-running with the single-image T2V fix.
+
+### TODO — Next Steps
+
+- [ ] **Re-run `tiger.ipynb` on Kaggle** with the updated `vlm_judge.py` (push code, re-upload notebook). The current notebook output still used the old two-image T2V code.
+- [ ] **Increase ablation sample size** from 20 to ≥50 — current sample is too small (all Restoration Acc show N/A because no V2T color restorations fell in the 20-item sample).
+- [ ] **Add wall-clock time + API cost footnote** to the paper (e.g. "1,500 products in ~60 min on T4, 24 Gemini calls ~$0.01"). No need for full multi-model benchmarking.
+- *(further candidates, user's choice):* **5.1** repair-quality metrics with
   independent-encoder CLIPScore + held-out-original protocol, **4.1** real-data (ABO) onboarding, **4.3** robustness
   (corrupted/EXIF images, provenance).
