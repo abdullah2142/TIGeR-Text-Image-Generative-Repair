@@ -113,7 +113,7 @@ class GeminiVLMJudge:
     def __init__(
         self,
         api_key: str | None = None,
-        model_name: str = "gemini-3.5-flash-lite",
+        model_name: str = "gemini-1.5-flash",
         rpm_limit: int = 15,
         verbose: bool = False,
     ):
@@ -186,16 +186,16 @@ class GeminiVLMJudge:
                 return answer
             except Exception as exc:  # noqa: BLE001
                 err_str = str(exc)
-                if "429" in err_str and attempt < 2:
-                    print(f"[GeminiVLMJudge] 429 Rate Limit hit. Retrying in 20s... (attempt {attempt+1}/3)")
+                if any(code in err_str for code in ["429", "503", "504"]) and attempt < 2:
+                    print(f"[GeminiVLMJudge] API error/timeout ({err_str[:25]}...). Retrying in 15s... (attempt {attempt+1}/3)")
                     self._last_call = time.monotonic()
-                    self._wait(override_gap=20.0)
+                    self._wait(override_gap=15.0)
                     continue
-                # On other API error (or out of retries), do NOT veto — avoid blocking all repairs on a transient error.
-                # Log and return True (pass-through) so only our structural gates decide.
-                print(f"[GeminiVLMJudge] API error (non-fatal, pass-through): {exc}")
+                # On other API error (or out of retries), VETO the repair (return False).
+                # Defaulting to True previously allowed bad repairs to slip through during timeouts.
+                print(f"[GeminiVLMJudge] API error (fatal, vetoing): {exc}")
                 self._last_call = time.monotonic()
-                return True
+                return False
 
     # ------------------------------------------------------------------
     # public interface  (mirrors IndependentVerifier in verify.py)
