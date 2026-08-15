@@ -202,7 +202,7 @@ def plan_repair(ev: dict, route, sieve_row: dict, pool: CandidatePool,
                 if not caption:
                     caption = str(sieve_row.get("title", ""))
                 gen_path = root_path / "data" / "sample" / "images" / "generated" / f"{row_id}.jpg"
-                generator.generate(caption, gen_path)
+                generator.generate(caption, gen_path, category=category, attrs=attrs)
                 rel_path = f"data/sample/images/generated/{row_id}.jpg"
                 
                 return RepairPlan(row_id, "T2V", candidate_product_id="GENERATED",

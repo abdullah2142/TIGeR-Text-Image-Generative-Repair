@@ -64,7 +64,7 @@ analyzer:
   swap_z_margin: 2.0                   # replaces the raw 0.01 margin (F5)
 
 arbiter:
-  gamma: 0.60                          # Eq. 22 confidence gate; below -> E4/escalate
+  gamma: 0.40                          # Eq. 22 confidence gate; lowered from 0.60 to allow more repairs
   dismiss_threshold: 0.80              # CLEAN needs at least this p to dismiss a flag
   train_seeds: [1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014]
                                        # noise seeds over the CALIBRATION split;

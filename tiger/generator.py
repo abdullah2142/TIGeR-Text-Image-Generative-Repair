@@ -39,17 +39,34 @@ class StableDiffusionGenerator:
         self.pipe = self.pipe.to(device)
         self.seed = 42
 
-    def generate(self, caption: str, out_path: Path) -> Path:
-        """Generate a product image matching the caption and save to out_path."""
+    def generate(self, caption: str, out_path: Path, category: str = "", attrs: dict = None) -> Path:
+        """Generate a product image matching the caption and attributes, and save to out_path."""
         import torch
-        prompt = f"A simple product photo of a {caption} on a white background"
-        print(f"[Generative Fallback] Synthesizing: '{prompt}'")
+        attrs = attrs or {}
+        
+        # Build an attribute-heavy prompt to force Stable Diffusion adherence
+        color = attrs.get("color", "")
+        # Remove trailing 's' from category (e.g., 'shirts' -> 'shirt') for better image generation
+        cat_singular = category.rstrip("s") if category else ""
+        
+        # Give a 30% boost to color and 20% to category to force SD1.5 to obey them
+        subject = f"({color}:1.3) ({cat_singular}:1.2)" if color and cat_singular else caption
+        
+        prompt = f"Professional studio product photo of a single {subject}, high resolution, 8k, sharp focus, perfectly centered on a pure bright white background, studio lighting"
+        negative_prompt = "blurry, cropped, distorted, text, watermark, low quality, bad anatomy, deformed, background details, multiple items, noisy, messy, person, model, human"
+        print(f"[Generative Fallback] Synthesizing: '{color} {cat_singular}' (from '{caption}')")
         
         generator = torch.Generator(device=self.device).manual_seed(self.seed)
         self.seed += 1
         
-        # 20 steps is a good balance for SD v1.5 speed/quality
-        image = self.pipe(prompt, generator=generator, num_inference_steps=20).images[0]
+        # Increased steps and added negative prompt for much better quality
+        image = self.pipe(
+            prompt, 
+            negative_prompt=negative_prompt, 
+            generator=generator, 
+            num_inference_steps=35, 
+            guidance_scale=7.5
+        ).images[0]
         
         out_path.parent.mkdir(parents=True, exist_ok=True)
         image.save(out_path, format="JPEG", quality=92)
