@@ -113,7 +113,7 @@ class GeminiVLMJudge:
     def __init__(
         self,
         api_key: str | None = None,
-        model_name: str = "gemini-1.5-pro",
+        model_name: str = "gemini-3.1-pro",
         rpm_limit: int = 2,
         verbose: bool = False,
     ):
