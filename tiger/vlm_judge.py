@@ -113,8 +113,8 @@ class GeminiVLMJudge:
     def __init__(
         self,
         api_key: str | None = None,
-        model_name: str = "gemini-1.5-flash",
-        rpm_limit: int = 5,
+        model_name: str = "gemini-3.5-flash-lite",
+        rpm_limit: int = 12,
         verbose: bool = False,
     ):
         _load_env()
