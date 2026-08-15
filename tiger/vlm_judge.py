@@ -114,7 +114,7 @@ class GeminiVLMJudge:
         self,
         api_key: str | None = None,
         model_name: str = "gemini-1.5-flash",
-        rpm_limit: int = 15,
+        rpm_limit: int = 10,
         verbose: bool = False,
     ):
         _load_env()
@@ -162,7 +162,7 @@ class GeminiVLMJudge:
 
     def _call(self, parts: list) -> bool:
         """Send parts to Gemini, return True if the answer is YES."""
-        for attempt in range(3):
+        for attempt in range(4):
             self._wait()
             try:
                 resp = self._model.generate_content(
@@ -186,10 +186,11 @@ class GeminiVLMJudge:
                 return answer
             except Exception as exc:  # noqa: BLE001
                 err_str = str(exc)
-                if any(code in err_str for code in ["429", "503", "504"]) and attempt < 2:
-                    print(f"[GeminiVLMJudge] API error/timeout ({err_str[:25]}...). Retrying in 15s... (attempt {attempt+1}/3)")
+                if any(code in err_str for code in ["429", "500", "502", "503", "504"]) and attempt < 3:
+                    wait_time = 15.0 * (attempt + 1)  # Escalating backoff: 15s, 30s, 45s
+                    print(f"[GeminiVLMJudge] API error/timeout ({err_str[:25]}...). Retrying in {wait_time}s... (attempt {attempt+1}/4)")
                     self._last_call = time.monotonic()
-                    self._wait(override_gap=15.0)
+                    self._wait(override_gap=wait_time)
                     continue
                 # On other API error (or out of retries), VETO the repair (return False).
                 # Defaulting to True previously allowed bad repairs to slip through during timeouts.
