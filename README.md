@@ -16,6 +16,81 @@ critical review of an earlier script-based MVP; the fixes and the paper-alignmen
 work are tracked checkpoint-by-checkpoint in
 [`ROADMAP_PROGRESS.md`](ROADMAP_PROGRESS.md).
 
+## Architecture
+
+```mermaid
+graph TD
+    %% Styling
+    classDef input fill:#f9f9f9,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5
+    classDef phase fill:#e1f5fe,stroke:#03a9f4,stroke-width:2px
+    classDef gate fill:#fff3e0,stroke:#ff9800,stroke-width:2px,shape:diamond
+    classDef action fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef fallback fill:#fce4ec,stroke:#e91e63,stroke-width:2px
+    classDef human fill:#ffebee,stroke:#f44336,stroke-width:2px
+
+    %% Inputs
+    RawDB[("Raw Catalogue\n(Images & Text Attributes)")]:::input
+
+    %% Phase 1: Sieve
+    subgraph Phase1 [Phase 1: The Sieve (Detection)]
+        Enc[Multimodal Encoder\nCLIP / SigLIP]
+        QGate{"Confidence\nQuantile Gate\n(Thresholding)"}:::gate
+    end
+
+    RawDB --> Enc
+    Enc --> |Cross-Modal Similarity| QGate
+    QGate -->|High Confidence\n(Clean)| CleanData[(Clean Catalogue)]
+    QGate -->|Low Confidence\n(Flagged Anomaly)| Phase2
+
+    %% Phase 2: Analyzer
+    subgraph Phase2 [Phase 2: The Analyzer (Evidence Gathering)]
+        LOO[Leave-One-Out (LOO)\nText Embeddings]
+        KNN[K-NN Visual Search\n(Find Candidate Images)]
+        Evid[Compile Evidence:\nSuspect Fields & Donors]
+    end
+
+    LOO --> Evid
+    KNN --> Evid
+    Phase2 --> Phase3
+
+    %% Phase 3: Arbiter
+    subgraph Phase3 [Phase 3: The Arbiter (Routing)]
+        LogReg[Logistic Regression Router]
+        GammaGate{"Gamma Gate\n(Confidence > 0.40?)"}:::gate
+    end
+
+    Evid --> LogReg
+    LogReg --> GammaGate
+
+    GammaGate -->|Low Confidence| Esc1[Escalate to Human]:::human
+    GammaGate -->|High Confidence| RouteSplit{Route Decision}:::gate
+
+    %% Phase 4: Solver
+    subgraph Phase4 [Phase 4: The Solver (Repair Execution)]
+        V2T[V2T Repair\nPatch Text Attributes]:::action
+        T2V[T2V Repair\nSwap Catalogue Image]:::action
+        GenFallback[Generative Fallback\nSDXL-Turbo Synthesis]:::fallback
+        PoolCheck{"Candidate\nAvailable?"}:::gate
+    end
+
+    RouteSplit -->|V2T| V2T
+    RouteSplit -->|T2V| PoolCheck
+    PoolCheck -->|Yes| T2V
+    PoolCheck -->|No| GenFallback
+
+    %% Phase 5: Verification
+    subgraph Phase5 [Phase 5: Independent Verifier]
+        Judge{"VLM / SigLIP Judge\n(Final Validation)"}:::gate
+    end
+
+    V2T --> Judge
+    T2V --> Judge
+    GenFallback --> Judge
+
+    Judge -->|YES (Approved)| Commit[(Repaired Catalogue)]:::action
+    Judge -->|NO (Vetoed)| Esc2[Escalate to Human]:::human
+```
+
 > The legacy `scripts/*.py` MVP is kept for reference only. Everything current
 > lives under `tiger/` and is driven by `python -m tiger.cli`.
 
