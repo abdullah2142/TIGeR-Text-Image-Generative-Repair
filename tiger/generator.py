@@ -3,7 +3,7 @@
 from pathlib import Path
 
 class StableDiffusionGenerator:
-    def __init__(self, device: str = "cuda", model_id: str = "runwayml/stable-diffusion-v1-5"):
+    def __init__(self, device: str = "cuda", model_id: str = "stabilityai/sdxl-turbo"):
         try:
             import os
             os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
@@ -11,7 +11,7 @@ class StableDiffusionGenerator:
             warnings.filterwarnings("ignore", category=FutureWarning)
             warnings.filterwarnings("ignore", message=".*Flax classes.*")
             
-            from diffusers import StableDiffusionPipeline
+            from diffusers import AutoPipelineForText2Image
             import diffusers
             import transformers
             diffusers.logging.set_verbosity_error()
@@ -28,11 +28,12 @@ class StableDiffusionGenerator:
             
         self.device = device
         dtype = torch.float16 if "cuda" in device else torch.float32
+        variant = "fp16" if dtype == torch.float16 else None
         
-        self.pipe = StableDiffusionPipeline.from_pretrained(
+        self.pipe = AutoPipelineForText2Image.from_pretrained(
             model_id, 
             torch_dtype=dtype,
-            safety_checker=None,
+            variant=variant,
             local_files_only=False
         )
         self.pipe.set_progress_bar_config(disable=True)
@@ -44,28 +45,24 @@ class StableDiffusionGenerator:
         import torch
         attrs = attrs or {}
         
-        # Build an attribute-heavy prompt to force Stable Diffusion adherence
         color = attrs.get("color", "")
-        # Remove trailing 's' from category (e.g., 'shirts' -> 'shirt') for better image generation
         cat_singular = category.rstrip("s") if category else ""
         
-        # Give a 30% boost to color and 20% to category to force SD1.5 to obey them
-        subject = f"({color}:1.3) ({cat_singular}:1.2)" if color and cat_singular else caption
+        # SDXL understands natural language much better, so we just construct a clear sentence
+        subject = f"{color} {cat_singular}" if color and cat_singular else caption
         
-        prompt = f"Professional studio product photo of a single {subject}, high resolution, 8k, sharp focus, perfectly centered on a pure bright white background, studio lighting"
-        negative_prompt = "blurry, cropped, distorted, text, watermark, low quality, bad anatomy, deformed, background details, multiple items, noisy, messy, person, model, human"
-        print(f"[Generative Fallback] Synthesizing: '{color} {cat_singular}' (from '{caption}')")
+        prompt = f"Professional studio product photo of a single {subject}, perfectly centered on a pure bright white background, studio lighting"
+        print(f"[Generative Fallback] Synthesizing (SDXL-Turbo): '{subject}'")
         
         generator = torch.Generator(device=self.device).manual_seed(self.seed)
         self.seed += 1
         
-        # Increased steps and added negative prompt for much better quality
+        # SDXL-Turbo generates in 1-4 steps with guidance_scale 0.0
         image = self.pipe(
-            prompt, 
-            negative_prompt=negative_prompt, 
+            prompt=prompt, 
             generator=generator, 
-            num_inference_steps=35, 
-            guidance_scale=7.5
+            num_inference_steps=4, 
+            guidance_scale=0.0
         ).images[0]
         
         out_path.parent.mkdir(parents=True, exist_ok=True)
