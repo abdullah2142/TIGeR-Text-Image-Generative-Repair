@@ -44,7 +44,7 @@ def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schem
                          thr: sieve_mod.SieveThresholds, loo_stats: dict,
                          vcal: verify_mod.VerifyCalibration, trained_model: arbiter_mod.ArbiterModel,
                          cfg: dict, root: Path, generator=None, vlm_judge=None,
-                         sample_size: int = 20) -> dict:
+                         sample_size: int | None = 20) -> dict:
     
     # 1. Sample the dataset intelligently: grab ALL corrupted rows + some clean
     #    context rows so the repair pipeline has real material to work with.
@@ -54,7 +54,7 @@ def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schem
         clean_rows = noisy_df[noisy_df["noise_label"] == "clean"]
         
         # Take up to sample_size corrupted rows
-        n_noisy = min(sample_size, len(noisy_rows))
+        n_noisy = len(noisy_rows) if sample_size is None else min(sample_size, len(noisy_rows))
         sampled_noisy = noisy_rows.sample(n=n_noisy, random_state=42)
         
         # Pad with clean rows so the Sieve has context (clean neighbours)
@@ -65,7 +65,10 @@ def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schem
         noisy_sample = pd.concat([sampled_noisy, sampled_clean], ignore_index=True)
         print(f"  Sampled {n_noisy} corrupted + {n_clean} clean = {len(noisy_sample)} total rows")
     else:
-        noisy_sample = noisy_df.sample(n=min(sample_size * 3, len(noisy_df)), random_state=42).reset_index(drop=True)
+        if sample_size is None:
+            noisy_sample = noisy_df.copy()
+        else:
+            noisy_sample = noisy_df.sample(n=min(sample_size * 3, len(noisy_df)), random_state=42).reset_index(drop=True)
         print(f"  Sampled {len(noisy_sample)} rows (no noise_label column found)")
     
     # Build ground-truth lookup from the noise audit log
@@ -107,7 +110,8 @@ def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schem
         }
 
     results = {}
-    print(f"\nRunning repair ablations on a {sample_size}-item sample...")
+    sample_str = "the full dataset" if sample_size is None else f"a {sample_size}-item sample"
+    print(f"\nRunning repair ablations on {sample_str}...")
 
     # Config 1: Full System
     print("1/5: Running 'Full System'...")

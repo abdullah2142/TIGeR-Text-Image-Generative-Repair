@@ -445,8 +445,9 @@ def cmd_ablate_repair(cfg: dict, args) -> None:
     if getattr(args, "generative_fallback", False):
         from tiger.generator import StableDiffusionGenerator
         generator = StableDiffusionGenerator(device=cfg["models"].get("device", "cuda"))
-        
-    sample_size = int(getattr(args, "sample", 20))
+    sample_size = getattr(args, "sample", None)
+    if sample_size is not None:
+        sample_size = int(sample_size)
 
     results = repair_ablation.run_repair_ablations(
         noisy, enc, schema, thr, loo_stats, vcal, model, cfg, ROOT,
@@ -632,7 +633,7 @@ def main() -> None:
     ap.add_argument("--output", type=str, help="output path for the standalone generate command")
     ap.add_argument("--seed", type=int, default=None, help="noise seed override")
     ap.add_argument("--seeds", default="7,8,9,10,11", help="sweep: comma-separated noise seeds")
-    ap.add_argument("--sample", type=int, default=20, help="ablate-repair: number of noisy items to sample (default: 20)")
+    ap.add_argument("--sample", type=int, default=None, help="ablate-repair: number of noisy items to sample (default: all)")
     ap.add_argument("--split", default="report", choices=["report", "calibration"])
     ap.add_argument("--independent", action="store_true",
                     help="repair: cross-check each repair with the independent verifier encoder (6.4)")
