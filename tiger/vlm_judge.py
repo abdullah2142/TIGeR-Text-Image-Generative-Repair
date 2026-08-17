@@ -113,7 +113,7 @@ class GeminiVLMJudge:
     def __init__(
         self,
         api_key: str | None = None,
-        model_name: str = "gemini-3.7-flash",
+        model_name: str = "gemini-1.5-flash",
         rpm_limit: int = 15,
         verbose: bool = False,
     ):
@@ -135,7 +135,7 @@ class GeminiVLMJudge:
             ) from exc
 
         genai.configure(api_key=key)
-        self._gen_config = genai.GenerationConfig(max_output_tokens=5)
+        self._gen_config = genai.GenerationConfig(max_output_tokens=20)
         self._model = genai.GenerativeModel(model_name)
         self._min_interval = 60.0 / rpm_limit   # seconds between calls
         self._last_call = 0.0
@@ -169,7 +169,10 @@ class GeminiVLMJudge:
                     parts, generation_config=self._gen_config
                 )
                 self._last_call = time.monotonic()
-                text = resp.text.strip().upper()
+                try:
+                    text = resp.text.strip().upper()
+                except ValueError:
+                    text = ""
                 # Robust parsing: check both the first and last word,
                 # so verbose responses like "... Therefore: YES" are
                 # correctly parsed instead of being wrongly vetoed.
@@ -182,7 +185,7 @@ class GeminiVLMJudge:
                     elif last in ("YES", "YES."):
                         answer = True
                 if self.verbose:
-                    print(f"[GeminiVLMJudge] raw='{resp.text.strip()}' -> {answer}")
+                    print(f"[GeminiVLMJudge] raw='{text}' -> {answer}")
                 return answer
             except Exception as exc:  # noqa: BLE001
                 err_str = str(exc)
