@@ -433,6 +433,7 @@ def cmd_ablate_repair(cfg: dict, args) -> None:
     
     # Initialize optional components
     independent = None
+    iv_name = cfg.get("models", {}).get("independent_verifier", "")
     if getattr(args, "vlm_judge", False):
         from tiger.vlm_judge import GeminiVLMJudge
         _judge = GeminiVLMJudge.from_env(verbose=False)
@@ -440,6 +441,11 @@ def cmd_ablate_repair(cfg: dict, args) -> None:
             def check_v2t(self, image_path, category, field, value): return _judge.check_v2t(image_path, category, field, value)
             def check_t2v(self, old_image_path, new_image_path, caption): return _judge.check_t2v(old_image_path, new_image_path, caption)
         independent = _JudgeAdapter()
+    elif getattr(args, "independent", False) and iv_name:
+        iv_enc = ClipEncoder(iv_name, device=cfg["models"].get("device", "cpu"),
+                             batch_size=int(cfg["models"].get("batch_size", 32)),
+                             cache_dir=_paths(cfg)["cache"])
+        independent = verify_mod.IndependentVerifier(iv_enc, schema)
 
     generator = None
     if getattr(args, "generative_fallback", False):
