@@ -32,7 +32,7 @@ graph TD
     RawDB[("Raw Catalogue\n(Images & Text Attributes)")]:::input
 
     %% Phase 1: Sieve
-    subgraph Phase1 [Phase 1: The Sieve (Detection)]
+    subgraph Phase1 ["Phase 1: The Sieve (Detection)"]
         Enc[Multimodal Encoder\nCLIP / SigLIP]
         QGate{"Confidence\nQuantile Gate\n(Thresholding)"}:::gate
     end
@@ -43,7 +43,7 @@ graph TD
     QGate -->|Low Confidence\n(Flagged Anomaly)| Phase2
 
     %% Phase 2: Analyzer
-    subgraph Phase2 [Phase 2: The Analyzer (Evidence Gathering)]
+    subgraph Phase2 ["Phase 2: The Analyzer (Evidence Gathering)"]
         LOO[Leave-One-Out (LOO)\nText Embeddings]
         KNN[K-NN Visual Search\n(Find Candidate Images)]
         Evid[Compile Evidence:\nSuspect Fields & Donors]
@@ -54,7 +54,7 @@ graph TD
     Phase2 --> Phase3
 
     %% Phase 3: Arbiter
-    subgraph Phase3 [Phase 3: The Arbiter (Routing)]
+    subgraph Phase3 ["Phase 3: The Arbiter (Routing)"]
         LogReg[Logistic Regression Router]
         GammaGate{"Gamma Gate\n(Confidence > 0.40?)"}:::gate
     end
@@ -66,7 +66,7 @@ graph TD
     GammaGate -->|High Confidence| RouteSplit{Route Decision}:::gate
 
     %% Phase 4: Solver
-    subgraph Phase4 [Phase 4: The Solver (Repair Execution)]
+    subgraph Phase4 ["Phase 4: The Solver (Repair Execution)"]
         V2T[V2T Repair\nPatch Text Attributes]:::action
         T2V[T2V Repair\nSwap Catalogue Image]:::action
         GenFallback[Generative Fallback\nSDXL-Turbo Synthesis]:::fallback
@@ -79,7 +79,7 @@ graph TD
     PoolCheck -->|No| GenFallback
 
     %% Phase 5: Verification
-    subgraph Phase5 [Phase 5: Independent Verifier]
+    subgraph Phase5 ["Phase 5: Independent Verifier"]
         Judge{"VLM / SigLIP Judge\n(Final Validation)"}:::gate
     end
 
