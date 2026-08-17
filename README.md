@@ -23,7 +23,7 @@ graph TD
     %% Styling
     classDef input fill:#f9f9f9,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5
     classDef phase fill:#e1f5fe,stroke:#03a9f4,stroke-width:2px
-    classDef gate fill:#fff3e0,stroke:#ff9800,stroke-width:2px,shape:diamond
+    classDef gate fill:#fff3e0,stroke:#ff9800,stroke-width:2px
     classDef action fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
     classDef fallback fill:#fce4ec,stroke:#e91e63,stroke-width:2px
     classDef human fill:#ffebee,stroke:#f44336,stroke-width:2px
