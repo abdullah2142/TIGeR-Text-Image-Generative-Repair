@@ -141,6 +141,7 @@ class GeminiVLMJudge:
         self._last_call = 0.0
         self.verbose = verbose
         self.model_name = model_name
+        self._cache: dict[str, bool] = {}
 
     @classmethod
     def from_env(cls, **kwargs) -> "GeminiVLMJudge":
@@ -162,6 +163,13 @@ class GeminiVLMJudge:
 
     def _call(self, parts: list) -> bool:
         """Send parts to Gemini, return True if the answer is YES."""
+        import json
+        cache_key = json.dumps(parts, sort_keys=True)
+        if cache_key in self._cache:
+            if self.verbose:
+                print(f"[GeminiVLMJudge] (cached) -> {self._cache[cache_key]}")
+            return self._cache[cache_key]
+
         for attempt in range(3):
             self._wait()
             try:
@@ -186,6 +194,7 @@ class GeminiVLMJudge:
                         answer = True
                 if self.verbose:
                     print(f"[GeminiVLMJudge] raw='{text}' -> {answer}")
+                self._cache[cache_key] = answer
                 return answer
             except Exception as exc:  # noqa: BLE001
                 err_str = str(exc)

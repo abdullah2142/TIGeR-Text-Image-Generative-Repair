@@ -205,3 +205,28 @@ def format_repair_ablations(results: dict) -> str:
         lines.append(f"  • Generative Fallback: Successfully repaired {delta_rep} products that would otherwise be dead ends")
 
     return "\n".join(lines)
+
+
+def save_repair_ablations_csv(results: dict, out_path: str | Path) -> None:
+    rows = []
+    friendly_names = {
+        "full": "Full System",
+        "no_arbiter": "No Arbiter (Random)",
+        "no_vlm": "No VLM Judge",
+        "no_gen": "No Generative Fallback",
+        "no_gamma": "No Gamma Gate (gamma=0)",
+    }
+    order = ["no_arbiter", "no_vlm", "no_gen", "no_gamma", "full"]
+    for name in order:
+        if name in results:
+            r = results[name]
+            rows.append({
+                "Configuration": friendly_names.get(name, name),
+                "Repaired": r["repaired"],
+                "Escalated": r["escalated"],
+                "Total Attempted": r["total_attempted"],
+                "Color Accuracy": r["color_accuracy"],
+                "V2T Cases": r["v2t_total"],
+            })
+    if rows:
+        pd.DataFrame(rows).to_csv(out_path, index=False)

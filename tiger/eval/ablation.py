@@ -129,3 +129,34 @@ def format_ablations(results: dict) -> str:
         lines.append(f"  • Full system vs Random: +{delta:.3f} F1 improvement")
     
     return "\n".join(lines)
+
+
+def save_ablations_csv(results: dict, out_path: str | Path) -> None:
+    rows = []
+    friendly_names = {
+        "random@budget": "Random Baseline",
+        "text_only": "Text Checks Only",
+        "global_only": "CLIP Score Only",
+        "probes_only": "LOO Probes Only",
+        "no_loo": "No LOO Masking",
+        "full": "Full System",
+        "full_fusion": "Full + Fusion Gate",
+    }
+    order = ["random@budget", "text_only", "global_only", "probes_only", "no_loo", "full", "full_fusion"]
+    labels = sorted(set().union(*[r["recall_by_label"].keys() for r in results.values()]))
+    
+    for name in order:
+        if name in results:
+            r = results[name]
+            row = {
+                "Configuration": friendly_names.get(name, name),
+                "Precision": r["precision"],
+                "Recall": r["recall"],
+                "F1": r["f1"],
+            }
+            for label in labels:
+                row[f"Recall ({label})"] = r["recall_by_label"].get(label, {}).get("recall", float("nan"))
+            rows.append(row)
+            
+    if rows:
+        pd.DataFrame(rows).to_csv(out_path, index=False)

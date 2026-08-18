@@ -407,6 +407,10 @@ def cmd_ablate(cfg: dict, args) -> None:
     out = p["outputs"] / "ablations.json"
     out.write_text(json.dumps(results, indent=2, default=float), encoding="utf-8")
     print(f"\nwrote {out}")
+    
+    out_csv = p["outputs"] / "sieve_ablations_summary.csv"
+    abl.save_ablations_csv(results, out_csv)
+    print(f"wrote {out_csv}")
 
 
 def cmd_ablate_repair(cfg: dict, args) -> None:
@@ -465,6 +469,10 @@ def cmd_ablate_repair(cfg: dict, args) -> None:
     out = p["outputs"] / "repair_ablations.json"
     out.write_text(json.dumps(results, indent=2, default=float), encoding="utf-8")
     print(f"\nwrote {out}")
+    
+    out_csv = p["outputs"] / "repair_ablations_summary.csv"
+    repair_ablation.save_repair_ablations_csv(results, out_csv)
+    print(f"wrote {out_csv}")
 
 
 def cmd_repair(cfg: dict, args) -> None:
@@ -609,6 +617,22 @@ def cmd_sweep(cfg: dict, args) -> None:
     out.write_text(json.dumps({"seeds": seeds, "per_seed": all_res, "pooled": res_pooled},
                               indent=2, default=float), encoding="utf-8")
     print(f"\nwrote {out}")
+    
+    rows = []
+    labels = sorted(res_pooled["recall_by_label"].keys())
+    row = {
+        "Configuration": "Pooled (All Seeds)",
+        "Precision": res_pooled["precision"],
+        "Recall": res_pooled["recall"],
+        "F1": res_pooled["f1"],
+    }
+    for l in labels:
+        row[f"Recall ({l})"] = res_pooled["recall_by_label"].get(l, {}).get("recall", float("nan"))
+    rows.append(row)
+    
+    out_csv = p["outputs"] / "sweep_summary.csv"
+    pd.DataFrame(rows).to_csv(out_csv, index=False)
+    print(f"wrote {out_csv}")
 
 
 def cmd_generate(cfg: dict, args) -> None:
