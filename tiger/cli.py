@@ -37,6 +37,7 @@ from tiger import sieve as sieve_mod
 from tiger.data import noise as noise_mod
 from tiger.data import synthgen
 from tiger.data import fashion_import
+from tiger.data import import_abo as abo_import
 from tiger.encoders import ClipEncoder
 from tiger.eval import detection as det_eval
 from tiger.schema import load_schema
@@ -97,6 +98,25 @@ def cmd_import_fashion(cfg: dict, args) -> None:
         schema, 
         max_items=3000, 
         seed=int(cfg.get("noise", {}).get("seed", 7))
+    )
+    print(df.groupby(["category", "split"]).size().to_string())
+
+def cmd_import_abo(cfg: dict, args) -> None:
+    schema = load_schema(ROOT / cfg["data"]["schema"])
+    if not args.listings or not args.images_csv or not args.images_dir:
+        print("Error: --listings, --images-csv, and --images-dir are all required for import-abo")
+        import sys; sys.exit(1)
+
+    out_dir = ROOT / cfg["data"]["sample_dir"]
+    print(f"Importing ABO from:\n  listings : {args.listings}\n  images   : {args.images_csv}\n  img dir  : {args.images_dir}")
+    df = abo_import.import_abo(
+        listings_csv=Path(args.listings).resolve(),
+        images_csv=Path(args.images_csv).resolve(),
+        images_dir=Path(args.images_dir).resolve(),
+        out_dir=out_dir,
+        schema=schema,
+        max_items=5000,
+        seed=int(cfg.get("noise", {}).get("seed", 7)),
     )
     print(df.groupby(["category", "split"]).size().to_string())
 
@@ -671,12 +691,20 @@ def main() -> None:
                     help="repair: cross-check each repair with the Gemini VLM judge (6.4, reads GEMINI_API_KEY from .env)")
     ap.add_argument("--generative-fallback", action="store_true",
                     help="repair: use Stable Diffusion to generate missing images (requires diffusers)")
+    # import-abo specific args
+    ap.add_argument("--listings", default=None,
+                    help="import-abo: path to ABO listings.csv")
+    ap.add_argument("--images-csv", default=None,
+                    help="import-abo: path to ABO images.csv")
+    ap.add_argument("--images-dir", default=None,
+                    help="import-abo: root directory of ABO small JPEG images")
     args = ap.parse_args()
 
     cfg = load_cfg(args.config)
     {
         "synthgen": cmd_synthgen,
         "import-fashion": cmd_import_fashion,
+        "import-abo": cmd_import_abo,
         "noise": cmd_noise,
         "calibrate": cmd_calibrate,
         "detect": cmd_detect,

@@ -17,23 +17,23 @@ Global CLIP similarity scores (cosine similarity between an image and a full cap
 
 ## 3. The Strict-Precision Decision Fusion (Arbiter)
 Automated repair systems risk corrupting clean data if they guess blindly (hallucination). TIGeR introduces a provably safe **Decision Fusion Arbiter**.
-- **Architecture**: An XGBoost classifier that ingests 14 dimensions of multimodal evidence (LOO Z-scores, swap margins, pixel-level color checks, and k-NN consistency).
+- **Architecture**: A Multinomial Logistic Regression Router that ingests 14 dimensions of multimodal evidence (LOO Z-scores, swap margins, pixel-level color checks, and k-NN consistency).
 - **The Gamma (γ) Gate**: A dynamically calibrated confidence threshold. The system sweeps a holdout validation set to find the minimum confidence required to achieve an 85% precision floor. If the Arbiter's predicted probability for a repair (e.g., `P(E2) = 0.60`) fails to beat the strict γ-gate (e.g., `0.85`), the system refuses to automate the repair and flags it for human review.
 
 ## 4. Generative Fallback for Missing Modalities
 Traditional curation pipelines fail when attempting to repair an image (E1) if a suitable replacement does not exist within the catalogue.
-- **Mechanism**: TIGeR incorporates a closed-loop **Generative Fallback**. When the Candidate Pool fails to find a valid image swap, the system routes the canonical text to a diffusion model (Stable Diffusion v1.5) to dynamically synthesize the missing modality.
+- **Mechanism**: TIGeR incorporates a closed-loop **Generative Fallback**. When the Candidate Pool fails to find a valid image swap, the system routes the canonical text to a diffusion model (Stable Diffusion XL Turbo) to dynamically synthesize the missing modality.
 - **Impact**: This guarantees that the dataset can be algorithmically plugged and repaired even when 100% of the candidate visual data is corrupted or missing.
 
-## 5. Independent Semantic Verification (VLM Judge)
+## 5. Independent Semantic Verification
 Encoder-only models (like CLIP and SigLIP) suffer from "bag-of-words" blindness, often failing to recognize spatial relationships or deep semantic intent (e.g., swapping a left-facing shoe for a right-facing shoe).
-- **Mechanism**: TIGeR employs an independent Vision-Language Model (Gemini) as a final semantic safety checkpoint to audit repairs before they are committed to the dataset, catching "wrong-direction" repairs that pass encoder-only thresholds.
+- **Mechanism**: TIGeR employs an independent vision encoder (SigLIP) or Vision-Language Model (Gemini) as a final semantic safety checkpoint to audit repairs before they are committed to the dataset, catching "wrong-direction" repairs that pass primary encoder-only thresholds.
 ## 6. Compound AI System Architecture
 TIGeR is not a single monolithic model; it is designed as a **Compound AI System** where four specialized models interact to create a closed-loop repair pipeline:
-1. **The Evidence Gatherer (CLIP / SigLIP)**: A Vision-Language Encoder used to rapidly calculate baseline similarities and perform the LOO masking.
-2. **The Router (XGBoost)**: The mathematical Arbiter. It ingests the evidence vectors from the encoder and routes the product to the correct repair strategy using the strict γ-gate.
-3. **The Synthesizer (Stable Diffusion v1.5)**: The Generative Fallback model that wakes up to draw mathematically perfect replacement images when the catalogue lacks a valid candidate.
-4. **The Auditor (Gemini VLM Judge)**: The final semantic safety checkpoint. It audits the repaired image and text pair to ensure they logically align before committing the data to the database, catching edge-case hallucinations that encoder-only models miss.
+1. **The Evidence Gatherer (CLIP)**: A Vision-Language Encoder used to rapidly calculate baseline similarities and perform the LOO masking.
+2. **The Router (Logistic Regression)**: The mathematical Arbiter. It ingests the evidence vectors from the encoder and routes the product to the correct repair strategy using the strict γ-gate.
+3. **The Synthesizer (SDXL-Turbo)**: The Generative Fallback model that wakes up to draw mathematically perfect replacement images when the catalogue lacks a valid candidate.
+4. **The Auditor (SigLIP / Gemini)**: The final semantic safety checkpoint. It audits the repaired image and text pair to ensure they logically align before committing the data to the database, catching edge-case hallucinations that primary encoder-only models miss.
 
 ## 7. Category-Specific Dynamic Thresholding (The Sieve)
 A major flaw in naive dataset filtering is using a single, global similarity threshold across all data. 

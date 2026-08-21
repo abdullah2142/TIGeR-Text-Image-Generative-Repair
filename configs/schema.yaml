@@ -10,14 +10,21 @@ attributes:
   color:
     required: true
     type: enum
-    values: [red, blue, green, black, white, yellow, pink, purple, brown, orange, gray, multicolour]
+    values: [red, blue, green, black, white, yellow, pink, purple, brown, orange, gray, multicolour,
+             silver, gold, beige, navy, teal]  # silver/gold/beige/navy/teal for ABO
     aliases:
       grey: gray
       multicolor: multicolour
       multi-color: multicolour
+      silver: gray        # ABO metallic silver → gray
+      gold: yellow        # ABO gold → yellow
+      beige: white
+      navy: blue
+      teal: green
   material:
     type: enum
-    values: [cotton, leather, canvas, wool, denim, suede, polyester]
+    values: [cotton, leather, canvas, wool, denim, suede, polyester,
+             plastic, metal, glass, wood, ceramic, rubber, silicone, fabric, paper]  # ABO extensions
   pattern:
     type: enum
     values: [solid, striped, dotted]
@@ -28,7 +35,7 @@ attributes:
     type: free_text
     max_len: 60
 
-categories: [shirts, shoes, bags, hats]
+categories: [shirts, shoes, bags, hats, electronics, furniture, kitchen, home_decor]
 
 # Cross-field constraints. Each rule: {if: {field: value}, then_not: {field: [values]}}
 constraints:
