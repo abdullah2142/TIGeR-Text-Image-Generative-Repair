@@ -13,6 +13,7 @@ Usage (in tiger.ipynb on Kaggle):
         --images-dir /kaggle/input/abo-images-small/images/small
 """
 
+import gzip
 import json
 import logging
 import random
@@ -126,7 +127,7 @@ def _extract_color(raw_color: str | None, schema: Schema) -> str | None:
 
 
 def import_abo(
-    listings_csv: Path,
+    listings_dir: Path,
     images_csv: Path,
     images_dir: Path,
     out_dir: Path,
@@ -135,10 +136,10 @@ def import_abo(
     seed: int = 7,
 ) -> pd.DataFrame:
     """
-    Parse ABO Kaggle CSVs and produce products.parquet for the TIGeR pipeline.
+    Parse ABO Kaggle JSON lines and produce products.parquet for the TIGeR pipeline.
 
     Args:
-        listings_csv: Path to ABO listings.csv (product metadata).
+        listings_dir: Directory containing ABO listings_*.json.gz files.
         images_csv:   Path to ABO images.csv (image_id → path mapping).
         images_dir:   Root directory of the ABO small JPEG images.
         out_dir:      Where to write products.parquet + meta.json.
@@ -147,9 +148,6 @@ def import_abo(
         seed:         Random seed for calibration/report split.
     """
     rng = random.Random(seed)
-
-    log.info("Loading ABO listings from %s ...", listings_csv)
-    listings = pd.read_csv(listings_csv, low_memory=False)
 
     log.info("Loading ABO image map from %s ...", images_csv)
     images = pd.read_csv(images_csv, low_memory=False)
@@ -170,9 +168,25 @@ def import_abo(
     rows = []
     seen_products: set[str] = set()
 
-    for _, row in listings.iterrows():
+    json_files = list(listings_dir.glob("listings_*.json.gz"))
+    if not json_files:
+        raise FileNotFoundError(f"No listings_*.json.gz files found in {listings_dir}")
+
+    log.info("Parsing ABO JSON listings from %d files...", len(json_files))
+    
+    for json_file in json_files:
         if len(rows) >= max_items:
             break
+            
+        with gzip.open(json_file, 'rt', encoding='utf-8') as f:
+            for line in f:
+                if len(rows) >= max_items:
+                    break
+                    
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
 
         # --- Category ---
         product_type = str(row.get("product_type", "")).strip().upper()
@@ -250,7 +264,7 @@ def import_abo(
 
     meta = {
         "created_utc": datetime.now(timezone.utc).isoformat(),
-        "source_listings": str(listings_csv),
+        "source_listings_dir": str(listings_dir),
         "source_images": str(images_csv),
         "seed": seed,
         "n_products": len(df),

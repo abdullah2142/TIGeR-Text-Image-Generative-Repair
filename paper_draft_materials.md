@@ -141,19 +141,18 @@ Copy and paste this into your Results or Discussion section as a practical impac
 
 ## 6. Cross-Domain Experiment: ABO Kaggle Setup Guide
 
-> **For the notebook:** Add **both** of the following datasets as inputs in your Kaggle notebook before running:
+> **For the notebook:** Add the following single dataset to your Kaggle notebook before running:
 >
-> 1. **ABO Metadata** — search Kaggle for "Amazon Berkeley Objects Complete Metadata". This dataset contains `listings.csv` and `images.csv`.
-> 2. **ABO Images Small** — search Kaggle for "Amazon Berkeley Objects Small Images". This contains the actual JPEG files (~3GB, max 256px).
+> 1. **ABO Dataset** — search Kaggle for "Amazon Berkeley Objects Small" by user khyeh0719 (or ishansingh811 if it contains the json listings too). Make sure it contains `listings/metadata/listings_*.json.gz`, `images/metadata/images.csv.gz`, and `images/small/`.
 >
 > **Then run these cells in order (after the existing fashion pipeline):**
 >
 > ```python
 > # Step A: Import ABO data
 > !python -m tiger.cli import-abo \
->     --listings /kaggle/input/abo-complete-metadata/listings.csv \
->     --images-csv /kaggle/input/abo-complete-metadata/images.csv \
->     --images-dir /kaggle/input/abo-images-small/images/small
+>     --listings-dir /kaggle/input/amazon-berkeley-objects-small/listings/metadata \
+>     --images-csv /kaggle/input/amazon-berkeley-objects-small/images/metadata/images.csv.gz \
+>     --images-dir /kaggle/input/amazon-berkeley-objects-small/images/small
 >
 > # Step B: Calibrate on the ABO data (fits new thresholds for non-fashion similarity distributions)
 > !python -m tiger.cli calibrate

@@ -103,14 +103,14 @@ def cmd_import_fashion(cfg: dict, args) -> None:
 
 def cmd_import_abo(cfg: dict, args) -> None:
     schema = load_schema(ROOT / cfg["data"]["schema"])
-    if not args.listings or not args.images_csv or not args.images_dir:
-        print("Error: --listings, --images-csv, and --images-dir are all required for import-abo")
+    if not args.listings_dir or not args.images_csv or not args.images_dir:
+        print("Error: --listings-dir, --images-csv, and --images-dir are all required for import-abo")
         import sys; sys.exit(1)
 
     out_dir = ROOT / cfg["data"]["sample_dir"]
-    print(f"Importing ABO from:\n  listings : {args.listings}\n  images   : {args.images_csv}\n  img dir  : {args.images_dir}")
+    print(f"Importing ABO from:\n  listings : {args.listings_dir}\n  images   : {args.images_csv}\n  img dir  : {args.images_dir}")
     df = abo_import.import_abo(
-        listings_csv=Path(args.listings).resolve(),
+        listings_dir=Path(args.listings_dir).resolve(),
         images_csv=Path(args.images_csv).resolve(),
         images_dir=Path(args.images_dir).resolve(),
         out_dir=out_dir,
@@ -692,8 +692,8 @@ def main() -> None:
     ap.add_argument("--generative-fallback", action="store_true",
                     help="repair: use Stable Diffusion to generate missing images (requires diffusers)")
     # import-abo specific args
-    ap.add_argument("--listings", default=None,
-                    help="import-abo: path to ABO listings.csv")
+    ap.add_argument("--listings-dir", default=None,
+                    help="import-abo: directory containing ABO listings_*.json.gz")
     ap.add_argument("--images-csv", default=None,
                     help="import-abo: path to ABO images.csv")
     ap.add_argument("--images-dir", default=None,
