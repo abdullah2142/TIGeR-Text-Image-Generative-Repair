@@ -674,7 +674,7 @@ def cmd_generate(cfg: dict, args) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(prog="tiger")
-    ap.add_argument("command", choices=["synthgen", "import-fashion", "noise", "calibrate", "detect", "evaluate",
+    ap.add_argument("command", choices=["synthgen", "import-fashion", "import-abo", "noise", "calibrate", "detect", "evaluate",
                                         "analyze", "train-arbiter", "route", "repair", "sweep",
                                         "calibrate-fusion", "ablate", "ablate-repair", "compare-encoders", "generate"])
     ap.add_argument("--config", default="configs/tiger.yaml")
