@@ -13,7 +13,6 @@ Usage (in tiger.ipynb on Kaggle):
         --images-dir /kaggle/input/abo-images-small/images/small
 """
 
-import gzip
 import json
 import logging
 import random
@@ -139,7 +138,7 @@ def import_abo(
     Parse ABO Kaggle JSON lines and produce products.parquet for the TIGeR pipeline.
 
     Args:
-        listings_dir: Directory containing ABO listings_*.json.gz files.
+        listings_dir: Directory containing ABO listings_*.json files.
         images_csv:   Path to ABO images.csv (image_id → path mapping).
         images_dir:   Root directory of the ABO small JPEG images.
         out_dir:      Where to write products.parquet + meta.json.
@@ -168,9 +167,9 @@ def import_abo(
     rows = []
     seen_products: set[str] = set()
 
-    json_files = list(listings_dir.glob("listings_*.json.gz"))
+    json_files = list(listings_dir.glob("listings_*.json"))
     if not json_files:
-        raise FileNotFoundError(f"No listings_*.json.gz files found in {listings_dir}")
+        raise FileNotFoundError(f"No listings_*.json files found in {listings_dir}")
 
     log.info("Parsing ABO JSON listings from %d files...", len(json_files))
     
@@ -178,7 +177,7 @@ def import_abo(
         if len(rows) >= max_items:
             break
             
-        with gzip.open(json_file, 'rt', encoding='utf-8') as f:
+        with open(json_file, 'rt', encoding='utf-8') as f:
             for line in f:
                 if len(rows) >= max_items:
                     break
