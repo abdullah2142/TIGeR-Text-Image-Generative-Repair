@@ -151,7 +151,7 @@ Copy and paste this into your Results or Discussion section as a practical impac
 > # Step A: Import ABO data
 > !python -m tiger.cli import-abo \
 >     --listings-dir /kaggle/input/amazon-berkeley-objects-small/abo-listings/listings/metadata \
->     --images-csv /kaggle/input/amazon-berkeley-objects-small/abo-images-small/images/metadata/images.csv.gz \
+>     --images-csv /kaggle/input/amazon-berkeley-objects-small/abo-images-small/images/metadata/images.csv \
 >     --images-dir /kaggle/input/amazon-berkeley-objects-small/abo-images-small/images/small
 >
 > # Step B: Calibrate on the ABO data (fits new thresholds for non-fashion similarity distributions)
