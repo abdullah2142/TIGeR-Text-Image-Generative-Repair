@@ -187,58 +187,58 @@ def import_abo(
                 except json.JSONDecodeError:
                     continue
 
-        # --- Category ---
-        product_type = str(row.get("product_type", "")).strip().upper()
-        category = CATEGORY_MAP.get(product_type)
-        if category is None:
-            continue  # Skip unmapped product types
-
-        # --- Title (English) ---
-        # ABO may store item_name as a JSON array of {"language_tag": ..., "value": ...}
-        raw_name = row.get("item_name", "")
-        title = _extract_english_value(raw_name)
-        if not title:
-            continue
-
-        # --- Product ID ---
-        product_id = str(row.get("item_id", "")).strip()
-        if not product_id or product_id in seen_products:
-            continue
-
-        # --- Image ---
-        main_image_id = str(row.get("main_image_id", "")).strip()
-        img_path = img_path_map.get(main_image_id)
-        if img_path is None:
-            continue  # Skip products whose image is not in the small archive
-
-        # --- Color ---
-        raw_color = row.get("color", row.get("colors", None))
-        color = _extract_color(_extract_english_value(raw_color), schema)
-        if color is None:
-            continue  # color is required by schema
-
-        attrs = {"color": color}
-
-        # --- Material (optional, best-effort) ---
-        raw_material = row.get("material", row.get("fabric_type", None))
-        if raw_material:
-            mat = str(_extract_english_value(raw_material) or "").lower().strip()
-            mat = schema.normalize("material", mat)
-            if schema.in_domain("material", mat):
-                attrs["material"] = mat
-
-        seen_products.add(product_id)
-        rows.append({
-            "row_id": product_id,
-            "product_id": product_id,
-            "title": title,
-            "category": category,
-            "attributes": json.dumps(attrs, ensure_ascii=False),
-            "canonical_text": text_views.canonical_text(title, category, attrs),
-            "image_path": str(img_path),
-            "is_image_missing": False,
-            "is_text_missing": False,
-        })
+                # --- Category ---
+                product_type = str(row.get("product_type", "")).strip().upper()
+                category = CATEGORY_MAP.get(product_type)
+                if category is None:
+                    continue  # Skip unmapped product types
+        
+                # --- Title (English) ---
+                # ABO may store item_name as a JSON array of {"language_tag": ..., "value": ...}
+                raw_name = row.get("item_name", "")
+                title = _extract_english_value(raw_name)
+                if not title:
+                    continue
+        
+                # --- Product ID ---
+                product_id = str(row.get("item_id", "")).strip()
+                if not product_id or product_id in seen_products:
+                    continue
+        
+                # --- Image ---
+                main_image_id = str(row.get("main_image_id", "")).strip()
+                img_path = img_path_map.get(main_image_id)
+                if img_path is None:
+                    continue  # Skip products whose image is not in the small archive
+        
+                # --- Color ---
+                raw_color = row.get("color", row.get("colors", None))
+                color = _extract_color(_extract_english_value(raw_color), schema)
+                if color is None:
+                    continue  # color is required by schema
+        
+                attrs = {"color": color}
+        
+                # --- Material (optional, best-effort) ---
+                raw_material = row.get("material", row.get("fabric_type", None))
+                if raw_material:
+                    mat = str(_extract_english_value(raw_material) or "").lower().strip()
+                    mat = schema.normalize("material", mat)
+                    if schema.in_domain("material", mat):
+                        attrs["material"] = mat
+        
+                seen_products.add(product_id)
+                rows.append({
+                    "row_id": product_id,
+                    "product_id": product_id,
+                    "title": title,
+                    "category": category,
+                    "attributes": json.dumps(attrs, ensure_ascii=False),
+                    "canonical_text": text_views.canonical_text(title, category, attrs),
+                    "image_path": str(img_path),
+                    "is_image_missing": False,
+                    "is_text_missing": False,
+                })
 
     if not rows:
         raise ValueError(
