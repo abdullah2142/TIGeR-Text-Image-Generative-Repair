@@ -277,28 +277,34 @@ def import_abo(
 
 def _extract_english_value(raw) -> str | None:
     """
-    ABO encodes multilingual fields as either a plain string or a JSON array like:
+    ABO encodes multilingual fields as either a plain string or a list of dicts:
       [{"language_tag": "en_US", "value": "Blue Mug"}, ...]
     This function extracts the English value regardless of format.
     """
     if raw is None or (isinstance(raw, float)):
         return None
+        
+    items = raw
+    # If it's a raw string that looks like a JSON array, try parsing it
+    if isinstance(raw, str) and raw.strip().startswith("["):
+        try:
+            items = json.loads(raw)
+        except json.JSONDecodeError:
+            pass
+
+    # If we have a list of dictionaries, extract the English one
+    if isinstance(items, list):
+        for item in items:
+            if isinstance(item, dict):
+                lang = str(item.get("language_tag", "")).lower()
+                if lang.startswith("en"):
+                    return str(item.get("value", "")).strip() or None
+        # Fallback: return first item's value regardless of language
+        if items and isinstance(items[0], dict):
+            return str(items[0].get("value", "")).strip() or None
+            
+    # If it's not a list (or failed to parse as one), just return it as a string
     s = str(raw).strip()
     if not s or s == "nan":
         return None
-    # Try to parse as JSON list
-    if s.startswith("["):
-        try:
-            items = json.loads(s)
-            if isinstance(items, list):
-                for item in items:
-                    if isinstance(item, dict):
-                        lang = str(item.get("language_tag", "")).lower()
-                        if lang.startswith("en"):
-                            return str(item.get("value", "")).strip() or None
-                # Fallback: return first item's value regardless of language
-                if items and isinstance(items[0], dict):
-                    return str(items[0].get("value", "")).strip() or None
-        except (json.JSONDecodeError, TypeError):
-            pass
     return s
