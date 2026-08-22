@@ -188,7 +188,11 @@ def import_abo(
                     continue
 
                 # --- Category ---
-                product_type = str(row.get("product_type", "")).strip().upper()
+                raw_pt = row.get("product_type", "")
+                pt = _extract_english_value(raw_pt)
+                if not pt:
+                    continue
+                product_type = pt.strip().upper()
                 category = CATEGORY_MAP.get(product_type)
                 if category is None:
                     continue  # Skip unmapped product types
