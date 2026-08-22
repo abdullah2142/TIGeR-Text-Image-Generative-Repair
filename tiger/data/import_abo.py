@@ -152,13 +152,21 @@ def import_abo(
     images = pd.read_csv(images_csv, low_memory=False)
 
     # Build image_id → relative file path lookup
-    # The images.csv 'path' column contains a relative path like "images/small/ab/cd/abcd1234.jpg"
     img_path_map: dict[str, Path] = {}
     for _, row in images.iterrows():
         iid = str(row.get("image_id", "")).strip()
         rel = str(row.get("path", "")).strip()
         if iid and rel:
+            # 1. Try direct join
             full = (images_dir / rel).resolve()
+            
+            # 2. If it doesn't exist, try stripping redundant "images/small/" prefix
+            if not full.exists():
+                if rel.startswith("images/small/"):
+                    full = (images_dir / rel[len("images/small/"):]).resolve()
+                elif rel.startswith("small/"):
+                    full = (images_dir / rel[len("small/"):]).resolve()
+                    
             if full.exists():
                 img_path_map[iid] = full
 
