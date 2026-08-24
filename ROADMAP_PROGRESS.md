@@ -116,9 +116,95 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 - [ ] Incorporate the Mermaid architecture diagram into the methodology section.
 - [ ] Draft the limitations section discussing the generative fallback's minor detail loss.
 - [ ] **Cost-Benefit Paragraph:** Add to Results/Discussion — TIGeR achieves ~6,000 products/hour on T4 vs. ~60-100 for a human curator (80× speedup). SigLIP verifier and SDXL-Turbo generative fallback incur zero API cost. Pre-written text available in `paper_draft_materials.md` Section 5.
-- [ ] **Cross-Domain Experiment (ABO):** Run ABO notebook on Kaggle to demonstrate domain-agnosticism.
-  - Duplicate `tiger.ipynb` → remove: synthgen, import-fashion, repair-demo, detection ablation, VLM ablation
-  - Keep: setup, `import-abo`, `calibrate`, `train-arbiter`, `ablate-repair --independent`
-  - Expected output: `data/outputs/repair_ablations_summary_run_abo.csv`
-  - Compare side-by-side with `repair_ablations_summary_run2.csv` (Fashion baseline)
-  - Schema extended: 4 new categories (electronics, furniture, kitchen, home_decor), 5 new colors, 8 new materials
+- [x] **Cross-Domain Experiment (ABO):** ABO notebook completed on Kaggle. ✅
+  - Schema extended: 4 new categories (electronics, furniture, kitchen, home_decor), 5 new colors, 8 new materials.
+  - Results with schema fix: Full System repaired 39 / escalated 440 out of 750 corrupted items.
+  - Ablation table written; findings documented in `paper_draft_materials.md` §7.
+  - ABO notebook: `tiger_abo.ipynb` — standalone, no fashion cells.
+
+---
+
+## ABO Integration: Hiccup Log (for Limitations Section)
+
+A detailed record of bugs and obstacles encountered during the cross-domain ABO integration.
+These inform the "Limitations & Future Work" section of the manuscript.
+
+### H1 — `import-abo` missing from argparse choices
+`import-abo` was added to the dispatch table but NOT to the `choices=[...]` list in argparse.
+Argparse validates command names before dispatch; the command was silently blocked.
+**Fix:** Added `"import-abo"` to the `choices` list in `tiger/cli.py`.
+
+### H2 — `.json.gz` expected, `.json` found
+The ABO README documents files as `.json.gz`, but the Kaggle dataset had already unzipped them.
+The import adapter was using Python's `gzip` module to open them, which immediately crashed on plain text files.
+**Fix:** Changed the glob pattern and file-open logic to handle raw `.json` files.
+
+### H3 — Indentation bug: parsing logic outside the for-loop
+When refactoring from a CSV-based reader to a JSON-line-by-line reader, the entire data extraction block
+(category, title, product ID, image, color, material) was accidentally de-indented out of the inner `for line in f` loop.
+The script ran without errors because it silently processed only the very last line of each JSON file,
+producing 0-16 valid products out of 147,000, then crashing with "No valid ABO products found."
+**Fix:** Re-indented 52 lines back into the loop using a targeted Python script.
+
+### H4 — `product_type` stored as multilingual JSON array, not plain string
+ABO encodes `product_type` as `[{"language_tag": "en_US", "value": "CELLULAR_PHONE_CASE"}]`, not a string.
+The import adapter was calling `str(row.get("product_type")).upper()`, which stringified the Python list
+using single-quote repr — unrecognizable to the CATEGORY_MAP, so every product was skipped as "unmapped."
+**Fix:** Route `product_type` through `_extract_english_value()` before CATEGORY_MAP lookup.
+
+### H5 — `_extract_english_value` stringify bug
+When JSON lines are parsed by `json.loads()`, list-valued fields become Python list objects.
+The function was calling `str(raw)` before trying to re-parse the value as JSON. Python's `str()` on a list
+uses single quotes (`'value'`) which is not valid JSON — causing a silent parse failure and returning
+a garbage string representation of the list.
+**Fix:** Rewrote `_extract_english_value` to handle both native Python lists and JSON strings natively,
+without converting to string first.
+
+### H6 — Image paths had redundant `images/small/` prefix
+`images.csv` contained relative paths like `images/small/60/609d8...jpg`.
+When joined to the `--images-dir` (which already ends in `.../images/small`), the result was
+`.../images/small/images/small/60/609d8...jpg` — a non-existent doubled path.
+All products would have passed the category/title/color checks but silently had no image match,
+causing them to be skipped.
+**Fix:** Image path builder now strips the `images/small/` or `small/` prefix if the direct join fails.
+
+### H7 — `--force-reinstall` destroyed Kaggle's PyTorch/Torchvision
+Added to bypass Kaggle's pip cache of the old `tiger` package (which lacked `import-abo`).
+`--force-reinstall` rebuilt the entire dependency tree, including PyTorch-dependent packages,
+pulling incompatible versions that broke `torchvision`'s NMS kernel registration.
+This caused every downstream cell using `AutoProcessor` (SigLIP) or `AutoPipeline` (SDXL-Turbo) to crash
+with `RuntimeError: operator torchvision::nms does not exist`.
+**Fix:** Replaced with `pip uninstall -y tiger && pip install --no-cache-dir -e .` — only the local package
+is cleared; Kaggle's curated PyTorch stack is untouched.
+
+### H8 — `images.csv.gz` vs `images.csv` extension
+The Kaggle dataset page and original ABO README refer to `images.csv.gz`, but Kaggle had unzipped it.
+The hardcoded `--images-csv` path in the notebook included `.gz`, causing an immediate FileNotFoundError.
+**Fix:** Removed `.gz` from the path in `tiger_abo.ipynb`.
+
+### H9 — Nested Kaggle directory structure
+The Kaggle dataset (`khyeh0719/amazon-berkeley-objects-small`) unpacks its contents into subdirectories
+`abo-listings/` and `abo-images-small/` inside the dataset root, not directly at the root.
+The notebook's initial paths assumed a flat structure.
+**Fix:** Updated all paths to include the correct subdirectory names based on the Kaggle file browser screenshot.
+
+### H10 — `color: required: true` caused 65% escalation on ABO (Schema Design Bug)
+The schema enforced `color` as a globally required attribute for all product categories.
+ABO non-fashion products (phone cases, chairs, mugs) frequently have ambiguous colors (multicolour,
+transparent, assorted) that fail schema validation. When a repair could not produce a schema-valid color,
+it escalated to human review instead of attempting the repair.
+The Arbiter and Gamma Gate made correct routing decisions, but they were irrelevant — schema validation
+gated the repair attempt and escalated ~65% of corrupted ABO items before the repair path was even attempted.
+**Fix:** Changed `color.required: true` (global) to `color.required_for_categories: [shirts, shoes, bags, hats]`
+(fashion-scoped). Non-fashion categories now proceed to repair even without a resolved color.
+**Paper impact:** Documented as a design insight: cross-domain TIGeR deployment requires lightweight schema
+reconfiguration per product vertical (a 3-line YAML change, not pipeline retraining).
+
+### H11 — Gamma Gate non-differentiation on ABO (Open Finding)
+`Full System` and `No Gamma Gate (gamma=0)` produce identical results in the ABO ablation.
+The gamma threshold (default: 0.60) is calibrated on fashion-domain data. On ABO, the Arbiter's
+`predict_proba()` scores are consistently above gamma, so the gate never fires.
+The Arbiter may be overconfident on out-of-domain data — its training noise distribution does not fully
+match ABO's attribute diversity, leading to uniformly high (but potentially unreliable) confidence scores.
+**Status:** Open. Diagnostic cell added to `tiger_abo.ipynb` (Cell after `ablate-repair`) to visualize
+the confidence score distribution. This will be reported as a limitation requiring per-domain gamma recalibration.
