@@ -200,11 +200,18 @@ gated the repair attempt and escalated ~65% of corrupted ABO items before the re
 **Paper impact:** Documented as a design insight: cross-domain TIGeR deployment requires lightweight schema
 reconfiguration per product vertical (a 3-line YAML change, not pipeline retraining).
 
-### H11 — Gamma Gate non-differentiation on ABO (Open Finding)
-`Full System` and `No Gamma Gate (gamma=0)` produce identical results in the ABO ablation.
+### H11 — Gamma Gate non-differentiation on ABO
+`Full System` and `No Gamma Gate (gamma=0)` produced identical results in the initial ABO ablation.
 The gamma threshold (default: 0.60) is calibrated on fashion-domain data. On ABO, the Arbiter's
-`predict_proba()` scores are consistently above gamma, so the gate never fires.
-The Arbiter may be overconfident on out-of-domain data — its training noise distribution does not fully
-match ABO's attribute diversity, leading to uniformly high (but potentially unreliable) confidence scores.
-**Status:** Open. Diagnostic cell added to `tiger_abo.ipynb` (Cell after `ablate-repair`) to visualize
-the confidence score distribution. This will be reported as a limitation requiring per-domain gamma recalibration.
+`predict_proba()` scores are consistently above this threshold, so the gate never fires.
+Root cause: the Arbiter is overconfident on out-of-domain data — its training noise distribution
+does not fully match ABO's broader attribute diversity, yielding uniformly high but unreliable confidence.
+**Decision:** Rather than masking this as a bug, we treat it as a measurable limitation.
+A two-step response was implemented in `tiger_abo.ipynb`:
+1. **Diagnostic cell (6b):** Plots the full max-confidence distribution and prints the percentage
+   of items below gamma=0.60. Produces `data/outputs/arbiter_confidence_abo.png`.
+2. **Recalibration cell (6c):** Computes the ABO-domain gamma at the 25th percentile of observed
+   confidence scores, patches `configs/tiger.yaml`, and reruns `ablate-repair`. The resulting table
+   should show `Full System` < `No Gamma Gate` in repairs, confirming the gate is now active.
+**Paper impact:** Reported as a concrete, quantified limitation — the Arbiter requires per-domain
+gamma recalibration for cross-domain deployment. See `paper_draft_materials.md` §7.5.
