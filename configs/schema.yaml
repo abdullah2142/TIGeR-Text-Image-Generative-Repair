@@ -8,7 +8,12 @@
 
 attributes:
   color:
-    required: true
+    # Required only for fashion categories where color is a primary product identifier.
+    # For electronics, furniture, kitchen, and home_decor (ABO domains), color is
+    # optional — a phone case or chair can be validly described without a color
+    # attribute. Making it globally required caused 65%+ escalation in cross-domain
+    # ABO runs. See paper_draft_materials.md §6 and ROADMAP_PROGRESS.md for rationale.
+    required_for_categories: [shirts, shoes, bags, hats]
     type: enum
     values: [red, blue, green, black, white, yellow, pink, purple, brown, orange, gray, multicolour,
              silver, gold, beige, navy, teal]  # silver/gold/beige/navy/teal for ABO

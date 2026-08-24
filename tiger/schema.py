@@ -75,8 +75,15 @@ class Schema:
             out.append(Violation("known_category", "category", category, f"unknown category: {category!r}"))
 
         for fld, spec in self.attributes.items():
+            # Simple required: applies to all categories
             if spec.get("required") and (fld not in attrs or attrs.get(fld) in (None, "", [])):
                 out.append(Violation("required", fld, None, f"required attribute {fld!r} is missing"))
+            # Category-scoped required: applies only when category is in the list
+            req_cats = spec.get("required_for_categories", [])
+            if req_cats and category in req_cats:
+                if fld not in attrs or attrs.get(fld) in (None, "", []):
+                    out.append(Violation("required", fld, None,
+                                        f"required attribute {fld!r} is missing for category {category!r}"))
 
         for fld, val in attrs.items():
             if fld not in self.attributes:
