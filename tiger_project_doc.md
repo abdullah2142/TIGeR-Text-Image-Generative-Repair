@@ -1,7 +1,7 @@
 # TIGeR — Technical Documentation (Living Document)
 
-> **Last updated:** 2026-08-20  
-> **Status:** Project Complete — Pipeline validated on Fashion Product Images dataset and ready for manuscript drafting.
+> **Last updated:** 2026-08-25
+> **Status:** Project Complete — Pipeline validated on Fashion Product Images (in-domain) and Amazon Berkeley Objects (cross-domain). Manuscript drafting phase.
 
 ---
 
@@ -33,7 +33,7 @@ TIGeR-Text-Image-Generative-Repair/
 │   ├── solver.py              ← Stage 4: Repair planning
 │   ├── verify.py              ← Stage 5: Acceptance gating
 │   ├── repair.py              ← Closed loop orchestrator
-│   ├── vlm_judge.py           ← Gemini VLM judge (Phase 6.4, NEW)
+│   ├── vlm_judge.py           ← SigLIP independent verifier + optional Gemini VLM judge
 │   ├── schema.py              ← Attribute domains Ω_j and constraint set C
 │   ├── encoders.py            ← CLIP / SigLIP encoder wrapper with caching
 │   ├── colors.py              ← HSV dominant colour estimator
@@ -41,7 +41,9 @@ TIGeR-Text-Image-Generative-Repair/
 │   ├── text_views.py          ← Caption construction, token budgeting
 │   ├── data/
 │   │   ├── synthgen.py        ← Synthetic catalogue generator
-│   │   └── noise.py           ← Error injector (self-verifying)
+│   │   ├── noise.py           ← Error injector (self-verifying)
+│   │   ├── fashion_import.py  ← Kaggle Fashion Product Images adapter
+│   │   └── import_abo.py      ← Amazon Berkeley Objects adapter (cross-domain)
 │   └── eval/
 │       ├── detection.py       ← Precision / Recall / F1 with bootstrap CIs
 │       ├── ablation.py        ← Baselines and ablation table
@@ -393,11 +395,27 @@ The engineering and experimentation phase is 100% complete. The final remaining 
 - **Safety:** 269/435 ambiguous products escalated to human rather than auto-repaired
 - **Accuracy gain:** Arbiter adds +49.4% restoration accuracy over random routing
 
-**Pending: Cross-Domain (ABO) Experiment**
-- `tiger/data/import_abo.py` and `import-abo` CLI command implemented
-- Schema extended to 8 categories (4 fashion + 4 non-fashion)
-- Run the lean ABO notebook on Kaggle (estimated 2-3 hours)
-- Compare `repair_ablations_summary_run_abo.csv` vs Fashion to prove domain-agnosticism
+### ✅ Cross-Domain Validation Completed (ABO)
+- Pipeline evaluated end-to-end on **Amazon Berkeley Objects (ABO)** dataset (electronics, furniture, kitchen, home_decor).
+- Schema extended with `required_for_categories` to make `color` optional for non-fashion categories.
+- Arbiter gamma recalibration protocol implemented (25th-percentile domain-specific threshold).
+- Full findings documented in `paper_draft_materials.md` §7.
+
+### 📝 Final Stage: Paper Writing
+The engineering and experimentation phase is 100% complete. The final remaining task is drafting the academic manuscript.
+
+**Key paper-ready numbers (Fashion baseline):**
+- **Throughput:** ~6,000 products/hour on T4 GPU (vs. ~60-100/hr human curation = 80× speedup)
+- **Cost:** $0.00 API cost (SigLIP is local; SDXL-Turbo runs on free Kaggle GPU)
+- **Safety:** 269/435 ambiguous products escalated to human rather than auto-repaired
+- **Accuracy gain:** Arbiter adds +49.4% restoration accuracy over random routing
+
+**Key paper-ready numbers (ABO cross-domain):**
+- **Products imported:** ~2,500 (from 147,702 total, filtered to 4 mapped categories)
+- **Corruption rate:** 30% (750/2,500 synthetic errors injected)
+- **Full System:** 39 repaired, 440 escalated (post schema fix)
+- **Schema fix impact:** Escalation rate dropped from ~65% to ~59% by scoping `color` requirement to fashion-only
+- **Gamma finding:** Default gamma=0.60 never fires on ABO; domain-specific recalibration required (see §7.5)
 
 Target venue: KDD Applied Data Science track or multimodal workshop at CVPR/ECCV
 

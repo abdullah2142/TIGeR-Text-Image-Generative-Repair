@@ -3,9 +3,9 @@
 Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md`
 (the review is gitignored with the rest of `docs/`; this log is committed).
 
-- **Branch:** `phase1-critical-fixes`
+- **Branch:** `master`
 - **Started:** 2026-07-17
-- **Last updated:** 2026-07-21 — Phase 3b done (model-agnostic encoder + SigLIP independent verifier); awaiting checkpoint review
+- **Last updated:** 2026-08-25 — ABO cross-domain run complete; gamma recalibration implemented; manuscript phase.
 - **Rule of engagement:** stop at each milestone checkpoint for user review before
   the next phase begins.
 
@@ -22,6 +22,7 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 | 4. Real-world readiness | ✅ 4.1, 4.2 done. (4.3/4.4 optional extensions) | — |
 | 5. Evaluation completeness | ✅ 5.4 ablation and 5.5 sweep complete | — |
 | 6. Extensions | ✅ 6.4 (SigLIP Verifier), 6.5 (Gen Fallback) complete | Milestone 4 |
+| 7. Cross-Domain (ABO) | ✅ ABO run complete; schema fix + gamma recalibration documented | — |
 
 ---
 
@@ -108,19 +109,19 @@ Living document tracking execution of `docs/TIGeR_Critical_Review_and_Roadmap.md
 - **2026-07-28 · Checkpoint 6.5** — Implemented Generative Fallback (SDXL-Turbo).
 - **2026-08-14 · VLM Judge Bugfixes** — Fixed single-image T2V prompting and token limits.
 - **2026-08-18 · API Caching & CSV Export** — Solved Gemini 500 RPD rate limit via LRU caching. Added automated CSV extraction for ablation metrics.
-- **2026-08-19 · Project Completion** — Final SigLIP vs Gemini ablation run completed on Kaggle Fashion dataset. SigLIP selected as final verifier. Project transitions to manuscript drafting phase.
+- **2026-08-19 · Project Completion (Fashion)** — Final SigLIP vs Gemini ablation run completed on Kaggle Fashion dataset. SigLIP selected as final verifier. Project transitions to manuscript drafting phase.
+- **2026-08-22 · ABO Adapter** — `import-abo` command implemented. Fixed 9 bugs during integration (H1–H9): argparse choices, gzip vs raw JSON, indentation bug, multilingual JSON arrays, image path prefix doubling, pip force-reinstall breaking Kaggle PyTorch.
+- **2026-08-24 · ABO Run Complete** — Full cross-domain ablation run executed on Kaggle (T4). Schema fix applied: `color` changed from globally required to fashion-scoped (`required_for_categories`). Escalation rate dropped from 65% to ~59%.
+- **2026-08-25 · Gamma Recalibration** — Arbiter confidence diagnostic + 25th-percentile gamma recalibration cells added to `tiger_abo.ipynb`. Documented as H11 and §7.5 in paper draft.
 
-### TODO — Next Steps (Manuscript Phase)
+### TODO — Remaining Manuscript Tasks
 
 - [ ] Format the LaTeX ablation tables using the metrics generated in `data/outputs/`.
+- [ ] Fill in the X% fashion escalation rate placeholder in `paper_draft_materials.md` §7.4.
 - [ ] Incorporate the Mermaid architecture diagram into the methodology section.
-- [ ] Draft the limitations section discussing the generative fallback's minor detail loss.
-- [ ] **Cost-Benefit Paragraph:** Add to Results/Discussion — TIGeR achieves ~6,000 products/hour on T4 vs. ~60-100 for a human curator (80× speedup). SigLIP verifier and SDXL-Turbo generative fallback incur zero API cost. Pre-written text available in `paper_draft_materials.md` Section 5.
-- [x] **Cross-Domain Experiment (ABO):** ABO notebook completed on Kaggle. ✅
-  - Schema extended: 4 new categories (electronics, furniture, kitchen, home_decor), 5 new colors, 8 new materials.
-  - Results with schema fix: Full System repaired 39 / escalated 440 out of 750 corrupted items.
-  - Ablation table written; findings documented in `paper_draft_materials.md` §7.
-  - ABO notebook: `tiger_abo.ipynb` — standalone, no fashion cells.
+- [ ] Draft the limitations section (use H10–H11 from this file as source material).
+- [ ] **Cost-Benefit Paragraph:** Pre-written text available in `paper_draft_materials.md` §5.
+- [x] **Cross-Domain Experiment (ABO):** ABO notebook completed. Schema fix + gamma recalibration applied. Results in `paper_draft_materials.md` §7.
 
 ---
 
