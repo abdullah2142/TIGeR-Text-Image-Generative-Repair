@@ -7,47 +7,47 @@ You can render this diagram directly in markdown editors that support Mermaid (l
 ```mermaid
 flowchart TD
     %% Styling
-    classDef input fill:#f9f9f9,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5
-    classDef phase fill:#e1f5fe,stroke:#03a9f4,stroke-width:2px
-    classDef gate fill:#fff3e0,stroke:#ff9800,stroke-width:2px
-    classDef action fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
-    classDef fallback fill:#fce4ec,stroke:#e91e63,stroke-width:2px
-    classDef human fill:#ffebee,stroke:#f44336,stroke-width:2px
+    classDef input fill:#f9f9f9,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5,color:#000
+    classDef phase fill:#e1f5fe,stroke:#03a9f4,stroke-width:2px,color:#000
+    classDef gate fill:#fff3e0,stroke:#ff9800,stroke-width:2px,color:#000
+    classDef action fill:#e8f5e9,stroke:#4caf50,stroke-width:2px,color:#000
+    classDef fallback fill:#fce4ec,stroke:#e91e63,stroke-width:2px,color:#000
+    classDef human fill:#ffebee,stroke:#f44336,stroke-width:2px,color:#000
 
     %% Main Input
-    RawDB[("Raw Catalogue<br/>(Images & Text Attributes)")]:::input
+    RawDB[("Raw Catalogue (Images & Text)")]:::input
 
     %% Phase 1
     subgraph Phase1 ["Phase 1: The Sieve (Detection)"]
-        Enc["Multimodal Encoder<br/>CLIP / SigLIP"]
-        QGate{"Confidence<br/>Quantile Gate"}:::gate
+        Enc["Multimodal Encoder (CLIP / SigLIP)"]
+        QGate{"Confidence Quantile Gate"}:::gate
     end
 
     %% Phase 2
     subgraph Phase2 ["Phase 2: The Analyzer (Evidence Gathering)"]
-        LOO["Leave-One-Out (LOO)<br/>Text Embeddings"]
-        KNN["K-NN Visual Search<br/>(Find Candidate Images)"]
-        Evid["Compile Evidence:<br/>Suspect Fields & Donors"]
+        LOO["Leave-One-Out (LOO) Text Embeddings"]
+        KNN["K-NN Visual Search (Find Candidate Images)"]
+        Evid["Compile Evidence: Suspect Fields & Donors"]
     end
 
     %% Phase 3
     subgraph Phase3 ["Phase 3: The Arbiter (Routing)"]
         LogReg["Logistic Regression Router"]
-        GammaGate{"Gamma Gate<br/>(Confidence > 0.40?)"}:::gate
+        GammaGate{"Gamma Gate (Confidence > 0.40?)"}:::gate
         RouteSplit{"Route Decision"}:::gate
     end
 
     %% Phase 4
     subgraph Phase4 ["Phase 4: The Solver (Repair Execution)"]
-        V2T["V2T Repair<br/>Patch Text Attributes"]:::action
-        PoolCheck{"Candidate<br/>Available?"}:::gate
-        T2V["T2V Repair<br/>Swap Catalogue Image"]:::action
-        GenFallback["Generative Fallback<br/>SDXL-Turbo Synthesis"]:::fallback
+        V2T["V2T Repair (Patch Text)"]:::action
+        PoolCheck{"Candidate Available?"}:::gate
+        T2V["T2V Repair (Swap Catalogue Image)"]:::action
+        GenFallback["Generative Fallback (SDXL-Turbo)"]:::fallback
     end
 
     %% Phase 5
     subgraph Phase5 ["Phase 5: Independent Verifier"]
-        Judge{"VLM / SigLIP Judge<br/>(Final Validation)"}:::gate
+        Judge{"VLM / SigLIP Judge (Final Validation)"}:::gate
     end
 
     %% External Outcomes
@@ -60,9 +60,9 @@ flowchart TD
     RawDB --> Enc
     Enc -- "Cross-Modal Similarity" --> QGate
     
-    QGate -- "High Confidence<br/>(Clean)" --> CleanData
-    QGate -- "Low Confidence<br/>(Flagged Anomaly)" --> LOO
-    QGate --> KNN
+    QGate -- "High Confidence (Clean)" --> CleanData
+    QGate -- "Low Confidence (Flagged Anomaly)" --> LOO
+    QGate -- "Low Confidence (Flagged Anomaly)" --> KNN
 
     LOO --> Evid
     KNN --> Evid
@@ -73,8 +73,8 @@ flowchart TD
     GammaGate -- "Low Confidence" --> Esc1
     GammaGate -- "High Confidence" --> RouteSplit
 
-    RouteSplit -- "V2T" --> V2T
-    RouteSplit -- "T2V" --> PoolCheck
+    RouteSplit -- "V2T Route" --> V2T
+    RouteSplit -- "T2V Route" --> PoolCheck
     
     PoolCheck -- "Yes" --> T2V
     PoolCheck -- "No" --> GenFallback
