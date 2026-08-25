@@ -5,7 +5,7 @@ The following diagram illustrates the complete, end-to-end workflow of the **Tex
 You can render this diagram directly in markdown editors that support Mermaid (like GitHub, Notion, or Obsidian), or paste it into a live editor like [Mermaid Live](https://mermaid.live/) to export it as an SVG/PNG for your research paper.
 
 ```mermaid
-graph TD
+flowchart TD
     %% Styling
     classDef input fill:#f9f9f9,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5
     classDef phase fill:#e1f5fe,stroke:#03a9f4,stroke-width:2px
@@ -14,67 +14,77 @@ graph TD
     classDef fallback fill:#fce4ec,stroke:#e91e63,stroke-width:2px
     classDef human fill:#ffebee,stroke:#f44336,stroke-width:2px
 
-    %% Inputs
+    %% Main Input
     RawDB[("Raw Catalogue<br/>(Images & Text Attributes)")]:::input
 
-    %% Phase 1: Sieve
+    %% Phase 1
     subgraph Phase1 ["Phase 1: The Sieve (Detection)"]
         Enc["Multimodal Encoder<br/>CLIP / SigLIP"]
-        QGate{"Confidence<br/>Quantile Gate<br/>(Thresholding)"}:::gate
+        QGate{"Confidence<br/>Quantile Gate"}:::gate
     end
 
-    RawDB --> Enc
-    Enc -- "Cross-Modal Similarity" --> QGate
-    QGate -- "High Confidence<br/>(Clean)" --> CleanData[("Clean Catalogue")]
-    QGate -- "Low Confidence<br/>(Flagged Anomaly)" --> Phase2
-
-    %% Phase 2: Analyzer
+    %% Phase 2
     subgraph Phase2 ["Phase 2: The Analyzer (Evidence Gathering)"]
         LOO["Leave-One-Out (LOO)<br/>Text Embeddings"]
         KNN["K-NN Visual Search<br/>(Find Candidate Images)"]
         Evid["Compile Evidence:<br/>Suspect Fields & Donors"]
     end
 
-    LOO --> Evid
-    KNN --> Evid
-    Phase2 --> Phase3
-
-    %% Phase 3: Arbiter
+    %% Phase 3
     subgraph Phase3 ["Phase 3: The Arbiter (Routing)"]
         LogReg["Logistic Regression Router"]
         GammaGate{"Gamma Gate<br/>(Confidence > 0.40?)"}:::gate
+        RouteSplit{"Route Decision"}:::gate
     end
 
-    Evid --> LogReg
-    LogReg --> GammaGate
-
-    GammaGate -- "Low Confidence" --> Esc1["Escalate to Human"]:::human
-    GammaGate -- "High Confidence" --> RouteSplit{"Route Decision"}:::gate
-
-    %% Phase 4: Solver
+    %% Phase 4
     subgraph Phase4 ["Phase 4: The Solver (Repair Execution)"]
         V2T["V2T Repair<br/>Patch Text Attributes"]:::action
+        PoolCheck{"Candidate<br/>Available?"}:::gate
         T2V["T2V Repair<br/>Swap Catalogue Image"]:::action
         GenFallback["Generative Fallback<br/>SDXL-Turbo Synthesis"]:::fallback
-        PoolCheck{"Candidate<br/>Available?"}:::gate
     end
 
-    RouteSplit -- "V2T" --> V2T
-    RouteSplit -- "T2V" --> PoolCheck
-    PoolCheck -- "Yes" --> T2V
-    PoolCheck -- "No" --> GenFallback
-
-    %% Phase 5: Verification
+    %% Phase 5
     subgraph Phase5 ["Phase 5: Independent Verifier"]
         Judge{"VLM / SigLIP Judge<br/>(Final Validation)"}:::gate
     end
+
+    %% External Outcomes
+    CleanData[("Clean Catalogue")]:::input
+    Esc1["Escalate to Human"]:::human
+    Esc2["Escalate to Human"]:::human
+    Commit[("Repaired Catalogue")]:::action
+
+    %% Graph Connections
+    RawDB --> Enc
+    Enc -- "Cross-Modal Similarity" --> QGate
+    
+    QGate -- "High Confidence<br/>(Clean)" --> CleanData
+    QGate -- "Low Confidence<br/>(Flagged Anomaly)" --> LOO
+    QGate --> KNN
+
+    LOO --> Evid
+    KNN --> Evid
+    
+    Evid --> LogReg
+    LogReg --> GammaGate
+
+    GammaGate -- "Low Confidence" --> Esc1
+    GammaGate -- "High Confidence" --> RouteSplit
+
+    RouteSplit -- "V2T" --> V2T
+    RouteSplit -- "T2V" --> PoolCheck
+    
+    PoolCheck -- "Yes" --> T2V
+    PoolCheck -- "No" --> GenFallback
 
     V2T --> Judge
     T2V --> Judge
     GenFallback --> Judge
 
-    Judge -- "YES (Approved)" --> Commit[("Repaired Catalogue")]:::action
-    Judge -- "NO (Vetoed)" --> Esc2["Escalate to Human"]:::human
+    Judge -- "YES (Approved)" --> Commit
+    Judge -- "NO (Vetoed)" --> Esc2
 ```
 
 ### Component Details for the Paper:
