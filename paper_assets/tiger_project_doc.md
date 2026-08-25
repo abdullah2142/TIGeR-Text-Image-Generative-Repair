@@ -58,7 +58,7 @@ TIGeR-Text-Image-Generative-Repair/
 │   ├── thresholds/            ← Locked calibration artefacts (JSON, committed)
 │   └── outputs/               ← Run outputs (gitignored)
 │
-├── tests/                     ← 73 unit tests; no GPU/network required
+
 ├── scripts/                   ← Legacy MVP (reference only, do not use)
 ├── .env                       ← API keys (gitignored, NEVER committed)
 ├── pyproject.toml             ← Package definition, extras
@@ -288,8 +288,7 @@ python -m tiger.cli repair --seed 7 --vlm-judge
 python -m tiger.cli sweep                 # 5-seed detection metrics
 python -m tiger.cli ablate                # baselines + ablations table
 
-# 7. Run unit tests (no GPU/network needed)
-pytest tests/ -q
+
 ```
 
 ### Option B: Kaggle Execution (Recommended)
