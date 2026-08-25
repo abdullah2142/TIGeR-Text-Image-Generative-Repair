@@ -135,7 +135,7 @@ Copy and paste this into the "Limitations" or "Discussion" section of your paper
 Copy and paste this into your Results or Discussion section as a practical impact statement.
 
 > **Computational and Economic Efficiency**
-> TIGeR operates with negligible computational overhead relative to manual curation. On a single NVIDIA T4 GPU (Kaggle free tier), the full pipeline processes 1,500 product records — including multimodal embedding, evidence gathering, Arbiter routing, repair execution, and SigLIP verification — in approximately 15 minutes, yielding a throughput of approximately 6,000 products per hour. In contrast, a human data curator performing the same quality verification task is estimated at 60–100 products per hour based on industry benchmarks [cite]. This represents an **80× speedup** while preserving human-in-the-loop safety for ambiguous cases (269 products escalated for manual review in our experiment). The Independent Verifier (SigLIP) runs locally with zero API cost, and the Generative Fallback (SDXL-Turbo) incurs no external service charges. For a catalogue of 100,000 products requiring quarterly quality audits, TIGeR reduces the associated labor requirement from an estimated 1,000–1,600 human-hours to under 20 GPU-hours — a cost saving of over 98% at cloud GPU rates of less than $1/hour.
+> TIGeR operates with negligible computational overhead relative to manual curation. On a single NVIDIA T4 GPU (Kaggle free tier), the full pipeline processes 1,500 product records — including multimodal embedding, evidence gathering, Arbiter routing, repair execution, and SigLIP verification — in approximately 15 minutes, yielding a throughput of approximately 6,000 products per hour. In contrast, a human data curator performing the same quality verification task is estimated at 60–100 products per hour based on industry benchmarks [cite]. This represents an **80× speedup** while preserving human-in-the-loop safety for ambiguous cases (269 products escalated for manual review in our experiment). The Independent Verifier (SigLIP) runs locally with zero API cost, and the Generative Fallback (SDXL-Turbo) incurs no external service charges. For a catalogue of 100,000 products requiring quarterly quality audits, TIGeR reduces the associated labor requirement from an estimated 1,000–1,600 human-hours to under 20 GPU-hours — a cost saving of over 98% at cloud GPU rates of less than $1/hour. Furthermore, compute efficiency remains constant during cross-domain evaluation (e.g., ABO), as pipeline latency is bounded by the underlying model inference speeds rather than domain-specific parsing logic.
 
 ---
 
@@ -252,3 +252,17 @@ The following text can be used in the methodology section to justify the specifi
 > - *Complete image mismatches (`swap_image`: 10%) and wrong colors (`color_flip`: 6%) receive the highest weights, as they are the most common human data-entry errors.*
 > - *Intra-category swaps (`swap_image_same_category`: 3%) simulate visually similar but semantically incorrect assignments.*
 > - *Subtler errors like material flips, dropped attributes, and missing images (1–2% each) represent edge cases; notably, missing images are weighted lowest as modern databases typically enforce non-null image fields."*
+
+---
+
+## 9. Paper Framing: Proposed Research Questions
+
+Use this framing in your Introduction to clearly define the scope and contributions of your paper. This sets up the narrative that TIGeR is not just an accuracy tool, but a highly efficient, automated triaging system.
+
+> **Primary Research Question (PRQ):** Can large-scale, multimodal catalog inconsistencies be resolved using a single, unified system that triangulates errors and executes automated repairs without blindly wasting compute on the entire dataset?
+
+This is supported by three sub-questions:
+
+1. **RQ1 (Efficacy vs. Compute):** How much computational and financial cost can be saved by using a lightweight Sieve to triangulate and route specific errors, rather than applying heavy generative AI (SDXL/VLMs) blindly across an entire catalogue?
+2. **RQ2 (Safety & Precision):** To what extent can independent multimodal verification (SigLIP) and statistical confidence thresholding (the Gamma gate) act as a cascading safety net to prevent destructive, hallucinated repairs on highly ambiguous items?
+3. **RQ3 (Generalizability):** Can a pipeline engineered for a specific vertical (e.g., fashion) maintain its safety guarantees and efficacy on an open-domain catalog (e.g., Amazon Berkeley Objects) via lightweight schema adaptation, rather than structural retraining?
