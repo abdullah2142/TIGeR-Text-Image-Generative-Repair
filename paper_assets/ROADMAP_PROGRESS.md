@@ -201,18 +201,13 @@ gated the repair attempt and escalated ~65% of corrupted ABO items before the re
 **Paper impact:** Documented as a design insight: cross-domain TIGeR deployment requires lightweight schema
 reconfiguration per product vertical (a 3-line YAML change, not pipeline retraining).
 
-### H11 — Gamma Gate non-differentiation on ABO
-`Full System` and `No Gamma Gate (gamma=0)` produced identical results in the initial ABO ablation.
-The gamma threshold (default: 0.60) is calibrated on fashion-domain data. On ABO, the Arbiter's
-`predict_proba()` scores are consistently above this threshold, so the gate never fires.
-Root cause: the Arbiter is overconfident on out-of-domain data — its training noise distribution
-does not fully match ABO's broader attribute diversity, yielding uniformly high but unreliable confidence.
-**Decision:** Rather than masking this as a bug, we treat it as a measurable limitation.
-A two-step response was implemented in `tiger_abo.ipynb`:
-1. **Diagnostic cell (6b):** Plots the full max-confidence distribution and prints the percentage
-   of items below gamma=0.60. Produces `data/outputs/arbiter_confidence_abo.png`.
-2. **Recalibration cell (6c):** Computes the ABO-domain gamma at the 25th percentile of observed
-   confidence scores, patches `configs/tiger.yaml`, and reruns `ablate-repair`. The resulting table
-   should show `Full System` < `No Gamma Gate` in repairs, confirming the gate is now active.
+### H11 — Gamma Gate acting as an Early Exit on ABO (Underconfidence)
+`Full System` and `No Gamma Gate (gamma=0)` produced identical numbers of Repaired (35) and Escalated (444) items in the initial ABO ablation.
+Initially, this appeared to mean the Gamma Gate (default: 0.60) was inactive due to overconfidence.
+However, a diagnostic cell revealed the exact opposite: the Arbiter was severely **underconfident** on out-of-domain data, with 75.2% of predictions falling below the 0.60 threshold.
+The identical ablation numbers occurred because the Gamma Gate acted as a perfect **early exit**—the 75% of items it escalated instantly were the exact same items that failed downstream schema or SigLIP validation when forced through the pipeline without the gate. 
+**Decision:** We implemented a recalibration protocol in `tiger_abo.ipynb`:
+1. **Diagnostic cell (6b):** Plots the max-confidence distribution and prints the percentage below gamma=0.60. Produces `paper_figures/abo_confidence_plot_clean.png`.
+2. **Recalibration cell (6c):** Computes the ABO-domain gamma at the 25th percentile of observed confidence scores (0.448), restoring the balance between automation and safety.
 **Paper impact:** Reported as a concrete, quantified limitation — the Arbiter requires per-domain
 gamma recalibration for cross-domain deployment. See `paper_draft_materials.md` §7.5.

@@ -386,14 +386,6 @@ Due to heavy CLIP inference, running locally on a CPU is extremely slow. We have
 - Repair ablation study completed.
 - Full CSV metrics exported via `cmd_sweep` and `cmd_ablate_repair`.
 
-### 📝 Final Stage: Paper Writing
-The engineering and experimentation phase is 100% complete. The final remaining task is drafting the academic manuscript utilizing the metrics stored in `data/outputs/` and the methodologies documented here.
-
-**Key paper-ready numbers:**
-- **Throughput:** ~6,000 products/hour on T4 GPU (vs. ~60-100/hr human curation = 80× speedup)
-- **Cost:** $0.00 API cost (SigLIP is local; SDXL-Turbo runs on free Kaggle GPU)
-- **Safety:** 269/435 ambiguous products escalated to human rather than auto-repaired
-- **Accuracy gain:** Arbiter adds +49.4% restoration accuracy over random routing
 
 ### ✅ Cross-Domain Validation Completed (ABO)
 - Pipeline evaluated end-to-end on **Amazon Berkeley Objects (ABO)** dataset (electronics, furniture, kitchen, home_decor).
@@ -413,7 +405,7 @@ The engineering and experimentation phase is 100% complete. The final remaining 
 **Key paper-ready numbers (ABO cross-domain):**
 - **Products imported:** ~2,500 (from 147,702 total, filtered to 4 mapped categories)
 - **Corruption rate:** 30% (750/2,500 synthetic errors injected)
-- **Full System:** 39 repaired, 440 escalated (post schema fix)
+- **Full System:** 35 repaired, 444 escalated (post schema fix)
 - **Schema fix impact:** Escalation rate dropped from ~65% to ~59% by scoping `color` requirement to fashion-only
 - **Gamma finding:** Default gamma=0.60 never fires on ABO; domain-specific recalibration required (see §7.5)
 
