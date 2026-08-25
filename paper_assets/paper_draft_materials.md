@@ -57,7 +57,7 @@ graph TD
 
     RawDB --> Enc
     Enc --> |Cross-Modal Similarity| QGate
-    QGate -->|High Confidence\n(Clean)| CleanData[(Clean Catalogue)]
+    QGate -->|High Confidence\n(Clean)| CleanData[("Clean Catalogue")]
     QGate -->|Low Confidence\n(Flagged Anomaly)| Phase2
 
     %% Phase 2: Analyzer
@@ -105,7 +105,7 @@ graph TD
     T2V --> Judge
     GenFallback --> Judge
 
-    Judge -->|YES (Approved)| Commit[(Repaired Catalogue)]:::action
+    Judge -->|YES (Approved)| Commit[("Repaired Catalogue")]:::action
     Judge -->|NO (Vetoed)| Esc2[Escalate to Human]:::human
 ```
 
