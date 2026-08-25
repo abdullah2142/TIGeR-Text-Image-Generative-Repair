@@ -33,20 +33,20 @@ graph TD
 
     %% Phase 1: Sieve
     subgraph Phase1 ["Phase 1: The Sieve (Detection)"]
-        Enc[Multimodal Encoder<br/>CLIP / SigLIP]
+        Enc["Multimodal Encoder<br/>CLIP / SigLIP"]
         QGate{"Confidence<br/>Quantile Gate<br/>(Thresholding)"}:::gate
     end
 
     RawDB --> Enc
-    Enc --> |Cross-Modal Similarity| QGate
-    QGate -->|High Confidence<br/>(Clean)| CleanData[("Clean Catalogue")]
-    QGate -->|Low Confidence<br/>(Flagged Anomaly)| Phase2
+    Enc -- "Cross-Modal Similarity" --> QGate
+    QGate -- "High Confidence<br/>(Clean)" --> CleanData[("Clean Catalogue")]
+    QGate -- "Low Confidence<br/>(Flagged Anomaly)" --> Phase2
 
     %% Phase 2: Analyzer
     subgraph Phase2 ["Phase 2: The Analyzer (Evidence Gathering)"]
-        LOO[Leave-One-Out (LOO)<br/>Text Embeddings]
-        KNN[K-NN Visual Search<br/>(Find Candidate Images)]
-        Evid[Compile Evidence:<br/>Suspect Fields & Donors]
+        LOO["Leave-One-Out (LOO)<br/>Text Embeddings"]
+        KNN["K-NN Visual Search<br/>(Find Candidate Images)"]
+        Evid["Compile Evidence:<br/>Suspect Fields & Donors"]
     end
 
     LOO --> Evid
@@ -55,28 +55,28 @@ graph TD
 
     %% Phase 3: Arbiter
     subgraph Phase3 ["Phase 3: The Arbiter (Routing)"]
-        LogReg[Logistic Regression Router]
+        LogReg["Logistic Regression Router"]
         GammaGate{"Gamma Gate<br/>(Confidence > 0.40?)"}:::gate
     end
 
     Evid --> LogReg
     LogReg --> GammaGate
 
-    GammaGate -->|Low Confidence| Esc1[Escalate to Human]:::human
-    GammaGate -->|High Confidence| RouteSplit{Route Decision}:::gate
+    GammaGate -- "Low Confidence" --> Esc1["Escalate to Human"]:::human
+    GammaGate -- "High Confidence" --> RouteSplit{"Route Decision"}:::gate
 
     %% Phase 4: Solver
     subgraph Phase4 ["Phase 4: The Solver (Repair Execution)"]
-        V2T[V2T Repair<br/>Patch Text Attributes]:::action
-        T2V[T2V Repair<br/>Swap Catalogue Image]:::action
-        GenFallback[Generative Fallback<br/>SDXL-Turbo Synthesis]:::fallback
+        V2T["V2T Repair<br/>Patch Text Attributes"]:::action
+        T2V["T2V Repair<br/>Swap Catalogue Image"]:::action
+        GenFallback["Generative Fallback<br/>SDXL-Turbo Synthesis"]:::fallback
         PoolCheck{"Candidate<br/>Available?"}:::gate
     end
 
-    RouteSplit -->|V2T| V2T
-    RouteSplit -->|T2V| PoolCheck
-    PoolCheck -->|Yes| T2V
-    PoolCheck -->|No| GenFallback
+    RouteSplit -- "V2T" --> V2T
+    RouteSplit -- "T2V" --> PoolCheck
+    PoolCheck -- "Yes" --> T2V
+    PoolCheck -- "No" --> GenFallback
 
     %% Phase 5: Verification
     subgraph Phase5 ["Phase 5: Independent Verifier"]
@@ -87,8 +87,8 @@ graph TD
     T2V --> Judge
     GenFallback --> Judge
 
-    Judge -->|YES (Approved)| Commit[("Repaired Catalogue")]:::action
-    Judge -->|NO (Vetoed)| Esc2[Escalate to Human]:::human
+    Judge -- "YES (Approved)" --> Commit[("Repaired Catalogue")]:::action
+    Judge -- "NO (Vetoed)" --> Esc2["Escalate to Human"]:::human
 ```
 
 > The legacy `scripts/*.py` MVP is kept for reference only. Everything current
