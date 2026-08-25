@@ -47,24 +47,24 @@ graph TD
     classDef human fill:#ffebee,stroke:#f44336,stroke-width:2px
 
     %% Inputs
-    RawDB[("Raw Catalogue\n(Images & Text Attributes)")]:::input
+    RawDB[("Raw Catalogue<br/>(Images & Text Attributes)")]:::input
 
     %% Phase 1: Sieve
     subgraph Phase1 ["Phase 1: The Sieve (Detection)"]
-        Enc[Multimodal Encoder\nCLIP]
-        QGate{"Confidence\nQuantile Gate\n(Thresholding)"}:::gate
+        Enc[Multimodal Encoder<br/>CLIP]
+        QGate{"Confidence<br/>Quantile Gate<br/>(Thresholding)"}:::gate
     end
 
     RawDB --> Enc
     Enc --> |Cross-Modal Similarity| QGate
-    QGate -->|High Confidence\n(Clean)| CleanData[("Clean Catalogue")]
-    QGate -->|Low Confidence\n(Flagged Anomaly)| Phase2
+    QGate -->|High Confidence<br/>(Clean)| CleanData[("Clean Catalogue")]
+    QGate -->|Low Confidence<br/>(Flagged Anomaly)| Phase2
 
     %% Phase 2: Analyzer
     subgraph Phase2 ["Phase 2: The Analyzer (Evidence Gathering)"]
-        LOO[Leave-One-Out (LOO)\nText Embeddings]
-        KNN[K-NN Visual Search\n(Find Candidate Images)]
-        Evid[Compile Evidence:\nSuspect Fields & Donors]
+        LOO[Leave-One-Out (LOO)<br/>Text Embeddings]
+        KNN[K-NN Visual Search<br/>(Find Candidate Images)]
+        Evid[Compile Evidence:<br/>Suspect Fields & Donors]
     end
 
     LOO --> Evid
@@ -74,7 +74,7 @@ graph TD
     %% Phase 3: Arbiter
     subgraph Phase3 ["Phase 3: The Arbiter (Routing)"]
         LogReg[Logistic Regression Router]
-        GammaGate{"Gamma Gate\n(Confidence > 0.40?)"}:::gate
+        GammaGate{"Gamma Gate<br/>(Confidence > 0.40?)"}:::gate
     end
 
     Evid --> LogReg
@@ -85,10 +85,10 @@ graph TD
 
     %% Phase 4: Solver
     subgraph Phase4 ["Phase 4: The Solver (Repair Execution)"]
-        V2T[V2T Repair\nPatch Text Attributes]:::action
-        T2V[T2V Repair\nSwap Catalogue Image]:::action
-        GenFallback[Generative Fallback\nSDXL-Turbo Synthesis]:::fallback
-        PoolCheck{"Candidate\nAvailable?"}:::gate
+        V2T[V2T Repair<br/>Patch Text Attributes]:::action
+        T2V[T2V Repair<br/>Swap Catalogue Image]:::action
+        GenFallback[Generative Fallback<br/>SDXL-Turbo Synthesis]:::fallback
+        PoolCheck{"Candidate<br/>Available?"}:::gate
     end
 
     RouteSplit -->|V2T| V2T
@@ -98,7 +98,7 @@ graph TD
 
     %% Phase 5: Verification
     subgraph Phase5 ["Phase 5: Independent Verifier"]
-        Judge{"SigLIP Judge\n(Final Validation)"}:::gate
+        Judge{"SigLIP Judge<br/>(Final Validation)"}:::gate
     end
 
     V2T --> Judge
