@@ -217,6 +217,18 @@ def plan_repair(ev: dict, route, sieve_row: dict, pool: CandidatePool,
             val, diag = _corrected_value(f, ev)
             if not val or not schema.in_domain(f, val):
                 continue
+            # B6: the pixel estimator and the CLIP probe were computed independently
+            # (B0's instrumentation) but nothing ever compared them -- a confident
+            # pixel share silently won even when the probe disagreed. Escalate a
+            # genuine two-estimator conflict instead of committing a coin flip;
+            # diagnostics are preserved on the plan so the escalation is still
+            # attributable to "estimators disagreed", not a generic unplannable row.
+            if diag["pixel_value"] and diag["probe_value"] and diag["pixel_value"] != diag["probe_value"]:
+                return RepairPlan(
+                    row_id, "V2T", plannable=False,
+                    notes=(f"estimators disagree on {f}: "
+                           f"pixel={diag['pixel_value']!r} vs probe={diag['probe_value']!r}"),
+                    **diag)
             if schema.normalize(f, val) == (schema.normalize(f, attrs.get(f, "")) if attrs.get(f) else ""):
                 continue  # no-op; the image already agrees with the text
             return RepairPlan(row_id, "V2T", patch={f: val}, cost=1.0,

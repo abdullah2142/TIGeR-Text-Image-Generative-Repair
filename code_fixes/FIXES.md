@@ -47,13 +47,12 @@ system. Each needs a **decision** before it needs a patch.
 
 The sweep split these into two kinds, which the first draft conflated.
 
-**Changes the design — new behaviour that has never existed. `PARKED`: needs a
-decision, not a patch. Do not fix these in a cleanup pass.**
+**Changes the design — new behaviour that has never existed.**
 
 | ⚑ | Finding | Entry | Why it is a design change |
 |---|---|---|---|
-| **1** | The repair operator has no ground-truth source, and nothing abstains on *value* | `B6` (with `B1`–`B4`, `E2`, `D6`) | The γ-gate abstains on routing; Eq. 27–29 abstains on schema and similarity. Nothing abstains on *"I do not know what colour this is."* A wrong-but-in-domain value that raises CLIP similarity passes every gate and is committed — the ~9 of 19 in `E2`. Fixing it inserts an abstention stage between Solver and Verify: a new component. |
-| **2** | The closed loop is not closed, and E3 has no behaviour of its own | `D4` | Four taxonomy classes, three implemented behaviours. Either remedy — rows re-entering a pass, or a two-step `BOTH` plan — adds pipeline behaviour that has never run. |
+| **1** | The repair operator had no ground-truth source, and nothing abstained on *value* | `B6` (with `B1`–`B4`, `E2`, `D6`) — **BUILT 2026-09-11** | The γ-gate abstains on routing; Eq. 27–29 abstains on schema and similarity. Nothing abstained on *"I do not know what colour this is."* A wrong-but-in-domain value that raises CLIP similarity used to pass every gate and be committed silently — the ~9 of 19 in `E2`. Now inserts an abstention: a real disagreement between the pixel and probe estimators escalates instead of committing. See `B6`'s entry for the mechanism. |
+| **2** | The closed loop is not closed, and E3 has no behaviour of its own | `D4` — **PARKED**: needs a decision, not a patch. Do not fix in a cleanup pass. | Four taxonomy classes, three implemented behaviours. Either remedy — rows re-entering a pass, or a two-step `BOTH` plan — adds pipeline behaviour that has never run. |
 
 **Changes a claim's scope — the architecture is untouched.**
 
@@ -485,8 +484,35 @@ this as a missing pipeline stage between Solver and Verify, not a threshold twea
 
 B0's report already quantifies what this would buy before it is built.
 
-**Status:** PARKED — ⚑ design change, decision required before implementation.
-Size it from the B0 run; do not implement in a cleanup pass.
+**Decision (user, 2026-09-11):** build it — assessed as low-risk and additive
+(doesn't touch the γ-gate, Eq. 27–29, or T2V at all; only V2T single-field
+patching), so implementing ahead of sizing was accepted as reasonable here,
+unlike `D4` (which changes results for an existing row class and was
+explicitly told to precede the baseline run).
+
+**Fix implemented** (`tiger/solver.py::plan_repair`, `tiger/repair.py`):
+- `_corrected_value`'s if/else is unchanged (still resolves single-estimator
+  fields — material, pattern — exactly as before; nothing there disagrees with
+  anything, since only `color` has a second, pixel-based estimator).
+- Before committing a V2T patch, `plan_repair` now checks whether the pixel
+  estimate and the CLIP probe both produced a value *and* differ. If so, the
+  row escalates (`plannable=False`) instead of silently committing whichever
+  one the old confidence threshold happened to favour.
+- The escalation carries the same `value_source`/`pixel_value`/`pixel_conf`/
+  `probe_value`/`estimators_agree` diagnostic fields an applied repair would
+  (`repair.py`'s unplannable branch previously dropped them) — an
+  estimator-disagreement escalation stays attributable in any future analysis,
+  not indistinguishable from a generic unplannable row.
+
+Regression tests: `tests/test_solver_planning.py::test_v2t_escalates_on_estimator_disagreement`
+(disagreement → escalate, diagnostics preserved) and
+`test_v2t_plans_normally_when_only_one_estimator_applies` (a field with no
+second estimator — e.g. material — is not mistaken for a disagreement).
+
+**Status:** DONE — 167 tests passing. Not yet sized against real data (that
+still needs the Phase 2 run — the risk/coverage trade this converts silent
+errors into hasn't been measured on real numbers yet), but the mechanism
+itself is built and tested.
 
 ---
 
@@ -992,10 +1018,13 @@ line in that document.
 **Status:** DONE — rewritten. Attack 3 point 2 no longer calls the 47.4%
 "safely escalated"; it now states plainly that these are rows TIGeR committed
 and got wrong, that the 269 escalated rows are a disjoint population already
-excluded from the 163-row denominator, and links to `B6` (the parked finding
-that nothing currently abstains on value-level uncertainty) as the honest
-explanation for why these errors get committed at all. Exact percentages are
-flagged as pending re-measurement under Phase 2 — the qualitative correction
+excluded from the 163-row denominator, and links to `B6` (built 2026-09-11,
+after this entry was written — the finding it references, that nothing
+abstained on value-level uncertainty, is now addressed by B6's
+disagreement-escalation mechanism going forward) as the honest explanation for
+why these errors were committed at all in the run these figures describe.
+Exact percentages are flagged as pending re-measurement under Phase 2 — the
+qualitative correction
 does not depend on the exact numbers.
 
 ### E3 · "Perfectly overlapped" was never demonstrated
@@ -1238,12 +1267,12 @@ Regression test added: `tests/test_import_abo_formats.py::test_non_english_only_
 | Section | Items | Done | Open | Parked / blocked / withdrawn |
 |---|---|---|---|---|
 | A. Measurement correctness | 9 | 9 | — | — |
-| B. Repair accuracy | 8 | 1 | B2, B3, B5, B7 | B1 needs fashion imagery · B4 blocked on B0 · **B6 parked ⚑** |
+| B. Repair accuracy | 8 | 2 | B2, B3, B5, B7 | B1 needs fashion imagery · B4 blocked on B0 |
 | C. Config & reproducibility | 8 | 6 | C5 (needs local data), C7 (not present in this checkout) | — |
 | D. Robustness & design | 13 | 9 | D1 (needs a trained model), D10 (code fixed, regen pending) | **D4 parked ⚑** · D3 withdrawn |
 | E. Documentation | 12 | 1 | E1, E4–E7, E9–E12 | E3, E8 blocked on A1 |
 | F. Found in Phase 2 dry run | 2 | 2 | — | — |
-| **Total** | **52** | **28** | **17** | 2 parked · 4 blocked · 1 withdrawn |
+| **Total** | **52** | **29** | **17** | 1 parked · 4 blocked · 1 withdrawn |
 
 **Counts re-verified 2026-09-11** by grepping every `**Status:**` line directly
 rather than hand-tallying — the previous table's arithmetic (14+28+7=49, not
@@ -1255,7 +1284,7 @@ as of 2026-09-11 (see A2's entry).
 The measurement instrument is now trustworthy, so B and the remaining sections
 can be measured against a baseline that means something.
 
-**Test suite: 165 passing** (re-verified 2026-09-11, `.venv/bin/python -m pytest`).
+**Test suite: 167 passing** (re-verified 2026-09-11, `.venv/bin/python -m pytest`).
 Every code fix in this pass and the 2026-09-11 housekeeping pass below was
 verified against it; none changed behaviour the suite did not already pin.
 
@@ -1282,11 +1311,16 @@ Left alone and why:
 - **B2, B3, B5, B7** — Section B is sequenced behind the B0 estimator-
   attribution report, which Phase 2 produces; B2/B5 are additionally blocked on
   local access to `data/raw/abo/`, not present in this checkout.
-- **B6, D4** — parked architectural decisions, not bugs; see the discussion
-  with the user for the reasoning, not re-litigated here.
+- **D4** — parked architectural decision, not a bug; see the discussion with
+  the user for the reasoning, not re-litigated here.
 
-162 tests passing throughout; no behaviour changed that the suite did not
-already pin.
+**Later the same day:** `B6` was reassessed and built (see `B6`'s own entry) —
+the user judged it low-risk enough to implement ahead of Phase 2 sizing,
+unlike `D4`, which changes results for an existing row class and was
+explicitly told to land before any baseline run.
+
+167 tests passing throughout (165 after the housekeeping pass above, +2 for
+B6); no behaviour changed that the suite did not already pin.
 
 **Done in this pass:** `C3` → `A4` → `A1` → `A3`/`A3b` → `A5` → `A6` → `A8` →
 `A7` → `A2` (partial) → `C8`. Section A is closed bar A2's model pin.
@@ -1308,5 +1342,7 @@ Then the numbers move, and `E2`, `E3`, `E8` and the ⚑ decisions can be settled
 against figures that mean something. Everything in `E` should wait for that run;
 the current values in `paper_assets/` are the ones this pass invalidated.
 
-`D4` and `B6` are **parked** — they are the two ⚑ design changes and are excluded
-from the fix pass by decision, not by oversight.
+`D4` and `B6` were **parked** as of this writing (2026-09-08/10) — the two ⚑
+design changes excluded from the fix pass by decision, not by oversight.
+**Update 2026-09-11: `B6` has since been built** (see its entry); `D4` remains
+parked.

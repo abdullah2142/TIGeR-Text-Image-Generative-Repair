@@ -38,6 +38,40 @@ def test_v2t_plan_single_field_from_evidence(schema):
     assert plan.cost == 1.0
 
 
+def test_v2t_escalates_on_estimator_disagreement(schema):
+    """B6: pixel estimator and CLIP probe disagree -> escalate, don't coin-flip.
+
+    Before B6, _corrected_value's if/else silently committed the pixel value
+    (confidence >= 0.55) without ever checking whether the probe agreed.
+    """
+    ev = {"row_id": "r1", "category": "shirts", "product_id": "r1",
+          "loo_top_field": "color", "pixel_color": "blue", "pixel_color_confidence": 0.9,
+          "probes": {"color": {"z": -3.0, "pred": "red"}}}
+    row = {"attributes": '{"color": "green", "material": "cotton", "pattern": "solid", "size": "M"}',
+           "title": "Green Shirt", "category": "shirts"}
+    plan = plan_repair(ev, Route("V2T"), row, pool=None, cat_ids=None,
+                       caption_emb=None, schema=schema)
+    assert not plan.plannable
+    assert "disagree" in plan.notes
+    # Diagnostics must survive the escalation for downstream attribution (B0/B6).
+    assert plan.pixel_value == "blue"
+    assert plan.probe_value == "red"
+    assert plan.estimators_agree is False
+
+
+def test_v2t_plans_normally_when_only_one_estimator_applies(schema):
+    """A non-colour field has no pixel estimator at all -- that's not a
+    disagreement (nothing to disagree with), so it must still plan normally."""
+    ev = {"row_id": "r1", "category": "shirts", "product_id": "r1",
+          "loo_top_field": "material", "probes": {"material": {"z": -3.0, "pred": "denim"}}}
+    row = {"attributes": '{"color": "blue", "material": "cotton", "pattern": "solid", "size": "M"}',
+           "title": "Blue Shirt", "category": "shirts"}
+    plan = plan_repair(ev, Route("V2T"), row, pool=None, cat_ids=None,
+                       caption_emb=None, schema=schema)
+    assert plan.plannable
+    assert plan.patch == {"material": "denim"}
+
+
 def test_v2t_unplannable_when_no_valid_value(schema):
     ev = {"row_id": "r1", "category": "shirts", "product_id": "r1",
           "loo_top_field": "color", "probes": {"color": {"z": -3.0, "pred": ""}}}

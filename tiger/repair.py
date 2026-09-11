@@ -115,9 +115,17 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
                                           generator=generator, root_path=root,
                                           sample_dir=cfg["data"]["sample_dir"])
             if not plan.plannable:
-                finalize(row_id, "escalated", pass_i,
-                         {"pass": pass_i, "action": "human_review",
-                          "reason": f"unplannable: {plan.notes}", "error_type": route.error_type})
+                entry = {"pass": pass_i, "action": "human_review",
+                         "reason": f"unplannable: {plan.notes}", "error_type": route.error_type}
+                if plan.estimators_agree is not None:
+                    # B6: an estimator-disagreement escalation carries the same
+                    # diagnostic fields an applied V2T repair would, so it stays
+                    # attributable (not just a generic "unplannable" line) in any
+                    # analysis that reads the estimator-attribution fields.
+                    entry.update(value_source=plan.value_source, pixel_value=plan.pixel_value,
+                                 pixel_conf=plan.pixel_conf, probe_value=plan.probe_value,
+                                 estimators_agree=plan.estimators_agree)
+                finalize(row_id, "escalated", pass_i, entry)
                 continue
 
             c_before = float(ev.get("sim_full")) if ev.get("sim_full") is not None else float("nan")
