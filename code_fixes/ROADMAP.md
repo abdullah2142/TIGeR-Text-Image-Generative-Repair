@@ -3,8 +3,9 @@
 Forward plan. The defect detail lives in `FIXES.md`; this is the ordering and
 the critical path. Written 2026-09-10, after the measurement-harness pass.
 
-**State:** 13 items done, 32 open, 2 parked, 1 withdrawn. 117 tests passing.
-26 commits on `docs/fixes-backlog-audit`.
+**State (updated 2026-09-11):** 28 items done, 17 open, 2 parked, 4 blocked,
+1 withdrawn (52 total — see `FIXES.md` section F for 2 new findings from a
+Kaggle Phase 2 dry run). 165 tests passing.
 
 ---
 
@@ -82,6 +83,14 @@ Both notebooks are built and pushed.
 **Expect movement in an unpredictable direction.** Four independent defects fed
 the old table and none biased it consistently.
 
+**Dry-run update (2026-09-11):** first Kaggle attempt at both notebooks failed
+before producing any usable numbers — `synthgen` crashed on the first
+non-fashion category (`FIXES.md` F1), and ABO import's non-English-title
+fallback crashed `calibrate` on a CLIP token-limit violation (`FIXES.md` F2).
+Both fixed and tested (165 tests passing); `tiger_corrected_run.ipynb` also
+picked up a missing `ablate-repair` cell it needed to produce repair numbers
+at all. Both notebooks need a clean re-run from a fresh clone.
+
 ---
 
 ## Phase 3 — Repair accuracy (Section B)
@@ -113,7 +122,7 @@ Do **after** Phase 2 except where noted.
 | 4.3 | **E9** — the ablation credits LOO masking for the contrastive probes' result. LOO contributes nothing to detection. Correcting this runs in your favour: the probe result is stronger and more novel. |
 | 4.4 | **E1, E6, E7, E10, E11, E12** — feature count, dead file paths, three different named verifiers, stale line counts, the undisclosed planted row, granularity mix. |
 | 4.5 | **E4, E5** — reframe Attack 1 on reliability rather than cost, and answer the ARO objection (pairs with B7). |
-| 4.6 | Citation: ABO as `collins2022abo` (added to `related_work.bib`). Resolve the licence discrepancy — the bucket ships CC BY 4.0, the AWS registry says CC BY-NC 4.0. NC would constrain Attack 1's commercial framing. |
+| 4.6 | Citation: ABO as `collins2022abo` (added to `related_work.bib`). **Licence discrepancy RESOLVED (2026-09-11):** checked both first-party sources directly — the dataset's own landing page (`amazon-berkeley-objects.s3.amazonaws.com/index.html`, published by Amazon) and the licence file bundled in the archive itself (`LICENSE-CC-BY-4.0.txt`) both state **CC BY 4.0** (commercial use permitted). The AWS Open Data registry listing (`registry.opendata.aws/amazon-berkeley-objects/`) is a third-party catalogue entry, not maintained by Amazon, and its "CC BY-NC 4.0" tag is stale/incorrect. **Cite CC BY 4.0.** Worth one sentence in the reproducibility section noting the registry's stale tag, pre-empting a reviewer who checks that page and gets confused. |
 
 ---
 

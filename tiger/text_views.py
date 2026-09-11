@@ -55,7 +55,7 @@ CLIP_TOKEN_LIMIT = 77
 
 def singular(category: str) -> str:
     c = str(category).strip().lower()
-    return CATEGORY_SINGULAR.get(c, c.rstrip("s") or "item")
+    return CATEGORY_SINGULAR.get(c, c.removesuffix("s") or "item")
 
 
 def parse_attrs(val: Any) -> dict:

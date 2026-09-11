@@ -32,8 +32,10 @@ Usage (wired automatically via `tiger.cli repair --vlm-judge`):
 from __future__ import annotations
 
 import base64
+import hashlib
 import os
 import time
+from collections import OrderedDict
 from pathlib import Path
 
 
@@ -159,7 +161,8 @@ class GeminiVLMJudge:
         self._last_call = 0.0
         self.verbose = verbose
         self.model_name = model_name
-        self._cache: dict[str, bool] = {}
+        self._cache: "OrderedDict[str, bool]" = OrderedDict()
+        self._cache_max = 2048
 
     @classmethod
     def from_env(cls, **kwargs) -> "GeminiVLMJudge":
@@ -179,11 +182,28 @@ class GeminiVLMJudge:
         if gap > 0:
             time.sleep(gap)
 
+    @staticmethod
+    def _cache_key(parts: list) -> str:
+        """Fixed-size digest of the request, not the raw base64 image bytes (D11).
+
+        The previous key was `json.dumps(parts)`, which embeds the full
+        base64-encoded image -- every distinct image the judge ever saw stayed
+        resident, at full size, for the process lifetime. Hashing collapses
+        each entry's *key* to 40 hex chars regardless of image size.
+        """
+        h = hashlib.sha1()
+        for p in parts:
+            if isinstance(p, dict) and "inline_data" in p:
+                h.update(p["inline_data"]["data"].encode("ascii"))
+            else:
+                h.update(str(p).encode("utf-8"))
+        return h.hexdigest()
+
     def _call(self, parts: list) -> bool:
         """Send parts to Gemini, return True if the answer is YES."""
-        import json
-        cache_key = json.dumps(parts, sort_keys=True)
+        cache_key = self._cache_key(parts)
         if cache_key in self._cache:
+            self._cache.move_to_end(cache_key)
             if self.verbose:
                 print(f"[GeminiVLMJudge] (cached) -> {self._cache[cache_key]}")
             return self._cache[cache_key]
@@ -213,6 +233,8 @@ class GeminiVLMJudge:
                 if self.verbose:
                     print(f"[GeminiVLMJudge] raw='{text}' -> {answer}")
                 self._cache[cache_key] = answer
+                if len(self._cache) > self._cache_max:
+                    self._cache.popitem(last=False)  # evict least-recently-used
                 return answer
             except Exception as exc:  # noqa: BLE001
                 err_str = str(exc)

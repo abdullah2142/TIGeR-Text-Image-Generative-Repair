@@ -181,8 +181,13 @@ def import_abo(
         
                 # --- Title (English) ---
                 # ABO may store item_name as a JSON array of {"language_tag": ..., "value": ...}
+                # require_english=True: products with no English name variant are
+                # skipped outright rather than falling back to another language.
+                # Non-English titles (observed: Japanese) can tokenize past CLIP's
+                # 77-token limit and hard-fail assert_token_budget downstream,
+                # aborting the whole calibrate/detect run over ~105 products.
                 raw_name = row.get("item_name", "")
-                title = _extract_english_value(raw_name)
+                title = _extract_english_value(raw_name, require_english=True)
                 if not title:
                     continue
         
@@ -266,15 +271,20 @@ def import_abo(
     return df
 
 
-def _extract_english_value(raw) -> str | None:
+def _extract_english_value(raw, require_english: bool = False) -> str | None:
     """
     ABO encodes multilingual fields as either a plain string or a list of dicts:
       [{"language_tag": "en_US", "value": "Blue Mug"}, ...]
     This function extracts the English value regardless of format.
+
+    require_english: when no "en*"-tagged entry exists, return None instead of
+    falling back to the first available language. Used for titles, which are
+    fed to CLIP under a hard token-length budget (assert_token_budget) that a
+    non-English (e.g. CJK) string can exceed even at a modest character count.
     """
     if raw is None or (isinstance(raw, float)):
         return None
-        
+
     items = raw
     # If it's a raw string that looks like a JSON array, try parsing it
     if isinstance(raw, str) and raw.strip().startswith("["):
@@ -290,6 +300,8 @@ def _extract_english_value(raw) -> str | None:
                 lang = str(item.get("language_tag", "")).lower()
                 if lang.startswith("en"):
                     return str(item.get("value", "")).strip() or None
+        if require_english:
+            return None
         # Fallback: return first item's value regardless of language
         if items and isinstance(items[0], dict):
             return str(items[0].get("value", "")).strip() or None

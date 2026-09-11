@@ -611,7 +611,7 @@ def cmd_repair(cfg: dict, args) -> None:
     print("\n\n🛠️ Stage 4 & 5: Repair & Verify")
     print("-" * 50)
     summary = report["summary"]
-    total = summary.get("total", 0)
+    total = summary.get("n_products", 0)
     repaired_c = summary.get("by_status", {}).get("repaired", 0)
     escalated_c = summary.get("by_status", {}).get("escalated", 0)
     
@@ -727,6 +727,9 @@ def main() -> None:
                          "the repair stage")
     ap.add_argument("--generative-fallback", action="store_true",
                     help="repair: use Stable Diffusion to generate missing images (requires diffusers)")
+    ap.add_argument("--gamma", type=float, default=None,
+                    help="override arbiter.gamma (Eq. 22 confidence gate) for this run "
+                         "without editing configs/tiger.yaml (C1/C2)")
     # import-abo specific args
     ap.add_argument("--listings-dir", default=None,
                     help="import-abo: directory containing ABO listings_*.json.gz")
@@ -743,6 +746,11 @@ def main() -> None:
     args = ap.parse_args()
 
     cfg = load_cfg(args.config)
+    if args.gamma is not None:
+        cfg.setdefault("arbiter", {})["gamma"] = args.gamma
+    if args.command in ("repair", "ablate-repair"):
+        print(f"[config] effective arbiter.gamma = {cfg.get('arbiter', {}).get('gamma')}"
+              + (" (overridden via --gamma)" if args.gamma is not None else " (from config)"))
     {
         "synthgen": cmd_synthgen,
         "import-fashion": cmd_import_fashion,

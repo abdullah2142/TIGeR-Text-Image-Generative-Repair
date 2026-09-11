@@ -46,10 +46,15 @@ class StableDiffusionGenerator:
         attrs = attrs or {}
         
         color = attrs.get("color", "")
-        cat_singular = category.rstrip("s") if category else ""
-        
+        material = attrs.get("material", "")
+        pattern = attrs.get("pattern", "")
+        cat_singular = category.removesuffix("s") if category else ""
+
         # SDXL understands natural language much better, so we just construct a clear sentence
-        subject = f"{color} {cat_singular}" if color and cat_singular else caption
+        descriptors = " ".join(d for d in (color, material) if d)
+        subject = f"{descriptors} {cat_singular}" if descriptors and cat_singular else caption
+        if pattern and pattern != "solid" and cat_singular:
+            subject = f"{subject} with a {pattern} pattern"
         
         prompt = f"Professional studio product photo of a single {subject}, perfectly centered on a pure bright white background, studio lighting"
         print(f"[Generative Fallback] Synthesizing (SDXL-Turbo): '{subject}'")

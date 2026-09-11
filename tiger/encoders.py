@@ -137,10 +137,6 @@ class ClipEncoder:
         from PIL import Image
 
         n = len(paths)
-        out = np.zeros((n, self.dim if self._cache_path is None or not self._cache else
-                        len(next(iter(self._cache.values())))), dtype=np.float32) \
-            if self._cache else None
-        # simpler: resolve dim lazily below
         keys: list[str | None] = []
         ok = np.zeros(n, dtype=bool)
         for p in paths:

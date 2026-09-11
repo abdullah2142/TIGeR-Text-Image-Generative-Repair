@@ -96,4 +96,6 @@ flowchart TD
     - **V2T (Visual-to-Text):** Corrects erroneous text attributes based on visual evidence.
     - **T2V (Text-to-Visual):** Swaps a corrupted image with a valid donor.
     - **Generative Fallback:** If the catalogue lacks a donor, **SDXL-Turbo** synthesizes a new, attribute-weighted product image in 4 inference steps.
-5. **Independent Verifier:** A secondary guardrail (Gemini 3.7 Flash or Local SigLIP) that checks the final proposed pair. It prevents "same-category wrong-direction" swaps from entering the database.
+5. **Independent Verifier:** A secondary guardrail (Local SigLIP; Gemini was built and evaluated as an alternative but SigLIP was selected as the reported verifier — see `project_chronicle.md`) that checks the final proposed pair. It prevents "same-category wrong-direction" swaps from entering the database.
+
+   **Asymmetric failure handling (D2), by design:** the verifier's two checks fail closed in opposite directions. `check_v2t` returns `True` (does not veto) when it cannot read the *existing* product image — an unreadable image on our own side is our failure, not evidence against the repair. `check_t2v` returns `False` (vetoes) when it cannot read the *proposed replacement* image — a candidate we cannot independently confirm is not trusted. Both branches are commented in `tiger/verify.py`; this note is the first place either is stated for a reader who has not opened the code.

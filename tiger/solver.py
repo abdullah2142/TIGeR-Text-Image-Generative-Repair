@@ -196,7 +196,8 @@ def _corrected_value(field: str, ev: dict) -> tuple[str, dict]:
 
 def plan_repair(ev: dict, route, sieve_row: dict, pool: CandidatePool,
                 cat_ids: np.ndarray, caption_emb: np.ndarray, schema: Schema,
-                same_category_only: bool = True, generator=None, root_path=None) -> RepairPlan:
+                same_category_only: bool = True, generator=None, root_path=None,
+                sample_dir: str = "data/sample") -> RepairPlan:
     """Build a concrete repair payload from evidence + route."""
     row_id = str(ev.get("row_id", ""))
     category = str(ev.get("category", ""))
@@ -234,9 +235,9 @@ def plan_repair(ev: dict, route, sieve_row: dict, pool: CandidatePool,
                 caption = str(sieve_row.get("canonical_text", ""))
                 if not caption:
                     caption = str(sieve_row.get("title", ""))
-                gen_path = root_path / "data" / "sample" / "images" / "generated" / f"{row_id}.jpg"
+                gen_path = root_path / sample_dir / "images" / "generated" / f"{row_id}.jpg"
                 generator.generate(caption, gen_path, category=category, attrs=attrs)
-                rel_path = f"data/sample/images/generated/{row_id}.jpg"
+                rel_path = f"{sample_dir}/images/generated/{row_id}.jpg"
                 
                 return RepairPlan(row_id, "T2V", candidate_product_id="GENERATED",
                                   candidate_image_path=rel_path, cost=2.0,

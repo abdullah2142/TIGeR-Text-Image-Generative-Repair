@@ -60,6 +60,37 @@ def test_both_listing_layouts_import(extension):
     assert df.iloc[0]["category"] == "chair"
 
 
+def test_non_english_only_title_is_excluded():
+    """A product with no English item_name is dropped, not force-included.
+
+    Real ABO data has products whose only name is in another language (observed:
+    Japanese). Falling back to that name and feeding it to CLIP can exceed the
+    77-token budget (assert_token_budget), hard-failing calibrate/detect for the
+    whole run over one row with no English name available at all.
+    """
+    ja_only = dict(RECORD, item_id="B02", main_image_id="IMG2",
+                   item_name=[{"language_tag": "ja_JP", "value": "日本語のタイトル"}])
+
+    d = Path(tempfile.mkdtemp())
+    (d / "meta").mkdir()
+    payload = "\n".join(json.dumps(r) for r in (RECORD, ja_only)) + "\n"
+    (d / "meta" / "listings_0.json").write_text(payload)
+
+    images = d / "img"
+    (images / "aa").mkdir(parents=True)
+    (images / "aa" / "1.jpg").write_bytes(b"\xff\xd8\xff\xe0" + b"\0" * 64)
+    (images / "aa" / "2.jpg").write_bytes(b"\xff\xd8\xff\xe0" + b"\0" * 64)
+    pd.DataFrame([{"image_id": "IMG1", "path": "aa/1.jpg", "height": 256, "width": 256},
+                  {"image_id": "IMG2", "path": "aa/2.jpg", "height": 256, "width": 256}]) \
+        .to_csv(d / "images.csv", index=False)
+
+    df = import_abo(schema=load_schema("configs/schema.yaml"), max_items=10, seed=7,
+                    listings_dir=d / "meta", images_csv=d / "images.csv",
+                    images_dir=images, out_dir=d / "out")
+    assert len(df) == 1
+    assert "日本語のタイトル" not in df["title"].tolist()
+
+
 def test_missing_listings_names_both_layouts():
     """The error must name both layouts, so a wrong path is diagnosable.
 

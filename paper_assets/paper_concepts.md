@@ -18,7 +18,7 @@ Global CLIP similarity scores (cosine similarity between an image and a full cap
 ## 3. The Strict-Precision Decision Fusion (Arbiter)
 Automated repair systems risk corrupting clean data if they guess blindly (hallucination). TIGeR introduces a provably safe **Decision Fusion Arbiter**.
 - **Architecture**: A Multinomial Logistic Regression Router that ingests 14 dimensions of multimodal evidence (LOO Z-scores, swap margins, pixel-level color checks, and k-NN consistency).
-- **The Gamma (γ) Gate**: A dynamically calibrated confidence threshold. The system sweeps a holdout validation set to find the minimum confidence required to achieve an 85% precision floor. If the Arbiter's predicted probability for a repair (e.g., `P(E2) = 0.60`) fails to beat the strict γ-gate (e.g., `0.85`), the system refuses to automate the repair and flags it for human review.
+- **The Gamma (γ) Gate**: A configured confidence threshold (Eq. 22), read statically from `configs/tiger.yaml` (currently 0.40; overridable per run with `--gamma`, see `code_fixes/FIXES.md` C1/C2). If the Arbiter's predicted probability for the winning error class fails to beat γ, the row is marked E4 (ambiguous) and routed to human review rather than automated. *(Note: γ is not dynamically calibrated and is unrelated to the Sieve's separate fusion `precision_floor` (0.85) — an earlier draft of this document conflated the two; they are different mechanisms on different components.)*
 
 ## 4. Generative Fallback for Missing Modalities
 Traditional curation pipelines fail when attempting to repair an image (E1) if a suitable replacement does not exist within the catalogue.

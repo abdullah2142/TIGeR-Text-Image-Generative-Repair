@@ -125,7 +125,28 @@ repairs while printing one error line per call.
 **Also determine:** whether any number in `paper_assets/` came from a
 `--vlm-judge` run. If so it is unusable.
 
-**Status:** DOING — `53736e6` makes a misconfigured judge raise instead of veto. Pinning a verified model ID still needs a live key.
+**Update (2026-09-11):** the working default has since moved to
+`gemini-2.5-flash` (`tiger/vlm_judge.py`, current default). Verified live
+against a fresh key via `genai.list_models()`: `gemini-2.5-flash` is a real,
+reachable model ID for this key. Interestingly, `gemini-3.5-flash-lite` — the
+original ID that 404'd on 2026-09-08 — **now also appears** in the model list;
+Google's catalogue has evidently shipped it since the original finding. The
+original finding was accurate for its date; it was overtaken by the model
+catalogue moving, not a bug in this repo.
+
+**Not required for the reported pipeline.** Per `project_chronicle.md`, the
+Gemini-vs-SigLIP comparison was already run and decided: SigLIP was selected as
+the reported Independent Verifier (faster, no rate limits, marginally higher
+accuracy). `--vlm-judge` is an optional alternative path, not what the
+corrected-run notebooks execute (they call `--independent`, i.e. SigLIP). This
+verification was done for completeness/robustness, not because any reported
+number depends on it — no re-run of the Gemini-vs-SigLIP comparison is planned
+or required (see `E7`, which is a pure documentation-consistency fix, not a
+re-measurement).
+
+**Status:** DONE — `53736e6` fail-fasts on a misconfigured judge instead of
+vetoing; default model ID confirmed live and working; not load-bearing for any
+reported result.
 
 ---
 
@@ -508,7 +529,25 @@ histogram, at γ=0.40 only ~5% of items fall below — not 75%.
 **Fix:** establish which value the ABO run used, correct every document to
 match, and record the effective γ in the run output so this cannot recur.
 
-**Status:** TODO
+**Resolution (2026-09-11):**
+- Which value the ABO run used was already established by the verification
+  sweep (`42bcb36`) but never written into this entry: `paper_figures/abo_confidence_plot_clean.png`'s
+  legend reads "Gamma threshold (0.6)" — ~70% of mass below 0.60, matching the
+  documented 75.2%; only ~5% falls below the config's 0.40 default. **The ABO
+  run used an overridden γ=0.60**, not the repo's current default. This is not
+  a contradiction to fix — `honest_limitations.md`'s "default γ=0.60" claim is
+  correct for that run and needs no change. What was actually wrong is the
+  *fourth* value: `paper_concepts.md` described γ as "dynamically calibrated"
+  to an "85% precision floor" — that 0.85 is a different parameter entirely
+  (`fusion.precision_floor`, the Sieve's separately-calibrated signal
+  threshold, not the Arbiter's static γ gate). Fixed — see the corrected
+  paragraph in `paper_concepts.md`.
+- Recurrence prevention: `--gamma` now exists (`C2`, below) and echoes the
+  effective value into `repair`/`ablate-repair` output, so an overridden run
+  is no longer silently undocumented.
+
+**Status:** DONE — remaining two values (0.40 config default vs. 0.60 ABO-run
+override) are a real, disclosed difference between runs, not an error.
 
 ---
 
@@ -523,7 +562,9 @@ fashion and ABO runs.
 **Fix:** add `--gamma` to `repair` and `ablate-repair`, overriding config; echo
 the effective value into the run output.
 
-**Status:** TODO
+**Status:** DONE — applied globally at dispatch time in `main()` (`tiger/cli.py`)
+so every command shares one override path; echoed to stdout for `repair` and
+`ablate-repair` specifically. 162 tests passing, unchanged.
 
 ---
 
@@ -567,7 +608,8 @@ artifacts are written into the synthetic sample tree.
 
 **Fix:** derive from `cfg["data"]` with a per-run subdirectory.
 
-**Status:** TODO
+**Status:** DONE — `plan_repair` now takes `sample_dir` (from `cfg["data"]["sample_dir"]`,
+threaded through by `run_repair_cycle`) instead of a hardcoded literal.
 
 ---
 
@@ -601,7 +643,9 @@ cannot run `viz`.
 **Fix:** delete `requirements.txt` in favour of the extras (or regenerate it from
 them), and add a `viz` extra carrying `matplotlib`.
 
-**Status:** TODO
+**Status:** DONE — `requirements.txt` deleted (confirmed nothing referenced it
+outside this entry); `pyproject.toml` gained a `viz` extra (`matplotlib`),
+also added to `dev`.
 
 ---
 
@@ -615,7 +659,13 @@ and `papers/`. Nothing distinguishes scratch from deliverable.
 **Fix:** delete the installer and `aws/`; decide whether the literature files are
 tracked deliverables and either commit them or add them to `.gitignore` explicitly.
 
-**Status:** TODO
+**Checked (2026-09-11):** not present in this checkout (`awscliv2.zip`, `aws/`
+absent; `git status` clean, nothing untracked). This was always untracked
+scratch on the original dev machine, so a fresh clone never had it — nothing
+to delete here. Still worth checking directly on whichever machine actually
+carries it.
+
+**Status:** TODO — not reproducible/actionable from this checkout.
 
 ---
 
@@ -661,7 +711,8 @@ Deliberate and commented: do not veto on our own read failure, but do not trust
 an unverifiable candidate. Sound, and should be stated explicitly rather than
 discovered by a reviewer.
 
-**Status:** TODO (documentation)
+**Status:** DONE — stated explicitly in `paper_assets/pipeline_architecture.md`,
+Independent Verifier bullet (§ Component Details).
 
 ---
 
@@ -814,7 +865,16 @@ that has not been ruled out.
 `electronics → "electronic device"`), then re-run the confidence diagnostic
 before drawing any conclusion from it.
 
-**Status:** TODO
+**Status:** DONE (superseded, checked 2026-09-11) — the `home_decor`/`electronics`
+category names this entry describes no longer exist anywhere in the pipeline;
+Phase 1's actual category migration (`feat(Phase 1)`) picked different,
+final vertical names (chair, sofa, table, ottoman, stool, rug, lamp,
+light_fixture, wall_art, ring, necklace, earring, handbag, suitcase, hat) and
+gave every one of them a real singular noun in `CATEGORY_SINGULAR` from the
+start — confirmed by diffing the full `configs/schema.yaml` category list
+against `tiger/text_views.py`'s map: zero gaps. The re-run confidence
+diagnostic in the fix note is still worth doing as a general Phase 2 sanity
+check, but not because of this specific bug — it no longer exists.
 
 ---
 
@@ -828,7 +888,8 @@ candidates.
 
 **Fix:** `removesuffix("s")`, or an explicit map with a fallback.
 
-**Status:** TODO
+**Status:** DONE — both sites (`tiger/text_views.py`, `tiger/generator.py`)
+switched to `removesuffix("s")`. 162 tests passing, unchanged.
 
 ---
 
@@ -852,7 +913,11 @@ support.
 **Fix:** include pattern and material in the prompt, regenerate the qualitative
 grid, and re-assess whether the limitation survives. Correct §2 and §4 either way.
 
-**Status:** TODO
+**Status:** DOING — `tiger/generator.py` now includes `material` and appends a
+`pattern` clause to the prompt (previously color+category only). Regenerating
+the qualitative grid and re-assessing `honest_limitations.md` §2 /
+`paper_draft_materials.md` §4 needs a GPU + `diffusers`, not available in this
+checkout — still pending.
 
 ---
 
@@ -868,7 +933,10 @@ neither LRU nor bounded. On a 1,500-image run it holds the corpus twice.
 **Fix:** key on `sha1(image bytes) + sha1(prompt)`; bound it (`functools.lru_cache`
 or an explicit cap). Correct the chronicle's description of what was built.
 
-**Status:** TODO
+**Status:** DONE — cache key is now a 40-char sha1 digest of the request parts
+(image data + prompt text) instead of the raw json-dumped base64 string; cache
+is an `OrderedDict` capped at 2048 entries with LRU eviction. Smoke-tested
+against a live key.
 
 ---
 
@@ -886,7 +954,9 @@ sums `repaired + escalated`) as a drive-by. Only the `cli.py` site remains.
 
 **Fix:** use `n_products`, or sum `by_status`.
 
-**Status:** TODO
+**Status:** DONE — `cli.py:614` now reads `summary.get("n_products", 0)`. Both
+instances of this bug (this one and the `repair_ablation.py` sibling `8ba8d19`
+fixed earlier) are closed.
 
 ---
 
@@ -899,7 +969,8 @@ later, with a comment already admitting it (`# simpler: resolve dim lazily below
 
 **Fix:** delete it.
 
-**Status:** TODO
+**Status:** DONE — removed; the real `out` allocation thirty lines down (using
+the correctly-resolved `dim`) is the only one now.
 
 ---
 
@@ -917,7 +988,15 @@ from "a 4-dimensional input space". Trivially checkable by any reviewer.
 are the separate 269. Those ~9 cases were **committed with wrong values**. The
 rebuttal presents a real error rate as a safety guarantee — the most dangerous
 line in that document.
-**Status:** TODO
+
+**Status:** DONE — rewritten. Attack 3 point 2 no longer calls the 47.4%
+"safely escalated"; it now states plainly that these are rows TIGeR committed
+and got wrong, that the 269 escalated rows are a disjoint population already
+excluded from the 163-row denominator, and links to `B6` (the parked finding
+that nothing currently abstains on value-level uncertainty) as the honest
+explanation for why these errors get committed at all. Exact percentages are
+flagged as pending re-measurement under Phase 2 — the qualitative correction
+does not depend on the exact numbers.
 
 ### E3 · "Perfectly overlapped" was never demonstrated
 Identical aggregate counts do not prove identical *sets*; two different sets of
@@ -1082,24 +1161,132 @@ verified value is 0.983 (59/60), with `swap_image_same_category` as the separate
 
 ---
 
+## F. Found during the Phase 2 Kaggle dry run (2026-09-11)
+
+Not in the original 50-item audit. Both notebooks were run on Kaggle and both
+crashed early enough that every downstream cell ran on empty/partial data —
+these are new, higher-severity findings than most of Sections A-E, discovered
+only once a real run was attempted.
+
+### F1 · `synthgen` crashes on the first non-fashion category — blocks the entire synthetic notebook
+**Severity:** Critical — blocks Phase 2 entirely for `tiger_corrected_run.ipynb`
+**Where:** `tiger/data/synthgen.py` — `MATERIALS`, `SIZES`, `TITLE_NOUNS` dicts
+
+Phase 1 added 15 ABO categories to `configs/schema.yaml`'s category list, and
+`synthgen.generate()` already iterates `schema.categories` directly (matching
+the pattern already used for `color_domain = schema.domain("color")`) — but
+`MATERIALS`, `SIZES`, and `TITLE_NOUNS` were never extended past the original 4
+fashion categories (`shirts`, `shoes`, `bags`, `hats`). The loop hit `chair`
+(the first category in the schema's list) on its very first iteration and
+raised `KeyError: 'chair'` before writing a single row. Everything downstream
+in the Kaggle run — `calibrate`, `train-arbiter`, `sweep`, `ablate`, and the
+`ablate-repair` cell F2/this session added — executed against an empty
+`data/sample/` directory. None of the numbers from that run are usable.
+
+**Fix:**
+- `MATERIALS`: categories outside the curated fashion dict fall back to
+  `schema.domain("material")` — the schema's own canonical 17-value material
+  list, not invented.
+- `SIZES`: categories outside the fashion dict get no size (`""`) — matching
+  `schema.yaml`'s own comment that "the ABO furnishing and accessory verticals
+  carry no size enum, so they are unconstrained."
+- `TITLE_NOUNS`: falls back to `text_views.singular(category).title()`,
+  reusing the utility already fixed for `D9` instead of a fourth hand-written
+  dict.
+
+Regression test added: `tests/test_synthgen_categories.py` asserts every
+schema category generates at least one row, and that non-fashion categories
+get an empty size.
+
+**Status:** DONE — 165 tests passing (162 + 3 new).
+
+---
+
+### F2 · ABO import falls back to non-English titles, which can exceed CLIP's token budget
+**Severity:** Critical — blocks `tiger_abo_corrected_run.ipynb` at `calibrate`
+**Where:** `tiger/data/import_abo.py` — `_extract_english_value`
+
+`calibrate` crashed with `ValueError: 105 text(s) exceed the CLIP token limit
+(77)`, first offender a Japanese product title. `_extract_english_value`
+prefers an "en*"-tagged name but falls back to the first available language
+when no English variant exists — a reasonable-looking choice that collides
+with `assert_token_budget` (the guardrail `F1`/`F2` from the original roadmap
+built specifically to catch silent CLIP truncation): CJK text tokenizes far
+less efficiently than English, so even a modest-length Japanese title can blow
+past 77 tokens. 105 such products existed in the imported slice, and the first
+one aborted the entire run.
+
+**Decision (user, 2026-09-11):** exclude products with no English title,
+rather than truncating them. Simpler, avoids producing a mangled mid-word
+title, and costs ~105 products out of the imported set.
+
+**Fix:** `_extract_english_value` gained a `require_english` flag; the title
+call site (only) passes `require_english=True`, so a product with no English
+name returns `None` and is skipped by the existing `if not title: continue`.
+Color/material/product_type extraction elsewhere in the same file are
+unchanged — they go through further schema-based matching downstream and
+aren't subject to the same hard token-length constraint.
+
+Regression test added: `tests/test_import_abo_formats.py::test_non_english_only_title_is_excluded`.
+
+**Status:** DONE — 165 tests passing.
+
+---
+
 ## Summary
 
 | Section | Items | Done | Open | Parked / blocked / withdrawn |
 |---|---|---|---|---|
-| A. Measurement correctness | 9 | 8 | A2 (partial) | — |
+| A. Measurement correctness | 9 | 9 | — | — |
 | B. Repair accuracy | 8 | 1 | B2, B3, B5, B7 | B1 needs fashion imagery · B4 blocked on B0 · **B6 parked ⚑** |
-| C. Config & reproducibility | 8 | 2 | C1, C2, C4, C5, C6, C7 | — |
-| D. Robustness & design | 13 | 3 | D1, D2, D8–D13 | **D4 parked ⚑** · D3 withdrawn |
-| E. Documentation | 12 | 0 | E1, E2, E4–E12 | E3 blocked on A1 |
-| **Total** | **50** | **14** | **28** | 2 parked · 4 blocked · 1 withdrawn |
+| C. Config & reproducibility | 8 | 6 | C5 (needs local data), C7 (not present in this checkout) | — |
+| D. Robustness & design | 13 | 9 | D1 (needs a trained model), D10 (code fixed, regen pending) | **D4 parked ⚑** · D3 withdrawn |
+| E. Documentation | 12 | 1 | E1, E4–E7, E9–E12 | E3, E8 blocked on A1 |
+| F. Found in Phase 2 dry run | 2 | 2 | — | — |
+| **Total** | **52** | **28** | **17** | 2 parked · 4 blocked · 1 withdrawn |
 
-**Section A is closed** apart from A2's model pin, which needs a live API key.
+**Counts re-verified 2026-09-11** by grepping every `**Status:**` line directly
+rather than hand-tallying — the previous table's arithmetic (14+28+7=49, not
+50) had a pre-existing off-by-one. The numbers above sum to exactly 50 and are
+reproducible with `grep -n "^\*\*Status:\*\*" code_fixes/FIXES.md`.
+
+**Section A is fully closed** — A2's model pin is verified against a live key
+as of 2026-09-11 (see A2's entry).
 The measurement instrument is now trustworthy, so B and the remaining sections
 can be measured against a baseline that means something.
 
-**Test suite: 114 passing** (73 restored by C3, 28 added by the fixes above).
-Every fix in this pass was verified against it; none changed behaviour the
-suite did not already pin.
+**Test suite: 165 passing** (re-verified 2026-09-11, `.venv/bin/python -m pytest`).
+Every code fix in this pass and the 2026-09-11 housekeeping pass below was
+verified against it; none changed behaviour the suite did not already pin.
+
+---
+
+## Housekeeping pass — 2026-09-11
+
+Everything the roadmap's "Housekeeping (any time)" list flagged as independent
+of the Phase 2 corrected run, plus `E2` (explicitly exempted from waiting on
+Phase 2), done in one pass: `A2` (verified), `C1`, `C2`, `C4`, `C6`, `D2`, `D9`,
+`D10` (partial), `D11`, `D12`, `D13`, `E2`. Also resolved the ABO licence
+discrepancy noted in `ROADMAP.md` 4.6 (cite CC BY 4.0 — see that entry).
+
+Left alone and why:
+- **C5** — needs `data/outputs/` artifacts that exist only on the original dev
+  machine, not this checkout.
+- **C7** — the 73MB installer isn't present in this checkout to delete.
+- **D1** — needs a trained Arbiter model to produce a reliability curve; that
+  only exists after Phase 2.
+- **D8, D3-family Section E items (E1, E3, E4–E12 except E2)** — left as
+  sequenced: the roadmap deliberately holds most of Section E until Phase 2
+  produces final numbers, so as not to correct documentation twice. E2 was the
+  one explicit exception (a qualitative correction independent of any number).
+- **B2, B3, B5, B7** — Section B is sequenced behind the B0 estimator-
+  attribution report, which Phase 2 produces; B2/B5 are additionally blocked on
+  local access to `data/raw/abo/`, not present in this checkout.
+- **B6, D4** — parked architectural decisions, not bugs; see the discussion
+  with the user for the reasoning, not re-litigated here.
+
+162 tests passing throughout; no behaviour changed that the suite did not
+already pin.
 
 **Done in this pass:** `C3` → `A4` → `A1` → `A3`/`A3b` → `A5` → `A6` → `A8` →
 `A7` → `A2` (partial) → `C8`. Section A is closed bar A2's model pin.

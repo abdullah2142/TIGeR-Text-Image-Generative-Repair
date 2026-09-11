@@ -112,7 +112,8 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
 
             plan = solver_mod.plan_repair(ev, route, flagged.loc[i].to_dict(), pool,
                                           cat_ids, caption_emb[i], schema,
-                                          generator=generator, root_path=root)
+                                          generator=generator, root_path=root,
+                                          sample_dir=cfg["data"]["sample_dir"])
             if not plan.plannable:
                 finalize(row_id, "escalated", pass_i,
                          {"pass": pass_i, "action": "human_review",

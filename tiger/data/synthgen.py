@@ -176,7 +176,10 @@ def render_product_image(
 
 
 def make_title(rng: random.Random, category: str, color: str, material: str, brand: str) -> str:
-    noun = rng.choice(TITLE_NOUNS[category])
+    # Same category-coverage gap as MATERIALS/SIZES in generate() below: TITLE_NOUNS
+    # only has the 4 fashion categories. Reuse text_views.singular (already correct
+    # for all 19 schema categories, per D9) instead of hand-maintaining a third dict.
+    noun = rng.choice(TITLE_NOUNS[category]) if category in TITLE_NOUNS else text_views.singular(category).title()
     style = rng.random()
     if style < 0.6:  # colour word in title (common case; exercises title checks)
         return f"{brand} {color.capitalize()} {material.capitalize()} {noun}"
@@ -199,6 +202,14 @@ def generate(
     images_dir = out / "images"
 
     color_domain = [c for c in schema.domain("color") if c != "multicolour"]
+    # Phase 1 added 15 ABO categories to the schema but MATERIALS/SIZES below were
+    # never extended to match -- the loop crashed on the first non-fashion category
+    # (`KeyError: 'chair'`) before writing a single row. Categories outside the
+    # curated fashion dicts fall back to the schema's own canonical material domain
+    # (already used for color, above) and get no size at all -- schema.yaml already
+    # documents that "the ABO furnishing and accessory verticals carry no size enum,
+    # so they are unconstrained".
+    material_domain = list(schema.domain("material"))
     categories = list(schema.categories)
 
     rows = []
@@ -206,9 +217,9 @@ def generate(
         for i in range(products_per_category):
             product_id = f"{category}_{i:03d}"
             color = rng.choice(color_domain)
-            material = rng.choice(MATERIALS[category])
+            material = rng.choice(MATERIALS.get(category, material_domain))
             pattern = _weighted(rng, PATTERN_WEIGHTS)
-            size_v = rng.choice(SIZES[category])
+            size_v = rng.choice(SIZES[category]) if category in SIZES else ""
             brand = rng.choice(BRANDS)
 
             attrs = {"color": color, "material": material, "pattern": pattern,
