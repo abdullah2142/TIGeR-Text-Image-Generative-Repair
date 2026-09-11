@@ -55,6 +55,24 @@ def _tau_for(thr: sieve_mod.SieveThresholds, category: str) -> float:
     return float(thr.sim.get(category, thr.sim_global)["tau"])
 
 
+def _promote_clean_pending(outcomes: dict[str, "RepairOutcome"], flagged: pd.DataFrame) -> None:
+    """D4: close out a "pending" row once the sieve says it is no longer flagged.
+
+    A row accepted in an earlier pass is kept "pending", not immediately
+    "repaired", so it re-enters diagnosis with its updated image/text (the
+    two-fix case: image gets swapped in pass 1, the row re-enters pass 2 and
+    the now-stale text gets caught against the new image). Once a later pass's
+    fresh sieve run shows the row is no longer flagged, whatever was fixed was
+    enough -- promote it. Without this, a row would stay "pending" forever.
+    """
+    # Explicit present-and-clean check, not "absent from still_flagged" -- a
+    # row missing from this pass's frame entirely is not evidence it is clean.
+    is_flagged = dict(zip(flagged["row_id"].astype(str), flagged["flagged"].astype(bool)))
+    for row_id, oc in outcomes.items():
+        if oc.final_status == "pending" and is_flagged.get(row_id, True) is False:
+            oc.final_status = "repaired"
+
+
 def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema,
                      thr: sieve_mod.SieveThresholds, loo_stats: dict,
                      vcal: verify_mod.VerifyCalibration, model: arbiter_mod.ArbiterModel,
@@ -72,6 +90,7 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
     for pass_i in range(1, max_passes + 1):
         sig, arrays = sieve_mod.compute_signals(working, encoder, schema, cfg, root)
         flagged = sieve_mod.apply_thresholds(sig, thr, fusion=fusion)
+        _promote_clean_pending(outcomes, flagged)
 
         image_emb = arrays["image_emb"]
         caption_emb = arrays["caption_emb"]
@@ -163,7 +182,9 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
                                 ["title", "attributes", "canonical_text"]] = \
                         [pr.title, json.dumps(pr.attrs, ensure_ascii=False), pr.canonical_text]
                     outcomes.setdefault(row_id, RepairOutcome(row_id, "pending")).log.append(entry)
-                    outcomes[row_id].final_status = "repaired"
+                    # D4: stays "pending", not "repaired" -- re-checked next pass.
+                    # _promote_clean_pending closes it out once it is no longer
+                    # flagged; the post-loop sweep below catches the last pass.
                     outcomes[row_id].passes_used = pass_i
                     any_committed = True
                 else:
@@ -195,7 +216,7 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
                         plan.candidate_image_path
                     oc = outcomes.setdefault(row_id, RepairOutcome(row_id, "pending"))
                     oc.log.append(entry)
-                    oc.final_status = "repaired"
+                    # D4: stays "pending" -- see the V2T branch above for why.
                     oc.passes_used = pass_i
                     any_committed = True
                 else:
@@ -205,6 +226,14 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
         encoder.save_cache()
         if not any_committed:
             break  # nothing changed; a second pass would repeat the first
+
+    # D4: one more promotion check against the *final* working set -- otherwise
+    # whatever was accepted in the very last pass (no pass_i+1 to re-check it)
+    # would fall into the "still pending after the cap" bucket below and be
+    # wrongly marked unrepaired despite having been successfully fixed.
+    if any(oc.final_status == "pending" for oc in outcomes.values()):
+        sig, _ = sieve_mod.compute_signals(working, encoder, schema, cfg, root)
+        _promote_clean_pending(outcomes, sieve_mod.apply_thresholds(sig, thr, fusion=fusion))
 
     # anything still flagged-and-unresolved after the cap -> human
     for row_id in list(outcomes):

@@ -52,7 +52,7 @@ The sweep split these into two kinds, which the first draft conflated.
 | ⚑ | Finding | Entry | Why it is a design change |
 |---|---|---|---|
 | **1** | The repair operator had no ground-truth source, and nothing abstained on *value* | `B6` (with `B1`–`B4`, `E2`, `D6`) — **BUILT 2026-09-11** | The γ-gate abstains on routing; Eq. 27–29 abstains on schema and similarity. Nothing abstained on *"I do not know what colour this is."* A wrong-but-in-domain value that raises CLIP similarity used to pass every gate and be committed silently — the ~9 of 19 in `E2`. Now inserts an abstention: a real disagreement between the pixel and probe estimators escalates instead of committing. See `B6`'s entry for the mechanism. |
-| **2** | The closed loop is not closed, and E3 has no behaviour of its own | `D4` — **PARKED**: needs a decision, not a patch. Do not fix in a cleanup pass. | Four taxonomy classes, three implemented behaviours. Either remedy — rows re-entering a pass, or a two-step `BOTH` plan — adds pipeline behaviour that has never run. |
+| **2** | The closed loop was not closed, and E3 had no behaviour of its own | `D4` — **BUILT 2026-09-12** | Four taxonomy classes, three implemented behaviours. Now: an accepted repair stays `pending` and re-enters the next pass, so a row needing both fixes actually gets both — the general re-diagnosis loop `repair.py`'s own docstring already claimed to have. |
 
 **Changes a claim's scope — the architecture is untouched.**
 
@@ -800,8 +800,55 @@ swapped and keep the wrong colour.
 Either changes results. If adopted, it must land **before** the corrected
 baseline run, not after.
 
-**Status:** PARKED — ⚑ design change, decision required before implementation.
-Do not fix in a cleanup pass.
+**Decision (user, 2026-09-12):** build it. Sized against the real ABO Phase 2
+run first — the Arbiter's own routing output showed `{'E1': 494, 'E2': 315,
+'E3': 239, 'CLEAN': 655}`: **E3/BOTH is 239 of 1703 routed rows (~14%)**,
+comparable in size to E2, not the rare edge case the 2% *synthetic injection
+rate* for one noise subtype had suggested. That 2% figure was the rate for
+one deliberately-injected noise type; E3 as the Arbiter actually classifies it
+is broader and far more common.
+
+**Fix implemented — option 1** ("keep accepted rows pending"), not option 2
+(a bespoke two-step BOTH plan). Reading `tiger/repair.py`'s own module
+docstring first: *"the cycle re-diagnoses so a row needing two fixes gets two
+(capped at two passes, roadmap 2.5)"* — this was already describing option 1
+as the intended design. The actual bug was one line: both the V2T and T2V
+acceptance branches set `final_status = "repaired"` immediately, which
+excluded the row from `active_mask` in every later pass regardless of whether
+`max_passes` said there should be one. `verify.max_passes: 2` was accordingly
+inert — read from config, never actually able to matter.
+
+- Both acceptance branches now leave the outcome `"pending"` instead.
+- A new `_promote_clean_pending(outcomes, flagged)` (module-level, not a
+  closure, specifically so it is unit-testable without the full CLIP/encoder
+  pipeline) runs at the top of every pass: a `"pending"` row whose fresh sieve
+  re-run shows it is no longer flagged gets promoted to `"repaired"`; a row
+  still flagged stays `"pending"` and is picked up again by `active_mask`
+  next pass — with its already-applied fix (e.g. the new image) now part of
+  `working`, so the next pass's diagnosis is against the corrected state.
+  Absence from the current pass's frame is deliberately **not** treated as
+  evidence of cleanliness (a test caught this ambiguity in the first draft).
+- A post-loop promotion check runs once more against the final `working`
+  state, so whatever the *last* pass accepted is not lost to the "still
+  pending after the cap -> unrepaired" catch-all with no chance to be
+  re-checked.
+- This required no changes to `solver.py`/`plan_repair` at all — `route()`
+  still returns `BOTH` → `T2V` first, same as before; it's the *next* pass's
+  ordinary re-diagnosis (now actually reachable) that catches the text half
+  against the newly-swapped image, exactly the "image first, then re-diagnose
+  text" sequence the paper docs already described.
+
+Regression tests: `tests/test_repair_two_pass.py` (promotion logic in
+isolation — promote when genuinely clean, stay pending while still flagged,
+never touch already-terminal rows, don't mistake absence for cleanliness).
+
+**Consequence:** the ABO/synthetic Phase 2 runs completed *before* this fix
+landed, so their E3-row numbers reflect the old (image-only) behaviour.
+Re-running both notebooks is needed to get numbers reflecting the fix;
+everything else from those runs (detection numbers, E1/E2-only repairs, A1/A6
+validation) is unaffected and stays valid.
+
+**Status:** DONE — 171 tests passing.
 
 ---
 
@@ -1269,10 +1316,10 @@ Regression test added: `tests/test_import_abo_formats.py::test_non_english_only_
 | A. Measurement correctness | 9 | 9 | — | — |
 | B. Repair accuracy | 8 | 2 | B2, B3, B5, B7 | B1 needs fashion imagery · B4 blocked on B0 |
 | C. Config & reproducibility | 8 | 6 | C5 (needs local data), C7 (not present in this checkout) | — |
-| D. Robustness & design | 13 | 9 | D1 (needs a trained model), D10 (code fixed, regen pending) | **D4 parked ⚑** · D3 withdrawn |
+| D. Robustness & design | 13 | 10 | D1 (needs a trained model), D10 (code fixed, regen pending) | D3 withdrawn |
 | E. Documentation | 12 | 1 | E1, E4–E7, E9–E12 | E3, E8 blocked on A1 |
 | F. Found in Phase 2 dry run | 2 | 2 | — | — |
-| **Total** | **52** | **29** | **17** | 1 parked · 4 blocked · 1 withdrawn |
+| **Total** | **52** | **30** | **16** | 0 parked · 4 blocked · 1 withdrawn |
 
 **Counts re-verified 2026-09-11** by grepping every `**Status:**` line directly
 rather than hand-tallying — the previous table's arithmetic (14+28+7=49, not
@@ -1284,7 +1331,7 @@ as of 2026-09-11 (see A2's entry).
 The measurement instrument is now trustworthy, so B and the remaining sections
 can be measured against a baseline that means something.
 
-**Test suite: 167 passing** (re-verified 2026-09-11, `.venv/bin/python -m pytest`).
+**Test suite: 171 passing** (re-verified 2026-09-12, `.venv/bin/python -m pytest`).
 Every code fix in this pass and the 2026-09-11 housekeeping pass below was
 verified against it; none changed behaviour the suite did not already pin.
 
@@ -1311,16 +1358,14 @@ Left alone and why:
 - **B2, B3, B5, B7** — Section B is sequenced behind the B0 estimator-
   attribution report, which Phase 2 produces; B2/B5 are additionally blocked on
   local access to `data/raw/abo/`, not present in this checkout.
-- **D4** — parked architectural decision, not a bug; see the discussion with
-  the user for the reasoning, not re-litigated here.
+**2026-09-12:** both remaining ⚑ decisions are now closed. `B6` was built the
+same day as this pass (see its entry) — judged low-risk enough to implement
+ahead of sizing. `D4` was sized against the real Phase 2 run (E3 = 239/1703
+routed rows, ~14% — not rare) and then built too; see its entry for the fix
+and why it required re-running both notebooks.
 
-**Later the same day:** `B6` was reassessed and built (see `B6`'s own entry) —
-the user judged it low-risk enough to implement ahead of Phase 2 sizing,
-unlike `D4`, which changes results for an existing row class and was
-explicitly told to land before any baseline run.
-
-167 tests passing throughout (165 after the housekeeping pass above, +2 for
-B6); no behaviour changed that the suite did not already pin.
+171 tests passing throughout (165 after the housekeeping pass above, +2 for
+B6, +4 for D4); no behaviour changed that the suite did not already pin.
 
 **Done in this pass:** `C3` → `A4` → `A1` → `A3`/`A3b` → `A5` → `A6` → `A8` →
 `A7` → `A2` (partial) → `C8`. Section A is closed bar A2's model pin.
@@ -1344,5 +1389,7 @@ the current values in `paper_assets/` are the ones this pass invalidated.
 
 `D4` and `B6` were **parked** as of this writing (2026-09-08/10) — the two ⚑
 design changes excluded from the fix pass by decision, not by oversight.
-**Update 2026-09-11: `B6` has since been built** (see its entry); `D4` remains
-parked.
+**Update: both have since been built** — `B6` on 2026-09-11, `D4` on
+2026-09-12 once the real Phase 2 run showed E3 was ~14% of routed rows, not
+the rare case the original 2% synthetic-injection figure suggested. See each
+entry for the fix.

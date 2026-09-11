@@ -3,10 +3,10 @@
 Forward plan. The defect detail lives in `FIXES.md`; this is the ordering and
 the critical path. Written 2026-09-10, after the measurement-harness pass.
 
-**State (updated 2026-09-11):** 29 items done, 17 open, 1 parked, 4 blocked,
+**State (updated 2026-09-12):** 30 items done, 16 open, 0 parked, 4 blocked,
 1 withdrawn (52 total — see `FIXES.md` section F for 2 new findings from a
-Kaggle Phase 2 dry run, and B6 for the parked decision that got built same
-day). 167 tests passing.
+Kaggle Phase 2 dry run). Both ⚑ parked decisions (B6, D4) are now built.
+171 tests passing. **Both notebooks need re-running** to reflect D4.
 
 ---
 
@@ -134,10 +134,11 @@ Not bugs. Each needs a decision before it needs a patch.
 | | |
 |---|---|
 | **B6** | ✅ **BUILT 2026-09-11.** Nothing abstained on *value* uncertainty — the γ-gate abstains on routing, Eq. 27–29 on schema and similarity, but nothing checked whether the pixel estimator and the CLIP probe agreed. Now: a real disagreement between the two escalates instead of silently committing whichever the old confidence threshold favoured. See `FIXES.md` B6. Not yet sized against real data — that still needs the Phase 2 run. |
-| **D4** | The two-pass loop never runs, so E3 has no behaviour distinct from E2 — four taxonomy classes, three implemented behaviours. The re-route arrow in the README has never executed. **Still parked** — per `FIXES.md`, if adopted it must land before the corrected baseline run, and a Phase 2 run is already in progress, so implementing it now would mean re-running Phase 2 again either way. |
+| **D4** | ✅ **BUILT 2026-09-12.** The two-pass loop never ran, so E3 had no behaviour distinct from E2. Sized against the real ABO run first: E3 = 239/1703 routed rows (~14%), not rare. Fix: an accepted repair now stays "pending" and re-enters the next pass instead of being marked "repaired" immediately — `repair.py`'s own docstring already described this as the design; the bug was one line excluding it. See `FIXES.md` D4. |
 
-D4 is worth doing but should not land in a cleanup pass — decide after Phase 2
-tells you how often `E3`/`BOTH` actually occurs in real data.
+Both Phase 5 decisions are now closed. **Both notebooks need a re-run** to get
+numbers reflecting D4 — the Phase 2 runs already completed used the old
+image-only BOTH-handling.
 
 ---
 
