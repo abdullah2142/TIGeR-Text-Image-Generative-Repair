@@ -88,8 +88,8 @@ def format_ablations(results: dict) -> str:
         "random@budget": "Random Baseline",
         "text_only": "Text Checks Only",
         "global_only": "CLIP Score Only",
-        "probes_only": "LOO Probes Only",
-        "no_loo": "No LOO Masking",
+        "probes_only": "Probes Only",
+        "no_loo": "No Probes",
         "full": "Full System",
         "full_fusion": "Full + Fusion Gate",
     }
@@ -123,7 +123,10 @@ def format_ablations(results: dict) -> str:
         lines.append(f"  • Full system vs CLIP-only: +{delta:.3f} F1 improvement")
     if "full" in results and "no_loo" in results:
         delta = results["full"]["f1"] - results["no_loo"]["f1"]
-        lines.append(f"  • Adding LOO Masking: +{delta:.3f} F1 improvement")
+        # E9: "no_loo" is per-field contrastive probes vs everything else --
+        # Eq. 18 LOO itself only runs on already-flagged rows and contributes
+        # nothing to detection. This is the contrastive-probes contribution.
+        lines.append(f"  • Adding contrastive probes: +{delta:.3f} F1 improvement")
     if "full" in results and "random@budget" in results:
         delta = results["full"]["f1"] - results["random@budget"]["f1"]
         lines.append(f"  • Full system vs Random: +{delta:.3f} F1 improvement")
@@ -137,8 +140,8 @@ def save_ablations_csv(results: dict, out_path: str | Path) -> None:
         "random@budget": "Random Baseline",
         "text_only": "Text Checks Only",
         "global_only": "CLIP Score Only",
-        "probes_only": "LOO Probes Only",
-        "no_loo": "No LOO Masking",
+        "probes_only": "Probes Only",
+        "no_loo": "No Probes",
         "full": "Full System",
         "full_fusion": "Full + Fusion Gate",
     }

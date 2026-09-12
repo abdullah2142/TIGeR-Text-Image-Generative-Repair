@@ -1054,7 +1054,7 @@ Fix **after** the corrected ablation run — the numbers will move.
 ### E1 · `reviewer_defense.md` Attack 8: "exactly four continuous evidence metrics"
 The `FEATURES` list in `tiger/arbiter.py` has **14**. The rebuttal also argues
 from "a 4-dimensional input space". Trivially checkable by any reviewer.
-**Status:** TODO
+**Status:** DONE — Attack 8 rewritten to cite the real 14-feature list by name.
 
 ### E2 · `reviewer_defense.md` Attack 3: the 47.4% were *not* "safely escalated"
 52.6% is restoration accuracy among the **163 repaired** rows; escalated rows
@@ -1079,7 +1079,14 @@ Identical aggregate counts do not prove identical *sets*; two different sets of
 444 items produce the same total. Given A1, the claim is moot — but if the
 early-exit story survives a corrected run, prove it by intersecting the
 escalated `row_id` sets.
-**Status:** BLOCKED on A1
+
+**Resolution (2026-09-12):** didn't survive a corrected run — no need for the
+set-intersection proof. The corrected ABO run shows Full System and No Gamma
+Gate producing genuinely different counts (268 vs. 498 repaired), so there's
+no identity left to demonstrate anything about. `paper_draft_materials.md`
+§7.5 formally withdrawn.
+
+**Status:** DONE
 
 ### E4 · Attack 1 argues cost where the durable argument is reliability
 The "why not just use a VLM" rebuttal rests on cost, throughput, and rate
@@ -1087,13 +1094,16 @@ limits. Cost arguments age badly. MLLM-as-a-Judge (ICML 2024) shows judges
 diverge from humans on *absolute scoring* and exhibit position, egocentric, and
 length bias plus hallucination even in GPT-4V — a reliability argument that does
 not expire.
-**Status:** TODO
+**Status:** DONE — Attack 1 rewritten to lead with the MLLM-as-a-Judge
+reliability argument; cost/throughput retained as secondary.
 
 ### E5 · Attack 6 does not answer the ARO objection
 The model-agnostic defence answers "why not a newer model" but not "why the
 model measured worst at your exact task" (CLIP 62% vs BLIP 88% on attribution).
 Pairs with B7.
-**Status:** TODO
+**Status:** DONE — Attack 6 now cites the ARO 62%/87%/88% figures directly and
+names the two mitigations already available without retraining
+(`compare_encoders`, the Koishigarina et al. linear correction).
 
 ---
 
@@ -1116,7 +1126,16 @@ the repo reproducible. Pairs with C5.
 every path, drop the `scripts/` and `ci.yml` claims, and remove the surviving
 "✅ Unit tests written" line in `tiger_project_doc.md` §11 (C3).
 
-**Status:** TODO
+**Status:** DONE (partial) — `data/thresholds/` committed with real artifacts
+(excluding `tiger_fusion.json`, which must stay absent by design — a test
+depends on `_load_fusion` failing loudly when fusion hasn't been calibrated).
+`data/sample/` still not committed: the notebooks don't export it (checked —
+neither zip's export cell includes it), so it needs a dedicated export step
+added first, not available from this session's run artifacts. README.md and
+`tiger_project_doc.md` corrected: `scripts/` marked deleted not "kept for
+reference", `kaggle_workflow.ipynb` (doesn't exist) replaced with the real
+notebook names, broken `ROADMAP_PROGRESS.md` link fixed, "✅ Unit tests
+written" line removed. `ci.yml` claim not found in current docs to remove.
 
 ---
 
@@ -1133,7 +1152,12 @@ at all. "Gemini 3.7 Flash" is not a real model.
 **Fix:** name SigLIP as the reported verifier everywhere, change the README
 example to `--independent`, and describe Gemini as an evaluated alternative.
 
-**Status:** TODO
+**Status:** DONE — README's end-to-end example changed to `--independent`
+with a note that `--vlm-judge` was evaluated but SigLIP is reported.
+`pipeline_architecture.md` already fixed earlier this session (removed the
+fake "Gemini 3.7 Flash" model name). `project_chronicle.md` and
+`ROADMAP_PROGRESS.md` checked — both already correctly say SigLIP was
+selected over Gemini; no fix needed there.
 
 ---
 
@@ -1157,7 +1181,12 @@ presents the two columns as exhaustive.
 **Fix:** report all statuses, or add a `Total` column with a footnote. Regenerate
 after A1.
 
-**Status:** BLOCKED on A1
+**Status:** DONE — `_evaluate_run` now extracts `dismissed`/`acquire_image`/
+`unrepaired` from `by_status` (previously discarded), and
+`save_repair_ablations_csv` reports all of them plus a `Total (All Statuses)`
+column alongside the pre-existing `Total Attempted`. `paper_draft_materials.md`
+§1's table marked invalidated (see `E3`) rather than patched — it's Fashion
+data from the pre-A1 harness, not something to regenerate against ABO.
 
 ---
 
@@ -1181,7 +1210,14 @@ detection contribution.
 and describe LOO as field attribution for routing. This correction runs in the
 project's favour — the probe result is stronger and more novel than the LOO story.
 
-**Status:** TODO
+**Status:** DONE — `tiger/eval/ablation.py`'s display labels renamed exactly
+as specified (internal dict keys `probes_only`/`no_loo` left as-is — already
+accurate at the code level, only the printed labels and the "Adding LOO
+Masking" takeaway line were wrong). `paper_concepts.md` §2 rewritten to credit
+contrastive probes for detection and reframe LOO as routing-side field
+attribution. Also caught and fixed a second, previously-unknown bug while
+here: §1 of the same document had E1/E2 defined backwards relative to
+`tiger/arbiter.py`'s authoritative convention.
 
 ---
 
@@ -1194,7 +1230,10 @@ project's favour — the probe result is stronger and more novel than the LOO st
 
 **Fix:** regenerate, or drop the line-count column — it ages on every commit.
 
-**Status:** TODO
+**Status:** DONE — regenerated via `wc -l` (2026-09-12); added the three
+previously-omitted files (`generator.py`, `viz.py`, `eval/repair_ablation.py`).
+Still ages on every commit as noted in the fix — no code change can prevent
+that, only re-running `wc -l` before each doc update.
 
 ---
 
@@ -1219,7 +1258,10 @@ mentions it.
 metrics, or disclose it in the evaluation setup — then confirm the synthetic
 numbers are unchanged.
 
-**Status:** TODO
+**Status:** DONE (disclosure only) — added as `honest_limitations.md` §5, the
+cheapest of the three fix options. Moving it to a dedicated fixture (removing
+it from the shared catalogue entirely) is still open if wanted, but no longer
+undisclosed.
 
 ---
 
@@ -1233,7 +1275,8 @@ verified value is 0.983 (59/60), with `swap_image_same_category` as the separate
 
 **Fix:** one number per granularity, each labelled with which it is.
 
-**Status:** TODO
+**Status:** DONE — `tiger_project_doc.md` §8's subtype table now shows 0.983
+(59/60) labelled "subtype-level", distinct from README's 0.975 coarse label.
 
 ---
 
@@ -1317,21 +1360,26 @@ Regression test added: `tests/test_import_abo_formats.py::test_non_english_only_
 | B. Repair accuracy | 8 | 2 | B2, B3, B5, B7 | B1 needs fashion imagery · B4 blocked on B0 |
 | C. Config & reproducibility | 8 | 6 | C5 (needs local data), C7 (not present in this checkout) | — |
 | D. Robustness & design | 13 | 10 | D1 (needs a trained model), D10 (code fixed, regen pending) | D3 withdrawn |
-| E. Documentation | 12 | 1 | E1, E4–E7, E9–E12 | E3, E8 blocked on A1 |
+| E. Documentation | 12 | 12 | — | — |
 | F. Found in Phase 2 dry run | 2 | 2 | — | — |
-| **Total** | **52** | **30** | **16** | 0 parked · 4 blocked · 1 withdrawn |
+| **Total** | **52** | **40** | **9** | 0 parked · 2 blocked · 1 withdrawn |
 
-**Counts re-verified 2026-09-11** by grepping every `**Status:**` line directly
-rather than hand-tallying — the previous table's arithmetic (14+28+7=49, not
-50) had a pre-existing off-by-one. The numbers above sum to exactly 50 and are
-reproducible with `grep -n "^\*\*Status:\*\*" code_fixes/FIXES.md`.
+**Counts re-verified 2026-09-12** by parsing every `### <id>` header and its
+next `**Status:**` line programmatically (not hand-tallying, and not a plain
+grep count either — this run had 5 status values that aren't literally
+`DONE`/`TODO`: `UNBLOCKED` counted as open, `WITHDRAWN`/`BLOCKED` counted
+separately, B0's `✅ **DONE**` counted as done, `DOING` counted as open). Sums
+to exactly 52.
 
 **Section A is fully closed** — A2's model pin is verified against a live key
 as of 2026-09-11 (see A2's entry).
 The measurement instrument is now trustworthy, so B and the remaining sections
 can be measured against a baseline that means something.
 
-**Test suite: 171 passing** (re-verified 2026-09-12, `.venv/bin/python -m pytest`).
+**Test suite: 175 passing** (re-verified 2026-09-12, `.venv/bin/python -m pytest`).
+**Section E fully closed** the same day — see each entry above; the only
+partial one is `E6` (data/sample still not committed — the notebooks don't
+export it).
 Every code fix in this pass and the 2026-09-11 housekeeping pass below was
 verified against it; none changed behaviour the suite did not already pin.
 

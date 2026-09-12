@@ -180,8 +180,16 @@ def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schem
         v2t_correct = v2t_total = 0
         cases: list[dict] = []
         after = final_df.set_index("row_id")
-        repaired_c = report["summary"].get("by_status", {}).get("repaired", 0)
-        escalated_c = report["summary"].get("by_status", {}).get("escalated", 0)
+        by_status = report["summary"].get("by_status", {})
+        repaired_c = by_status.get("repaired", 0)
+        escalated_c = by_status.get("escalated", 0)
+        # E8: total_attempted previously only summed these two, so a run where
+        # dismissed/acquire_image/unrepaired rows exist would silently under-
+        # report the true total -- the table then presented two columns as
+        # exhaustive when they were not.
+        dismissed_c = by_status.get("dismissed", 0)
+        acquire_c = by_status.get("acquire_image", 0)
+        unrepaired_c = by_status.get("unrepaired", 0)
 
         for rid, oc in report["outcomes"].items():
             if oc["final_status"] == "repaired" and rid in truth_color:
@@ -282,6 +290,12 @@ def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schem
             "total_attempted": repaired_c + escalated_c,
             "repaired": repaired_c,
             "escalated": escalated_c,
+            "dismissed": dismissed_c,
+            "acquire_image": acquire_c,
+            "unrepaired": unrepaired_c,
+            # sum of every status -- the honest total (E8); should equal
+            # total_attempted only when dismissed/acquire_image/unrepaired are 0
+            "total_all_statuses": repaired_c + escalated_c + dismissed_c + acquire_c + unrepaired_c,
             # colour-only view, retained for existing CSV consumers
             "color_accuracy": (v2t_correct / max(1, v2t_total)),
             "v2t_total": v2t_total,
@@ -514,7 +528,11 @@ def save_repair_ablations_csv(results: dict, out_path: str | Path) -> None:
                 "Configuration": friendly_names.get(name, name),
                 "Repaired": r["repaired"],
                 "Escalated": r["escalated"],
+                "Dismissed": r.get("dismissed", 0),
+                "Acquire Image": r.get("acquire_image", 0),
+                "Unrepaired": r.get("unrepaired", 0),
                 "Total Attempted": r["total_attempted"],
+                "Total (All Statuses)": r.get("total_all_statuses", r["total_attempted"]),
                 "Color Accuracy": r["color_accuracy"],
                 "V2T Cases": r["v2t_total"],
                 "Attr Accuracy": r.get("attr_accuracy"),

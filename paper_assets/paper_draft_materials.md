@@ -6,6 +6,23 @@ The following sections contain pre-formatted text, code, and tables that you can
 
 ## 1. Results Section: LaTeX Ablation Table
 
+**⚠️ INVALIDATED (2026-09-12) — do not cite these numbers.** This table's "No
+Gamma Gate" row is identical to "Full System" (163/269/52.6% both) because of
+the A1 bug: the ablation wrote `cfg["fusion"]["gamma"]`, a key nothing reads,
+so the "gate disabled" run was silently the same run as Full System twice.
+Confirmed directly: a corrected re-run (`code_fixes/FIXES.md` A1, A6, B6, D4
+all landed) on real ABO data shows these two configurations are now genuinely
+different — 268 vs. 498 repaired, not identical (see
+`paper_assets/results/abo/repair_ablations_summary.csv` for the current real
+numbers, and `E8` below for why the "Escalated" totals also don't sum
+consistently in the table as originally written). Also drop the "Restoration
+Acc (V2T)" column note claiming $N=19$ for all rows — A5 fixed the ablation to
+score every audited field and to score T2V repairs, so a regenerated table
+should report accuracy per field with its own N, not one N for the whole
+table. Regenerate this table from a fresh `ablate-repair` run before using it
+in the manuscript; the table below is retained only so the LaTeX structure can
+be reused with corrected numbers.
+
 Copy and paste this LaTeX code into your manuscript to render the final repair ablation table. It highlights the full system's performance and the contribution of each component.
 
 ```latex
@@ -208,6 +225,27 @@ This finding should be reported in the paper as follows:
 ---
 
 ### 7.5 Gamma Gate Recalibration & The "Early Exit" Finding
+
+**⚠️ WITHDRAWN (2026-09-12) — the premise of this section is disproven.** The
+"Cascading Safety Net" analysis below explains why `Full System` and
+`No Gamma Gate` produced *identical* Repaired/Escalated counts on ABO. That
+identity was never a real phenomenon — it was the A1 bug: the ablation wrote
+`cfg["fusion"]["gamma"]`, a config key `arbiter.route()` never reads, so
+"No Gamma Gate" silently ran the exact same configuration as `Full System`
+twice (`code_fixes/FIXES.md` A1). With A1 fixed, a corrected ABO re-run shows
+these two configurations genuinely differ (498 vs. 268 repaired — see
+`paper_assets/results/abo/repair_ablations_summary.csv`), so there is no
+identity left to explain. **Do not cite the "perfect early-exit" framing or
+the quoted paper paragraph below in any manuscript.**
+
+What *does* still stand from this section, on its own separate evidence: the
+underconfidence measurement (the Arbiter's max-p distribution genuinely
+shifts on out-of-domain ABO data — though the corrected run shows **38.8%**
+of predictions below γ=0.60, not 75.2%; re-measure before citing either
+number) and the general recommendation that γ may need per-domain
+recalibration. Those are real findings independent of the withdrawn "early
+exit" story; if you want to keep them in the paper, restate them without the
+disproven causal claim and with the corrected confidence numbers.
 
 #### Observed Issue
 After the schema fix, the ABO ablation table showed `Full System (gamma=0.60)` and `No Gamma Gate (gamma=0)` producing identical numbers of Repaired (35) and Escalated (444) items. Initially, this appeared to mean the Gamma Gate was inactive. 

@@ -6,11 +6,11 @@ This document anticipates the most common and aggressive critiques from peer rev
 
 ### Attack 1: "Why not just use a massive, end-to-end Multimodal LLM (like GPT-4V or Gemini 1.5 Pro) to fix the whole catalog? Why build a complex 5-stage pipeline?"
 
-**The Rebuttal (Cost, Latency, and Scalability):**
-While large VLMs have high reasoning capabilities, using them as a zero-shot, end-to-end solver for catalog maintenance is economically and computationally intractable. 
-1. **Cost:** Processing a 100,000-item catalog with an API-based VLM would cost thousands of dollars per audit. TIGeR achieves this with **$0 API cost** by running locally on a single consumer-grade GPU (T4).
-2. **Throughput:** API rate limits and massive inference times bottleneck VLMs. TIGeR achieves a throughput of **6,000 products per hour** (an 80x speedup over human curation). 
-3. **Targeted Compute:** TIGeR uses cheap, fast models (CLIP) for the Sieve to instantly ignore the 70% of clean data, saving the heavy compute (SDXL-Turbo, SigLIP) *only* for the specific products that actually need it. TIGeR is an intelligent triage system, not a brute-force model.
+**The Rebuttal (Reliability first, cost second):**
+The durable argument here is reliability, not cost — cost arguments age badly as API prices fall and rate limits loosen, but the reliability gap does not (E4).
+1. **VLM judges are not a trustworthy sole arbiter of correctness.** MLLM-as-a-Judge (Chen et al., ICML 2024) documents that VLM judges diverge from human judgment on absolute scoring and exhibit position bias, egocentric bias, length bias, and hallucination — *including in GPT-4V*. Using one VLM as the entire detect-diagnose-repair-verify pipeline means every one of those failure modes is unguarded; TIGeR's five-stage structure means no single model's blind spot is the last word on a repair.
+2. **Cost and throughput are real, but secondary.** Processing a 100,000-item catalog with an API-based VLM end-to-end would cost thousands of dollars per audit; TIGeR achieves this with **$0 API cost** on a single consumer-grade GPU (T4) at **6,000 products/hour** (an 80x speedup over human curation) — worth stating, but not the reason to prefer this architecture over a strong future VLM.
+3. **Targeted compute:** TIGeR uses cheap, fast models (CLIP) for the Sieve to instantly ignore the 70% of clean data, saving heavier compute (SDXL-Turbo, SigLIP) *only* for products that actually need it — an intelligent triage system, not a brute-force model.
 
 ---
 
@@ -19,7 +19,7 @@ While large VLMs have high reasoning capabilities, using them as a zero-shot, en
 **The Rebuttal (The Cascading Safety Net):**
 We agree that generative models hallucinate, which is exactly why TIGeR **does not blindly trust them.** 
 The generative fallback is strictly protected by a "cascading safety net":
-1. **The Gamma Gate:** The Arbiter evaluates the confidence of the required repair. If the product is highly complex or ambiguous (the bottom 25% of confidence scores), it is instantly escalated to a human.
+1. **The Gamma Gate:** The Arbiter evaluates the confidence of the required repair. If confidence falls below the configured threshold γ, it is instantly escalated to a human. *(The specific share of rows this affects depends on γ and the domain's confidence distribution — see `code_fixes/FIXES.md` A3 — and is not a fixed "bottom 25%".)*
 2. **The Independent Verifier:** Even if SDXL generates an image, it is not immediately committed to the database. An independent verifier (SigLIP) audits the generated image against the original text constraints. If SDXL hallucinated (e.g., generated a blue shirt when the text demanded red), SigLIP vetoes the repair and escalates it. 
 Our ablation study proves this: the Gamma Gate and VLM Judge successfully and safely escalated 269 ambiguous items rather than forcing bad repairs.
 
@@ -52,9 +52,9 @@ Furthermore, our cross-domain experiment on the Amazon Berkeley Objects (ABO) da
 
 ### Attack 6: "Why didn't you use [New SOTA Model] instead of CLIP and SigLIP? The vision-language landscape moves too fast for these to be relevant."
 
-**The Rebuttal (Model-Agnostic Architecture):**
-The primary contribution of TIGeR is not establishing the absolute performance ceiling of specific foundational models, but rather introducing a **novel system architecture** (Detect $\rightarrow$ Diagnose $\rightarrow$ Route $\rightarrow$ Repair $\rightarrow$ Verify). 
-Our implementation explicitly abstracts the embedding and verification logic (`encoders.py`, `vlm_judge.py`) so that models are perfectly swappable. We evaluated both Gemini (API-based) and SigLIP (local), ultimately selecting SigLIP to prove the pipeline operates effectively and securely entirely on open-source, local-first models. Upgrading the underlying embedding models in the future will seamlessly plug into the TIGeR framework and only raise its baseline performance.
+**The Rebuttal (Model-Agnostic Architecture — and yes, we know CLIP is the weak link):**
+The primary contribution of TIGeR is not establishing the absolute performance ceiling of specific foundational models, but rather introducing a **novel system architecture** (Detect $\rightarrow$ Diagnose $\rightarrow$ Route $\rightarrow$ Repair $\rightarrow$ Verify).
+This question has a sharper form worth answering directly: ARO (Yuksekgonul et al., ICLR 2023) measures CLIP at just **62%** on attribute-binding tasks — barely above the 50% chance floor — against BLIP at 88% and XVLM at 87%. TIGeR's per-field contrastive probes are exactly an attribute-binding task, so this is not a hypothetical concern; it plausibly sets the ceiling on the probe path today (see `code_fixes/FIXES.md` B7, and B0's estimator-attribution instrumentation, which decomposes exactly how much of the pipeline's error is attributable to this encoder choice versus the pixel-colour path). We do not treat this as disqualifying: `encoders.py` abstracts the embedding logic so CLIP is a swappable component, not an architectural commitment, and `compare_encoders` already supports substituting BLIP/XVLM or applying a post-hoc linear correction (Koishigarina et al., ICLR 2026) with no retraining. Separately, for the Independent Verifier stage specifically, we evaluated both Gemini (API-based) and SigLIP (local), selecting SigLIP for speed, no rate limits, and comparable empirical safety performance (see `project_chronicle.md`). Upgrading the probe encoder in the future plugs into the same framework and would only raise TIGeR's baseline performance, not require re-architecting it.
 
 ---
 
@@ -69,8 +69,8 @@ If the image is completely missing or belongs to a contradictory category, there
 ### Attack 8: "You used a simplistic Logistic Regression model for the Arbiter. Why not a more sophisticated Neural Network?"
 
 **The Rebuttal (Interpretability and Probability Calibration):**
-The Arbiter’s job is not feature extraction (the CLIP models handle that). Its job is low-dimensional routing based on exactly four continuous evidence metrics (Eq. 18, Eq. 19, swap margins, pixel signals). 
-For a 4-dimensional input space, a deep neural network is highly prone to overfitting and, more importantly, suffers from **uncalibrated overconfidence** on out-of-distribution data. Logistic Regression was specifically chosen because it provides well-calibrated, monotonic probability distributions (`predict_proba`), which are mathematically required for our $\gamma$-gate (Eq. 22) to function reliably. Furthermore, the linear weights provide exact interpretability as to *why* a specific repair path was chosen, a critical requirement for enterprise data systems.
+The Arbiter's job is not feature extraction (the CLIP models handle that). Its job is low-dimensional routing based on a compact, hand-engineered evidence vector — 14 features in total (`tiger/arbiter.py::FEATURES`: Eq. 18/19 signals, swap margins, pixel-agreement, per-field probe z-scores, and two text-only flags), not raw high-dimensional embeddings.
+For an input space this low-dimensional and this structured, a deep neural network is highly prone to overfitting and, more importantly, suffers from **uncalibrated overconfidence** on out-of-distribution data. Logistic Regression was specifically chosen because it provides well-calibrated, monotonic probability distributions (`predict_proba`), which are mathematically required for our $\gamma$-gate (Eq. 22) to function reliably. Furthermore, the linear weights provide exact interpretability as to *why* a specific repair path was chosen, a critical requirement for enterprise data systems.
 
 ---
 

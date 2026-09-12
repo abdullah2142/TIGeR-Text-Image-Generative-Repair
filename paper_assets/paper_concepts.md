@@ -5,15 +5,41 @@ This document outlines the core intellectual contributions and mathematical para
 ## 1. The Multimodal Error Taxonomy (E1-E4)
 Traditional dataset curation treats noise as binary: data is either "clean" and kept, or "dirty" and discarded. This results in massive data loss.
 TIGeR shifts the paradigm to **Dataset Repair** by establishing a fine-grained taxonomy of multimodal misalignment:
-- **E1 (Image Fault)**: The text accurately describes a product, but the wrong photo was associated with it. (Requires Text-to-Vision repair).
-- **E2 (Text Fault)**: The image is correct, but the text contains typos, contradictions, or missing attributes. (Requires Vision-to-Text repair).
+- **E1 (Text Fault)**: The image is correct, but the text contains typos, contradictions, or missing attributes. (Requires Vision-to-Text repair — read the image, fix the text).
+- **E2 (Image Fault)**: The text accurately describes a product, but the wrong photo was associated with it. (Requires Text-to-Vision repair — read the text, fix the image).
+  *(Corrected 2026-09-12: this document previously had E1/E2 swapped relative to `tiger/arbiter.py`'s authoritative convention — E1=text wrong/V2T, E2=image wrong/T2V, per its own docstring and `CLASSES`.)*
 - **E3 (Dual Fault)**: Both modalities are corrupted or mismatched beyond salvage.
 - **E4 (Ambiguous)**: The misalignment is too vague to resolve safely.
 
-## 2. Deep Evidence Gathering via LOO Masking
-Global CLIP similarity scores (cosine similarity between an image and a full caption) are fragile and lack explainability. TIGeR introduces **Leave-One-Out (LOO) Masking** for dataset curation.
-- **Mechanism**: The system systematically masks specific attributes (e.g., color, material) from the canonical text and recalculates the CLIP score.
-- **Z-Score Calculation**: If the removal of a specific token (e.g., "red") causes a statistically massive jump in the similarity score, it mathematically proves that the token is the culprit. This transforms a vague "bad match" into actionable, pinpointed evidence.
+## 2. Detection: per-field contrastive probes, with LOO for field attribution
+
+**Corrected 2026-09-12 (E9).** This section previously credited LOO Masking as
+the detection contribution and reported "Adding LOO Masking: +X F1" as the
+headline ablation number. That was a mis-credit: `tiger/eval/ablation.py`'s
+`no_loo` config is actually per-field contrastive probes vs. everything
+except them — Eq. 18 leave-one-out lives in `tiger/analyzer.py` and only runs
+on rows *already* flagged, so it contributes nothing to detection at all. The
+mechanism behind the project's strongest verified result — `mutate_text`
+recall **0.267 → 0.853** — is the contrastive probes, not LOO. This correction
+runs in the project's favour: the probe result is stronger and more novel
+than the LOO framing gave it credit for.
+
+**Per-field contrastive probes (detection):** for each attribute field
+(colour, material, pattern), the sieve tests whether the image matches the
+*declared* value better than every other value in that field's domain. This
+catches subtle text mutations (e.g. "blue" → "red") that a single global
+CLIP score misses — without probes, `mutate_text` recall is ~0.27; with them,
+~0.85.
+
+**Leave-One-Out (LOO) masking (field attribution for routing, not detection):**
+once a row is already flagged, the system masks one attribute at a time from
+the canonical text and re-scores with CLIP. If removing a token (e.g. "red")
+causes similarity to jump, that field is the suspect — this is what tells the
+Arbiter *which* field to patch (V2T), not what flagged the row in the first
+place.
+- **Z-Score Calculation**: the jump is measured as a z-score against the
+  clean-calibration distribution, turning "this field looks suspicious" into
+  a statistically grounded, pinpointed signal for routing.
 
 ## 3. The Strict-Precision Decision Fusion (Arbiter)
 Automated repair systems risk corrupting clean data if they guess blindly (hallucination). TIGeR introduces a provably safe **Decision Fusion Arbiter**.

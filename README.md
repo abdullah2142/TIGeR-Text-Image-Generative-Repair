@@ -12,9 +12,10 @@ Sieve → Analyzer → Arbiter → Solver → Verify
 ```
 
 This repository is the `tiger/` reference implementation. It grew out of a
-critical review of an earlier script-based MVP; the fixes and the paper-alignment
-work are tracked checkpoint-by-checkpoint in
-[`ROADMAP_PROGRESS.md`](ROADMAP_PROGRESS.md).
+critical review of an earlier script-based MVP (since deleted; `tiger/` is the
+only active codebase); the fixes and the paper-alignment work are tracked
+checkpoint-by-checkpoint in
+[`ROADMAP_PROGRESS.md`](paper_assets/ROADMAP_PROGRESS.md).
 
 ## Architecture
 
@@ -101,7 +102,7 @@ flowchart TD
     Judge -- "NO (Vetoed)" --> Esc2
 ```
 
-> The legacy `scripts/*.py` MVP is kept for reference only. Everything current
+> The legacy `scripts/*.py` MVP has been deleted. Everything current
 > lives under `tiger/` and is driven by `python -m tiger.cli`.
 
 ## Modules
@@ -129,7 +130,11 @@ pip install -e ".[dev,vlm]"    # dev = torch/transformers; vlm = google-generati
 pip install -e ".[test]"
 ```
 
-**Kaggle Workflow:** A fully configured `kaggle_workflow.ipynb` is included in the root directory to run this pipeline on Kaggle's free GPUs (T4x2/P100), bypassing local hardware limits.
+**Kaggle Workflow:** `tiger_corrected_run.ipynb` (synthetic catalogue) and
+`tiger_abo_corrected_run.ipynb` (ABO cross-domain) run this pipeline end to
+end on Kaggle's free GPUs (T4x2/P100), bypassing local hardware limits.
+(`tiger.ipynb`/`tiger_abo.ipynb` are earlier, superseded versions of the same
+notebooks — there is no `kaggle_workflow.ipynb`.)
 
 CPU torch is sufficient. The first CLIP-using command downloads
 `openai/clip-vit-base-patch32` (~600 MB).
@@ -146,7 +151,9 @@ python -m tiger.cli noise --seed 7     # inject errors into the report split
 python -m tiger.cli detect --seed 7    # sieve with locked thresholds
 python -m tiger.cli analyze --seed 7   # Eq. 18/19 evidence for flagged rows
 python -m tiger.cli route  --seed 7    # Arbiter routing plan
-python -m tiger.cli repair --seed 7 --vlm-judge # full closed-loop repair + VLM independent cross-check
+python -m tiger.cli repair --seed 7 --independent # full closed-loop repair + SigLIP independent cross-check
+# --vlm-judge (Gemini) is also available and was evaluated, but SigLIP is the
+# reported verifier -- faster, no rate limits, comparable safety performance.
 
 python -m tiger.cli sweep              # 5-seed detection metrics with product-level CIs
 python -m tiger.cli ablate             # baselines + ablations table

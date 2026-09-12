@@ -23,3 +23,24 @@ No system is perfect, and peer reviewers expect a critical, honest appraisal of 
 **The Limitation:** Both the Sieve (for multimodal similarity thresholds) and the Arbiter (for routing probabilities) require a calibration dataset. TIGeR assumes that this calibration data (even when corrupted synthetically) is representative of the actual catalogue.
 **Why it matters:** If a real-world catalog is *already* so massively corrupted that the "clean" baseline is noisy, the Sieve thresholds will become extremely wide, leading to false negatives (failing to flag actual anomalies). 
 **Future Work:** Exploring unsupervised or self-supervised anomaly detection methods that do not require clean calibration splits would make the pipeline more resilient to heavily degraded starting states.
+
+### 5. A planted smoke-test row is present in the synthetic catalogue's reported metrics
+**The Limitation:** `tiger/data/synthgen.py` appends one hand-placed row
+(`forced_gen_000`) to the synthetic catalogue, assigned a sentinel category
+(`"uniforms"`, not in `schema.categories`) with a colour/material combination
+outside the domain, hard-assigned to the report split, and unconditionally
+image-blanked regardless of noise seed or configured rate. It exists to force
+the generative-fallback code path to exercise during evaluation, since no
+other guaranteed trigger for that branch otherwise exists — it is guaranteed
+flagged, guaranteed to have no T2V candidate, and guaranteed to fail the Eq.
+27 schema gate.
+**Why it matters:** it is defensible as a smoke test, but it was never
+previously disclosed anywhere in the documentation, and it sits inside every
+reported detection number computed on the synthetic report split.
+**Disclosure, not yet fixed in code:** at the scale of a 570+ product
+synthetic catalogue, one row's effect on pooled precision/recall/F1 is not
+expected to be material, but the honest position is to say so explicitly
+rather than let a reviewer discover an undisclosed planted row themselves.
+Cleaner options for a future pass: move it behind a dedicated fixture/smoke
+test instead of the shared catalogue, or exclude it from reported metrics
+explicitly and confirm the numbers are unchanged either way.

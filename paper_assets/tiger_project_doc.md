@@ -54,12 +54,13 @@ TIGeR-Text-Image-Generative-Repair/
 │   └── schema.yaml            ← Attribute domains and constraints
 │
 ├── data/
-│   ├── sample/                ← Bundled synthetic catalogue (240 products, committed)
-│   ├── thresholds/            ← Locked calibration artefacts (JSON, committed)
+│   ├── sample/                ← Synthetic catalogue (gitignored -- not currently committed;
+│   │                             regenerate with `tiger.cli synthgen`, or see below)
+│   ├── thresholds/            ← Locked calibration artefacts (JSON, committed as of
+│   │                             2026-09-12 -- see `paper_assets/results/` for a full
+│   │                             archived copy per Phase 2 run)
 │   └── outputs/               ← Run outputs (gitignored)
 │
-
-├── scripts/                   ← Legacy MVP (reference only, do not use)
 ├── .env                       ← API keys (gitignored, NEVER committed)
 ├── pyproject.toml             ← Package definition, extras
 ├── ROADMAP_PROGRESS.md        ← Checkpoint-by-checkpoint progress log
@@ -296,10 +297,10 @@ python -m tiger.cli ablate                # baselines + ablations table
 Due to heavy CLIP inference, running locally on a CPU is extremely slow. We have ported the execution to Kaggle's free GPUs.
 
 1. Push your code to a public GitHub repository.
-2. Upload `kaggle_workflow.ipynb` (found in the repository root) to Kaggle as a new Notebook.
-3. In the right-hand panel of the Kaggle editor, go to **Add-ons -> Secrets** and add your `GEMINI_API_KEY`.
+2. Upload `tiger_corrected_run.ipynb` or `tiger_abo_corrected_run.ipynb` (found in the repository root; there is no `kaggle_workflow.ipynb`) to Kaggle as a new Notebook.
+3. `GEMINI_API_KEY` in **Add-ons -> Secrets** is only needed for `--vlm-judge`; the reported `--independent` (SigLIP) configuration needs no key.
 4. Under **Notebook options -> Accelerator**, select **GPU T4 x2** or **P100**.
-5. Run the cells sequentially. The notebook clones the repo, pulls the key, runs the pipeline, and zips the results (`tiger_outputs.zip`) for easy download.
+5. Run the cells sequentially. The notebook clones the repo, runs the pipeline, and zips the results for download from the Output panel.
 
 ---
 
@@ -316,7 +317,7 @@ Due to heavy CLIP inference, running locally on a CPU is extremely slow. We have
 
 | Error Type | Recall | Notes |
 |---|---|---|
-| swap_image | 0.975 | Strong — CLIP similarity drops clearly |
+| swap_image (subtype-level) | 0.983 (59/60) | Strong — CLIP similarity drops clearly |
 | swap_image_same_category | 0.950 | Subtle, but probes catch it |
 | color_flip | 0.971 | Per-field colour probe |
 | near_color_flip | 0.800 | Adjacent colour, harder |
@@ -369,7 +370,6 @@ Due to heavy CLIP inference, running locally on a CPU is extremely slow. We have
 ## 11. Project Completion Status
 
 ### ✅ Immediate Tasks Completed
-- Unit tests written.
 - Wrong-direction repair caught by SigLIP/Gemini verifier.
 - `ROADMAP_PROGRESS.md` updated with final metrics.
 
@@ -414,23 +414,30 @@ Target venue: KDD Applied Data Science track or multimodal workshop at CVPR/ECCV
 
 ## 12. File Reference
 
+Regenerated 2026-09-12 via `wc -l` (was last updated 2026-08-25 and had drifted;
+also previously omitted `generator.py`, `viz.py`, and `eval/repair_ablation.py`
+entirely — added below).
+
 | File | Lines | Role |
 |---|---|---|
-| `tiger/cli.py` | 505 | All CLI commands; entry point |
-| `tiger/sieve.py` | ~290 | CLIP signals + threshold application |
-| `tiger/analyzer.py` | 318 | Evidence (Eq. 18/19, swap_z, pixel) |
-| `tiger/arbiter.py` | ~250 | P(E1..E4) router, γ-gate |
-| `tiger/solver.py` | 209 | Repair planning, CandidatePool |
-| `tiger/repair.py` | 203 | Closed loop orchestrator |
-| `tiger/verify.py` | 184 | Eq. 27–29 gates, IndependentVerifier |
-| `tiger/vlm_judge.py` | ~165 | Gemini VLM judge (NEW) |
-| `tiger/schema.py` | 112 | Ω_j domains, constraint set C |
-| `tiger/encoders.py` | ~120 | CLIP/SigLIP wrapper, content-hash cache |
-| `tiger/colors.py` | ~100 | HSV dominant colour estimator |
-| `tiger/fusion.py` | ~100 | Per-signal precision-floor calibration |
-| `tiger/text_views.py` | ~200 | Caption building, token budgeting |
-| `tiger/data/synthgen.py` | ~200 | Synthetic catalogue generator |
-| `tiger/data/noise.py` | ~150 | Self-verifying error injector |
-| `configs/tiger.yaml` | 79 | All pipeline hyperparameters |
-| `configs/schema.yaml` | ~50 | Attribute domains and constraints |
-| `ROADMAP_PROGRESS.md` | 332 | Checkpoint log, milestone results |
+| `tiger/cli.py` | 776 | All CLI commands; entry point |
+| `tiger/sieve.py` | 321 | CLIP signals + threshold application |
+| `tiger/analyzer.py` | 317 | Evidence (Eq. 18/19, swap_z, pixel) |
+| `tiger/arbiter.py` | 249 | P(E1..E4) router, γ-gate |
+| `tiger/solver.py` | 267 | Repair planning, CandidatePool |
+| `tiger/repair.py` | 248 | Closed loop orchestrator |
+| `tiger/verify.py` | 189 | Eq. 27–29 gates, IndependentVerifier |
+| `tiger/vlm_judge.py` | 308 | Gemini VLM judge |
+| `tiger/schema.py` | 157 | Ω_j domains, constraint set C |
+| `tiger/encoders.py` | 186 | CLIP/SigLIP wrapper, content-hash cache |
+| `tiger/colors.py` | 129 | HSV dominant colour estimator |
+| `tiger/fusion.py` | 135 | Per-signal precision-floor calibration |
+| `tiger/text_views.py` | 267 | Caption building, token budgeting |
+| `tiger/data/synthgen.py` | 287 | Synthetic catalogue generator |
+| `tiger/data/noise.py` | 320 | Self-verifying error injector |
+| `tiger/generator.py` | 75 | SDXL-Turbo generative fallback |
+| `tiger/viz.py` | 146 | Plotting utilities |
+| `tiger/eval/repair_ablation.py` | 529 | Repair-side ablation harness (A1-A8, B0, B6) |
+| `configs/tiger.yaml` | 98 | All pipeline hyperparameters |
+| `configs/schema.yaml` | 103 | Attribute domains and constraints |
+| `paper_assets/ROADMAP_PROGRESS.md` | 213 | Checkpoint log, milestone results |

@@ -3,10 +3,12 @@
 Forward plan. The defect detail lives in `FIXES.md`; this is the ordering and
 the critical path. Written 2026-09-10, after the measurement-harness pass.
 
-**State (updated 2026-09-12):** 30 items done, 16 open, 0 parked, 4 blocked,
-1 withdrawn (52 total — see `FIXES.md` section F for 2 new findings from a
-Kaggle Phase 2 dry run). Both ⚑ parked decisions (B6, D4) are now built.
-171 tests passing. **Both notebooks need re-running** to reflect D4.
+**State (updated 2026-09-12):** 40 items done, 9 open, 0 parked, 2 blocked,
+1 withdrawn (52 total). Phase 4 (Section E, paper corrections) is fully
+closed. The only genuinely open items left are: `B3`/`B7` (repair-accuracy,
+Phase 3), `C5` (needs local data — partially done, thresholds committed),
+`C7` (not present in this checkout), `D1` (needs a trained model), `D10`
+(regen needs GPU), `B1`/`B4` (blocked). 175 tests passing.
 
 ---
 
@@ -112,17 +114,18 @@ B2, B5 and B3 are PIL/NumPy on images already on disk — cheap locally, no GPU.
 
 ---
 
-## Phase 4 — Paper corrections (Section E)
+## Phase 4 — Paper corrections (Section E) ✅ DONE (2026-09-12)
 
-Do **after** Phase 2 except where noted.
+All of Section E closed same day, once Phase 2 completed. See `FIXES.md`
+E1–E12 for what each fix actually did; summary:
 
-| | Task |
-|---|---|
-| 4.1 | **E2 — do this now, it does not need the run.** `reviewer_defense.md` Attack 3 calls the 47.4% "safely escalated to a human". Those rows were repaired and **committed with wrong values**. It presents a real error rate as a safety guarantee. Most exposed claim in the repo. |
-| 4.2 | **E3 / E8** — §7.5 and H11 analyse an identity A1 manufactured. Withdraw or rewrite. If overlap survives the corrected run, prove it by intersecting escalated `row_id` sets; equal totals are not equal sets. |
-| 4.3 | **E9** — the ablation credits LOO masking for the contrastive probes' result. LOO contributes nothing to detection. Correcting this runs in your favour: the probe result is stronger and more novel. |
-| 4.4 | **E1, E6, E7, E10, E11, E12** — feature count, dead file paths, three different named verifiers, stale line counts, the undisclosed planted row, granularity mix. |
-| 4.5 | **E4, E5** — reframe Attack 1 on reliability rather than cost, and answer the ARO objection (pairs with B7). |
+| | Task | Outcome |
+|---|---|---|
+| 4.1 | **E2** | Rewritten — no longer calls committed-wrong-value rows "safely escalated". |
+| 4.2 | **E3 / E8** | §7.5's "cascading safety net" formally **withdrawn** — the corrected ABO run shows Full System and No Gamma Gate are genuinely different (268 vs. 498 repaired), so there was never an identity to prove. `_evaluate_run` now reports all 5 outcome statuses, not just 2. |
+| 4.3 | **E9** | Ablation labels renamed ("Probes Only"/"No Probes"); `paper_concepts.md` §2 rewritten to credit contrastive probes, not LOO, for detection. Bonus catch: §1 had E1/E2 defined backwards vs. `arbiter.py` — fixed too. |
+| 4.4 | **E1, E6, E7, E10, E11, E12** | Feature count fixed (14, not 4); README/`tiger_project_doc.md` dead paths corrected (`scripts/`, `kaggle_workflow.ipynb`, broken link); `data/thresholds/` actually committed (`data/sample/` still can't be — notebooks don't export it); verifier naming already consistent elsewhere, README's `--vlm-judge` example changed to `--independent`; line counts regenerated; planted `forced_gen_000` row disclosed in `honest_limitations.md`; swap_image granularity separated. |
+| 4.5 | **E4, E5** | Attack 1 now leads with the MLLM-as-a-Judge reliability argument; Attack 6 answers the ARO objection directly (CLIP 62% vs. BLIP 88%) instead of dodging it. |
 | 4.6 | Citation: ABO as `collins2022abo` (added to `related_work.bib`). **Licence discrepancy RESOLVED (2026-09-11):** checked both first-party sources directly — the dataset's own landing page (`amazon-berkeley-objects.s3.amazonaws.com/index.html`, published by Amazon) and the licence file bundled in the archive itself (`LICENSE-CC-BY-4.0.txt`) both state **CC BY 4.0** (commercial use permitted). The AWS Open Data registry listing (`registry.opendata.aws/amazon-berkeley-objects/`) is a third-party catalogue entry, not maintained by Amazon, and its "CC BY-NC 4.0" tag is stale/incorrect. **Cite CC BY 4.0.** Worth one sentence in the reproducibility section noting the registry's stale tag, pre-empting a reviewer who checks that page and gets confused. |
 
 ---
