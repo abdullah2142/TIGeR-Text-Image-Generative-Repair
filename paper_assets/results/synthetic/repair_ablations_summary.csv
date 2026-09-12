@@ -1,0 +1,6 @@
+Configuration,Repaired,Escalated,Total Attempted,Color Accuracy,V2T Cases,Attr Accuracy,Attr Cases,T2V Accuracy,T2V Cases,Attr Accuracy (color),Attr Cases (color)
+No Arbiter (Random),0,443,443,0.0,0,,0,,0,,
+No VLM Judge,5,438,443,0.0,0,,0,1.0,4,,
+No Generative Fallback,4,439,443,0.0,0,,0,1.0,4,,
+No Gamma Gate (gamma=0),15,428,443,0.2,5,0.2,5,0.7142857142857143,14,0.2,5.0
+Full System,4,439,443,0.0,0,,0,1.0,4,,

@@ -1,0 +1,32 @@
+{
+  "branch": "docs/fixes-backlog-audit",
+  "gamma": 0.6,
+  "noise_seed": 7,
+  "random_baseline_seed": 42,
+  "dismiss_threshold": 0.8,
+  "t2v_allowed_categories": [
+    "shirts",
+    "shoes",
+    "bags",
+    "hats",
+    "chair",
+    "sofa",
+    "table",
+    "ottoman",
+    "stool",
+    "rug",
+    "lamp",
+    "light_fixture",
+    "wall_art",
+    "ring",
+    "necklace",
+    "earring",
+    "handbag",
+    "suitcase",
+    "hat"
+  ],
+  "precision_floor": 0.85,
+  "clip_model": "openai/clip-vit-base-patch32",
+  "independent_verifier": "google/siglip-base-patch16-224",
+  "fusion_applied": false
+}

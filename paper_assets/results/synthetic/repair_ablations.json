@@ -1,0 +1,140 @@
+{
+  "full": {
+    "total_attempted": 443,
+    "repaired": 4,
+    "escalated": 439,
+    "color_accuracy": 0.0,
+    "v2t_total": 0,
+    "attr_accuracy": NaN,
+    "attr_total": 0,
+    "attr_by_field": {},
+    "t2v_accuracy": 1.0,
+    "t2v_total": 4
+  },
+  "no_arbiter": {
+    "total_attempted": 443,
+    "repaired": 0,
+    "escalated": 443,
+    "color_accuracy": 0.0,
+    "v2t_total": 0,
+    "attr_accuracy": NaN,
+    "attr_total": 0,
+    "attr_by_field": {},
+    "t2v_accuracy": NaN,
+    "t2v_total": 0
+  },
+  "no_vlm": {
+    "total_attempted": 443,
+    "repaired": 5,
+    "escalated": 438,
+    "color_accuracy": 0.0,
+    "v2t_total": 0,
+    "attr_accuracy": NaN,
+    "attr_total": 0,
+    "attr_by_field": {},
+    "t2v_accuracy": 1.0,
+    "t2v_total": 4
+  },
+  "no_gen": {
+    "total_attempted": 443,
+    "repaired": 4,
+    "escalated": 439,
+    "color_accuracy": 0.0,
+    "v2t_total": 0,
+    "attr_accuracy": NaN,
+    "attr_total": 0,
+    "attr_by_field": {},
+    "t2v_accuracy": 1.0,
+    "t2v_total": 4
+  },
+  "no_gamma": {
+    "total_attempted": 443,
+    "repaired": 15,
+    "escalated": 428,
+    "color_accuracy": 0.2,
+    "v2t_total": 5,
+    "attr_accuracy": 0.2,
+    "attr_total": 5,
+    "attr_by_field": {
+      "color": {
+        "correct": 1,
+        "n": 5,
+        "accuracy": 0.2
+      }
+    },
+    "t2v_accuracy": 0.7142857142857143,
+    "t2v_total": 14
+  },
+  "_v2t_cases": [
+    {
+      "config": "no_gamma",
+      "row_id": "bags_029",
+      "true_color": "yellow",
+      "written_color": "brown",
+      "correct": 0,
+      "value_source": "pixel",
+      "pixel_value": "brown",
+      "pixel_conf": 0.9041218637992832,
+      "probe_value": "brown",
+      "estimators_agree": true,
+      "pixel_correct": 0,
+      "probe_correct": 0
+    },
+    {
+      "config": "no_gamma",
+      "row_id": "bags_046",
+      "true_color": "brown",
+      "written_color": "brown",
+      "correct": 1,
+      "value_source": "pixel",
+      "pixel_value": "brown",
+      "pixel_conf": 0.9041218637992832,
+      "probe_value": "brown",
+      "estimators_agree": true,
+      "pixel_correct": 1,
+      "probe_correct": 1
+    },
+    {
+      "config": "no_gamma",
+      "row_id": "shoes_005",
+      "true_color": "green",
+      "written_color": "blue",
+      "correct": 0,
+      "value_source": "",
+      "pixel_value": "",
+      "pixel_conf": null,
+      "probe_value": "",
+      "estimators_agree": null,
+      "pixel_correct": null,
+      "probe_correct": null
+    },
+    {
+      "config": "no_gamma",
+      "row_id": "shoes_007",
+      "true_color": "blue",
+      "written_color": "white",
+      "correct": 0,
+      "value_source": "",
+      "pixel_value": "",
+      "pixel_conf": null,
+      "probe_value": "",
+      "estimators_agree": null,
+      "pixel_correct": null,
+      "probe_correct": null
+    },
+    {
+      "config": "no_gamma",
+      "row_id": "shoes_014",
+      "true_color": "pink",
+      "written_color": "purple",
+      "correct": 0,
+      "value_source": "",
+      "pixel_value": "",
+      "pixel_conf": null,
+      "probe_value": "",
+      "estimators_agree": null,
+      "pixel_correct": null,
+      "probe_correct": null
+    }
+  ]
+}

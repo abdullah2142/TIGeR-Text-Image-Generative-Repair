@@ -1,0 +1,58 @@
+{
+  "per_signal": {
+    "flag_probe_color": {
+      "z_margin": 2.0,
+      "fired": 1045,
+      "precision": 0.857,
+      "precision_any_dirty": 0.861,
+      "quarantined": false
+    },
+    "flag_probe_material": {
+      "z_margin": 4.0,
+      "fired": 0,
+      "precision": null,
+      "precision_any_dirty": null,
+      "quarantined": true
+    },
+    "flag_probe_pattern": {
+      "z_margin": 3.0,
+      "fired": 278,
+      "precision": 0.957,
+      "precision_any_dirty": 0.964,
+      "quarantined": false
+    },
+    "flag_low_sim": {
+      "precision": 0.874,
+      "precision_any_dirty": 0.874,
+      "fired": 811,
+      "quarantined": false,
+      "z_margin": null
+    },
+    "flag_text_out_of_domain": {
+      "precision": 0.299,
+      "precision_any_dirty": 0.299,
+      "fired": 3609,
+      "quarantined": false,
+      "z_margin": null
+    },
+    "flag_title_contradiction": {
+      "precision": 1.0,
+      "precision_any_dirty": 1.0,
+      "fired": 88,
+      "quarantined": false,
+      "z_margin": null
+    }
+  },
+  "precision_floor": 0.85,
+  "meta": {
+    "z_grid": [
+      2.0,
+      2.5,
+      3.0,
+      3.5,
+      4.0
+    ],
+    "n_calibration_rows": 4552,
+    "n_dirty": 1352
+  }
+}

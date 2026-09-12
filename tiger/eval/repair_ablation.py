@@ -184,9 +184,7 @@ def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schem
         escalated_c = report["summary"].get("by_status", {}).get("escalated", 0)
 
         for rid, oc in report["outcomes"].items():
-            if oc["final_status"] != "repaired":
-                continue
-            if rid in truth_color:
+            if oc["final_status"] == "repaired" and rid in truth_color:
                 import json as _json
                 attrs_str = after.at[rid, "attributes"]
                 if isinstance(attrs_str, pd.Series):
@@ -213,6 +211,33 @@ def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schem
                     "probe_value": bv,
                     "estimators_agree": d.get("estimators_agree"),
                     # counterfactuals: would each estimator alone have been right?
+                    "pixel_correct": (int(pv == truth) if pv else None),
+                    "probe_correct": (int(bv == truth) if bv else None),
+                })
+            elif oc["final_status"] == "escalated" and rid in truth_color:
+                # B6: a genuine estimator disagreement escalates instead of
+                # committing -- nothing was written, so `correct`/`written_color`
+                # are None, but this is exactly the row this report exists to
+                # explain. Without this branch, B6 silently empties every
+                # "disagree" case out of the report that is supposed to
+                # attribute pixel-vs-probe error, since disagreements no
+                # longer reach the "repaired" branch above at all.
+                d = next((e for e in (oc.get("log") or []) if e.get("estimators_agree") is False), None)
+                if d is None:
+                    continue
+                truth = truth_color[rid]
+                pv, bv = str(d.get("pixel_value") or ""), str(d.get("probe_value") or "")
+                cases.append({
+                    "config": config_name,
+                    "row_id": rid,
+                    "true_color": truth,
+                    "written_color": None,
+                    "correct": None,
+                    "value_source": d.get("value_source", ""),
+                    "pixel_value": pv,
+                    "pixel_conf": d.get("pixel_conf"),
+                    "probe_value": bv,
+                    "estimators_agree": d.get("estimators_agree"),
                     "pixel_correct": (int(pv == truth) if pv else None),
                     "probe_correct": (int(bv == truth) if bv else None),
                 })
@@ -416,27 +441,29 @@ def format_v2t_diagnostics(results: dict, config: str = "full") -> str:
         L.append("  no scored V2T cases -- nothing to attribute.")
         return "\n".join(L)
 
-    n = len(cases)
+    n = len(cases)  # committed + B6-escalated-disagreement rows, i.e. every V2T attempt
+    committed = [c for c in cases if c["correct"] is not None]
 
     def pct(k, d):
         return f"{(k / d):.1%}" if d else "n/a"
 
-    used = sum(c["correct"] for c in cases)
-    L.append(f"  scored V2T repairs             : {n}")
-    L.append(f"  accuracy as shipped            : {pct(used, n)}  ({used}/{n})")
+    used = sum(c["correct"] for c in committed)
+    L.append(f"  V2T attempts (committed + escalated) : {n}")
+    L.append(f"  accuracy as shipped (committed only) : {pct(used, len(committed))}  ({used}/{len(committed)})")
     L.append("")
 
-    # Which path supplied the written value, and how each did.
+    # Which path supplied the written value, and how each did (committed only).
     L.append("  by path actually taken:")
     for src in ("pixel", "probe"):
-        sub = [c for c in cases if c["value_source"] == src]
+        sub = [c for c in committed if c["value_source"] == src]
         if sub:
             k = sum(c["correct"] for c in sub)
             L.append(f"    {src:<6s} supplied {len(sub):>3d} values -> {pct(k, len(sub))} correct  ({k}/{len(sub)})")
     L.append("")
 
-    # Counterfactual: how would each estimator have done on ALL of these rows?
-    L.append("  counterfactual (same rows, one estimator throughout):")
+    # Counterfactual: how would each estimator have done across every attempt,
+    # committed or escalated -- this is why escalated rows are scored too.
+    L.append("  counterfactual (every attempt, one estimator throughout):")
     for key, label in (("pixel_correct", "always pixel"), ("probe_correct", "always probe")):
         sub = [c for c in cases if c.get(key) is not None]
         if sub:
@@ -446,24 +473,27 @@ def format_v2t_diagnostics(results: dict, config: str = "full") -> str:
     L.append(f"    {'either right':<14s}: {pct(oracle, n)}  ({oracle}/{n})  <- ceiling for any selection rule")
     L.append("")
 
-    # Agreement: what an agree/disagree gate would buy (Step 2).
+    # Agreement gate (B6): live in this run, not hypothetical -- disagreement
+    # rows below were actually escalated, not committed, so they carry no
+    # "correct" (nothing was written); what they carry is which estimator
+    # *would* have been right, which is the actual case for building anything
+    # smarter than blanket escalation on disagreement.
     agree = [c for c in cases if c.get("estimators_agree") is True]
     disagree = [c for c in cases if c.get("estimators_agree") is False]
-    L.append("  agreement gate (prospective):")
+    L.append("  agreement gate (B6, live in this run):")
     if agree:
         k = sum(c["correct"] for c in agree)
-        L.append(f"    agree    : {len(agree):>3d} rows ({len(agree)/n:.0%} coverage) -> {pct(k, len(agree))} correct")
+        L.append(f"    agree    : {len(agree):>3d} rows ({len(agree)/n:.0%} coverage) -> {pct(k, len(agree))} correct (committed)")
     if disagree:
-        k = sum(c["correct"] for c in disagree)
         pk = sum(int(bool(c.get("pixel_correct"))) for c in disagree)
         bk = sum(int(bool(c.get("probe_correct"))) for c in disagree)
-        L.append(f"    disagree : {len(disagree):>3d} rows ({len(disagree)/n:.0%} coverage) -> {pct(k, len(disagree))} correct")
-        L.append(f"               when they disagree: pixel right {pct(pk, len(disagree))}, probe right {pct(bk, len(disagree))}")
+        L.append(f"    disagree : {len(disagree):>3d} rows ({len(disagree)/n:.0%} coverage) -> escalated, nothing committed")
+        L.append(f"               had one side been trusted anyway: pixel right {pct(pk, len(disagree))}, probe right {pct(bk, len(disagree))}")
     L.append("")
-    L.append("  Reading: if 'agree' accuracy is high and 'disagree' is near chance, an")
-    L.append("  agreement gate converts silent wrong-writes into escalations (trading")
-    L.append("  coverage for precision). If 'always pixel' >> 'always probe' (or vice")
-    L.append("  versa), fix the weaker estimator before touching routing.")
+    L.append("  Reading: if 'agree' accuracy is high and disagree rows show pixel or probe")
+    L.append("  systematically more often right, a smarter tie-break (not blanket escalation)")
+    L.append("  could recover some of the coverage B6 currently trades away. If neither side")
+    L.append("  is systematically better, blanket escalation is already the right call.")
     return "\n".join(L)
 
 

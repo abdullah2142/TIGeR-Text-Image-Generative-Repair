@@ -1,0 +1,6 @@
+config,row_id,true_color,written_color,correct,value_source,pixel_value,pixel_conf,probe_value,estimators_agree,pixel_correct,probe_correct
+no_gamma,bags_029,yellow,brown,0,pixel,brown,0.9041218637992832,brown,True,0.0,0.0
+no_gamma,bags_046,brown,brown,1,pixel,brown,0.9041218637992832,brown,True,1.0,1.0
+no_gamma,shoes_005,green,blue,0,,,,,,,
+no_gamma,shoes_007,blue,white,0,,,,,,,
+no_gamma,shoes_014,pink,purple,0,,,,,,,
