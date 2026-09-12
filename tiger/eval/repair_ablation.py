@@ -286,12 +286,29 @@ def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schem
                            or _attrs_of(rid).get("color", ""))
             t2v_k += int(installed == (str(_cell(rid, "category")), want_col))
 
+        # ---- D4: direct evidence the two-pass re-entry loop actually ran ----
+        # passes_used alone is ambiguous (a row can reach pass 2 by being
+        # re-flagged for an unrelated reason); a row whose log contains BOTH
+        # a T2V and a V2T entry is unambiguous -- it got both repair types
+        # across passes, which is exactly what D4 was built to make possible.
+        passes_used_distribution: dict[int, int] = {}
+        both_directions_rows = 0
+        for oc in report["outcomes"].values():
+            pu = int(oc.get("passes_used", 0) or 0)
+            passes_used_distribution[pu] = passes_used_distribution.get(pu, 0) + 1
+            directions = {e.get("direction") for e in (oc.get("log") or []) if e.get("direction")}
+            if "T2V" in directions and "V2T" in directions:
+                both_directions_rows += 1
+
         return {
             "total_attempted": repaired_c + escalated_c,
             "repaired": repaired_c,
             "escalated": escalated_c,
             "dismissed": dismissed_c,
             "acquire_image": acquire_c,
+            "passes_used_distribution": passes_used_distribution,
+            "multi_pass_rows": sum(v for k, v in passes_used_distribution.items() if k >= 2),
+            "both_directions_rows": both_directions_rows,
             "unrepaired": unrepaired_c,
             # sum of every status -- the honest total (E8); should equal
             # total_attempted only when dismissed/acquire_image/unrepaired are 0
@@ -414,6 +431,22 @@ def format_repair_ablations(results: dict) -> str:
         lines.append("  when the installed image depicts a product matching this row's true")
         lines.append("  category and colour. The row's own original is held out of the")
         lines.append("  candidate pool by design (F14), so recovering it is not the target.")
+
+    if "full" in results and "passes_used_distribution" in results["full"]:
+        r = results["full"]
+        dist = r["passes_used_distribution"]
+        multi = r.get("multi_pass_rows", 0)
+        both = r.get("both_directions_rows", 0)
+        lines.append("")
+        lines.append("D4 check -- did any row actually get a second pass?")
+        lines.append(f"  passes_used distribution (Full System): {dict(sorted(dist.items()))}")
+        lines.append(f"  rows that reached pass 2+: {multi}")
+        lines.append(f"  rows that got BOTH a T2V and a V2T repair (the direct signature "
+                     f"of D4 working): {both}")
+        lines.append("  Non-zero on both lines means the two-pass re-diagnosis loop fired on "
+                     "real rows, not just in the unit tests." if multi and both else
+                     "  Zero here does not mean D4 is broken -- it means no row in this sample "
+                     "needed both an image and a text fix this run.")
 
     lines.append("")
     lines.append("Key Takeaways:")

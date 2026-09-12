@@ -848,7 +848,19 @@ Re-running both notebooks is needed to get numbers reflecting the fix;
 everything else from those runs (detection numbers, E1/E2-only repairs, A1/A6
 validation) is unaffected and stays valid.
 
-**Status:** DONE — 171 tests passing.
+**Status:** DONE — 178 tests passing.
+
+**Follow-up: hard-proof instrumentation (2026-09-12).** The corrected-run
+tables show accuracy moved in the right direction, but didn't prove D4
+specifically fired (B6 landed in the same run). Added: `_evaluate_run` now
+tallies each config's `passes_used` distribution and, more directly,
+`both_directions_rows` — rows whose log contains both a T2V and a V2T entry,
+which is the unambiguous signature of a row getting both fixes across passes
+(the thing that could never happen before D4). Surfaced in
+`format_repair_ablations`'s printed report, `repair_ablations.json`, and a
+dedicated cell in both notebooks (reads the JSON directly, same pattern as
+the existing A1/A6 checks) — next Kaggle run gives a real yes/no on real ABO
+rows, not just the unit tests.
 
 ---
 
@@ -1376,7 +1388,7 @@ as of 2026-09-11 (see A2's entry).
 The measurement instrument is now trustworthy, so B and the remaining sections
 can be measured against a baseline that means something.
 
-**Test suite: 175 passing** (re-verified 2026-09-12, `.venv/bin/python -m pytest`).
+**Test suite: 178 passing** (re-verified 2026-09-12, `.venv/bin/python -m pytest`).
 **Section E fully closed** the same day — see each entry above; the only
 partial one is `E6` (data/sample still not committed — the notebooks don't
 export it).
