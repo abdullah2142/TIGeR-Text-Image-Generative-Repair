@@ -1411,14 +1411,39 @@ as-is would not regenerate it, for two independent reasons:
    and `paper_figures` — not `data/sample`. This is the same gap as `E6`'s
    uncommittable `data/sample/`.
 
-So closing D10 needs, in order: export `data/sample/images/generated/` from the
-notebook; write something that assembles the grid (a `tiger/viz.py` entry point
-would be the natural home — matplotlib is already declared under the `viz`
-extra); then re-run with `--generative-fallback` on a GPU. Only the last step
-needs hardware.
+**The plumbing is now built (2026-09-13), so a single run closes this.** Three
+pieces, all local:
 
-**Status:** DOING — prompt fixed and pinned, §2/§4 corrected. The regeneration
-is blocked on missing plumbing *and* a GPU, not a GPU alone.
+1. **The run stops discarding its own per-row record.** The corrected notebooks
+   only ever call `ablate-repair`, which summarised the five configurations and
+   dropped the frames — so a full pipeline run left behind counts and no
+   per-row trace at all. `repair_ablation._persist_full_run` now writes the
+   Full System run's `repaired_report_seed{N}.parquet` and
+   `repair_report_seed{N}.json`, the same filenames the `repair` subcommand
+   writes, so a consumer does not care which command produced them.
+2. **Something builds the figure.** `viz.build_qualitative_grid` draws
+   clean / corrupted / repaired triptychs — image, the error subtype, the
+   repair action actually taken, and the attributes at each stage. It draws
+   with **PIL only**, not matplotlib: the figure should build wherever the
+   pipeline runs, and it is then testable in a checkout with no plotting
+   extra. Row selection is deterministic and puts a generated image first, so
+   the figure can be compared with the one before it. Exposed as
+   `python -m tiger.cli qualitative-grid --seed 7`, which explains what to run
+   first if the artifacts are missing rather than raising a traceback.
+3. **The generated images leave Kaggle.** Both notebooks' export cells now copy
+   `data/sample/images/generated/` into the results zip, and both gained a cell
+   that builds the grid and displays it before the export runs.
+
+Tests: six in `tests/test_qualitative_grid.py` against a synthetic completed
+run — the figure is written, the generated row is shown first, selection is
+deterministic and respects `max_rows`, a run with nothing repaired returns
+`None` rather than an empty image, and a missing image is drawn as a labelled
+tile rather than raised (an E4 row legitimately has none).
+
+**Status:** DOING — everything except the run itself. One Kaggle run of either
+corrected notebook with `--generative-fallback` now produces the grid, ships
+the images it was built from, and lets §2/§4's withdrawn attribution be
+re-assessed against pictures this pipeline actually made.
 
 ---
 

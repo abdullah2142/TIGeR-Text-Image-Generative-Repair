@@ -126,6 +126,26 @@ class DummyArbiter(arbiter_mod.ArbiterModel):
         )
 
 
+def _persist_full_run(final_df: pd.DataFrame, report: dict, cfg: dict, root: Path) -> None:
+    """Write the Full System run's per-row frame and outcome log to disk (D10).
+
+    The ablation is the only place that knows which of the five configurations
+    is the real system, and it is the only command the corrected notebooks run
+    -- so without this, a full pipeline run leaves behind counts and no
+    per-row record at all. Filenames match the `repair` subcommand's.
+    """
+    seed = cfg.get("noise", {}).get("seed", 7)
+    processed = root / cfg["data"]["processed_dir"]
+    outputs = root / cfg["data"]["outputs_dir"]
+    processed.mkdir(parents=True, exist_ok=True)
+    outputs.mkdir(parents=True, exist_ok=True)
+    frame = processed / f"repaired_report_seed{seed}.parquet"
+    log = outputs / f"repair_report_seed{seed}.json"
+    final_df.to_parquet(frame, index=False)
+    log.write_text(json.dumps(report, indent=2, default=float), encoding="utf-8")
+    print(f"  wrote {frame.name} and {log.name} (Full System, per-row)")
+
+
 def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schema,
                          thr: sieve_mod.SieveThresholds, loo_stats: dict,
                          vcal: verify_mod.VerifyCalibration, trained_model: arbiter_mod.ArbiterModel,
@@ -341,6 +361,14 @@ def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schem
         max_passes=2, independent=vlm_judge, generator=generator, fusion=fusion)
     results["full"], _c = _evaluate_run(rep_full_report, rep_full, "full")
     v2t_cases += _c
+
+    # D10: persist the Full System run's per-row frame and outcome log. The
+    # ablation summarises them and then dropped them, which is why nothing
+    # downstream could rebuild the qualitative grid: the summary keeps counts
+    # and estimator diagnostics, not image paths or per-row repair actions.
+    # Same filenames the `repair` subcommand writes, so a consumer does not
+    # care which command produced them.
+    _persist_full_run(rep_full, rep_full_report, cfg, root)
 
     # Config 2: No Arbiter (Random Routing)
     print("2/5: Running 'No Arbiter (Random Routing)'...")

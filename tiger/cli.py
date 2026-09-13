@@ -725,11 +725,34 @@ def cmd_generate(cfg: dict, args) -> None:
     print(f"Saved to {out_path}")
 
 
+def cmd_qualitative_grid(cfg: dict, args) -> None:
+    """D10: the clean/corrupted/repaired figure, from a completed run's artifacts."""
+    from tiger import viz
+
+    seed = args.seed if args.seed is not None else cfg.get("noise", {}).get("seed", 7)
+    out = Path(args.output).resolve() if getattr(args, "output", None) else None
+    try:
+        written = viz.build_qualitative_grid(
+            ROOT, seed=seed, out_path=out,
+            max_rows=int(getattr(args, "max_rows", 6) or 6))
+    except FileNotFoundError as e:
+        raise SystemExit(
+            f"missing input: {e.filename}\n"
+            "The figure is built from a completed repair run. Run `ablate-repair` "
+            "(or `repair`) for this seed first -- it writes the per-row frame and "
+            "outcome log this reads.")
+    if written is None:
+        print("no repaired rows in this run: nothing to show")
+        return
+    print(f"wrote {written}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(prog="tiger")
     ap.add_argument("command", choices=["synthgen", "import-fashion", "import-abo", "noise", "calibrate", "detect", "evaluate",
                                         "analyze", "train-arbiter", "route", "repair", "sweep",
-                                        "calibrate-fusion", "ablate", "ablate-repair", "compare-encoders", "generate"])
+                                        "calibrate-fusion", "ablate", "ablate-repair", "compare-encoders", "generate",
+                                        "qualitative-grid"])
     ap.add_argument("--config", default="configs/tiger.yaml")
     ap.add_argument("--source", type=str, help="source directory for the import-fashion command")
     ap.add_argument("--caption", type=str, help="caption for the standalone generate command")
@@ -737,6 +760,8 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=None, help="noise seed override")
     ap.add_argument("--seeds", default="7,8,9,10,11", help="sweep: comma-separated noise seeds")
     ap.add_argument("--sample", type=int, default=None, help="ablate-repair: number of noisy items to sample (default: all)")
+    ap.add_argument("--max-rows", type=int, default=6,
+                    help="qualitative-grid: how many repaired rows to show (default 6)")
     ap.add_argument("--split", default="report", choices=["report", "calibration"])
     ap.add_argument("--independent", action="store_true",
                     help="repair: cross-check each repair with the independent verifier encoder (6.4)")
@@ -791,6 +816,7 @@ def main() -> None:
         "ablate-repair": cmd_ablate_repair,
         "compare-encoders": cmd_compare_encoders,
         "generate": cmd_generate,
+        "qualitative-grid": cmd_qualitative_grid,
     }[args.command](cfg, args)
 
 
