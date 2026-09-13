@@ -19,3 +19,7 @@ docs/
 
 # packaging
 *.egg-info/
+
+# Kaggle run downloads -- large, and the small summary artifacts that matter
+# belong in paper_assets/results/ instead (see C5)
+*.zip
