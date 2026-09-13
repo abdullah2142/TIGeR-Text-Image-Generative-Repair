@@ -3,12 +3,18 @@
 Forward plan. The defect detail lives in `FIXES.md`; this is the ordering and
 the critical path. Written 2026-09-10, after the measurement-harness pass.
 
-**State (updated 2026-09-12):** 40 items done, 9 open, 0 parked, 2 blocked,
-1 withdrawn (52 total). Phase 4 (Section E, paper corrections) is fully
-closed. The only genuinely open items left are: `B3`/`B7` (repair-accuracy,
-Phase 3), `C5` (needs local data — partially done, thresholds committed),
-`C7` (not present in this checkout), `D1` (needs a trained model), `D10`
-(regen needs GPU), `B1`/`B4` (blocked). 175 tests passing.
+**State (updated 2026-09-13):** 40 items done, 8 open, 0 parked, 2 blocked,
+1 withdrawn, 1 discarded (52 total). Phase 4 (Section E, paper corrections) is
+fully closed. D4 has hard proof it fires on real ABO data (98 rows reached
+pass 2+, 6 got both a T2V and V2T repair). `C7` discarded — was never
+applicable to this repo. The only genuinely open items left are: `B2`/`B3`/`B5`
+(repair-accuracy, Phase 3 — prioritize over `B7`: real B0 data now shows the
+pixel path, not the encoder, is the weaker estimator when they disagree —
+11.1% vs 33.7% correct), `B4` (newly unblocked — real B0 data now exists to
+calibrate against), `C5` (needs local data — partially done, thresholds
+committed), `D1` (needs a trained model — one now exists), `D10` (regen needs
+GPU, but Kaggle is available), `B1` (blocked, needs fashion imagery). 178
+tests passing.
 
 ---
 
@@ -139,20 +145,20 @@ Not bugs. Each needs a decision before it needs a patch.
 | **B6** | ✅ **BUILT 2026-09-11.** Nothing abstained on *value* uncertainty — the γ-gate abstains on routing, Eq. 27–29 on schema and similarity, but nothing checked whether the pixel estimator and the CLIP probe agreed. Now: a real disagreement between the two escalates instead of silently committing whichever the old confidence threshold favoured. See `FIXES.md` B6. Not yet sized against real data — that still needs the Phase 2 run. |
 | **D4** | ✅ **BUILT 2026-09-12.** The two-pass loop never ran, so E3 had no behaviour distinct from E2. Sized against the real ABO run first: E3 = 239/1703 routed rows (~14%), not rare. Fix: an accepted repair now stays "pending" and re-enters the next pass instead of being marked "repaired" immediately — `repair.py`'s own docstring already described this as the design; the bug was one line excluding it. See `FIXES.md` D4. |
 
-Both Phase 5 decisions are now closed. **Both notebooks need a re-run** to get
-numbers reflecting D4 — the Phase 2 runs already completed used the old
-image-only BOTH-handling.
+Both Phase 5 decisions are now closed and both re-run and verified on real
+ABO data (2026-09-13) — see `FIXES.md` D4's hard-proof instrumentation note.
 
 ---
 
 ## Housekeeping (any time)
 
-`A2` pin a verified Gemini model ID (needs a live key) · `C1` γ consistency ·
-`C2` `--gamma` flag · `C4` hardcoded generated-image path · `C5` commit the
-evaluation artifacts · `C6` requirements/pyproject divergence · `C7` the 73 MB
-AWS installer in the repo root · `D1` `class_weight="balanced"` vs the
-calibration claim · `D2` document the verifier's asymmetric failure handling ·
-`D9`–`D13` small correctness items.
+~~`A2` pin a verified Gemini model ID~~ · ~~`C1` γ consistency~~ ·
+~~`C2` `--gamma` flag~~ · ~~`C4` hardcoded generated-image path~~ · `C5` commit the
+evaluation artifacts · ~~`C6` requirements/pyproject divergence~~ ·
+~~`C7` the 73 MB AWS installer in the repo root~~ (discarded — not applicable) ·
+`D1` `class_weight="balanced"` vs the
+calibration claim · ~~`D2` document the verifier's asymmetric failure handling~~ ·
+~~`D9`, `D11`–`D13`~~ done · `D10` code fixed, regen needs GPU (Kaggle available).
 
 ---
 

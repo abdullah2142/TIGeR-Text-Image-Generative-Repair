@@ -691,7 +691,9 @@ scratch on the original dev machine, so a fresh clone never had it — nothing
 to delete here. Still worth checking directly on whichever machine actually
 carries it.
 
-**Status:** TODO — not reproducible/actionable from this checkout.
+**Status:** DISCARDED (2026-09-13, user decision) — the file was scratch
+clutter on the original researcher's machine, never part of this repo. Not
+applicable to this project going forward; not tracked as open work.
 
 ---
 
@@ -1370,11 +1372,11 @@ Regression test added: `tests/test_import_abo_formats.py::test_non_english_only_
 |---|---|---|---|---|
 | A. Measurement correctness | 9 | 9 | — | — |
 | B. Repair accuracy | 8 | 2 | B2, B3, B5, B7 | B1 needs fashion imagery · B4 blocked on B0 |
-| C. Config & reproducibility | 8 | 6 | C5 (needs local data), C7 (not present in this checkout) | — |
+| C. Config & reproducibility | 8 | 6 | C5 (needs local data) | C7 discarded (not applicable) |
 | D. Robustness & design | 13 | 10 | D1 (needs a trained model), D10 (code fixed, regen pending) | D3 withdrawn |
 | E. Documentation | 12 | 12 | — | — |
 | F. Found in Phase 2 dry run | 2 | 2 | — | — |
-| **Total** | **52** | **40** | **9** | 0 parked · 2 blocked · 1 withdrawn |
+| **Total** | **52** | **40** | **8** | 0 parked · 2 blocked · 1 withdrawn · 1 discarded |
 
 **Counts re-verified 2026-09-12** by parsing every `### <id>` header and its
 next `**Status:**` line programmatically (not hand-tallying, and not a plain
