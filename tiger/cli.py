@@ -153,6 +153,22 @@ def _tag(split: str, seed: int) -> str:
     return f"seed{seed}" if split == "report" else f"cal_seed{seed}"
 
 
+def _resolve_seed(cfg: dict, args) -> int:
+    """The seed for this invocation, written back into `cfg` so there is one.
+
+    `--seed` was resolved at the call site while everything downstream kept
+    reading `cfg["noise"]["seed"]`. `ablate-repair --seed 9` therefore loaded
+    the seed-9 noisy frame and scored it against the seed-7 noise audit --
+    different ground truth, no error raised. The notebooks never pass `--seed`
+    to `ablate-repair`, so no published number is affected, but the trap is
+    real and it now also decides where the per-row frame is written (D10).
+    """
+    override = getattr(args, "seed", None)
+    seed = int(override if override is not None else cfg.get("noise", {}).get("seed", 7))
+    cfg.setdefault("noise", {})["seed"] = seed
+    return seed
+
+
 def cmd_noise(cfg: dict, args) -> None:
     schema = load_schema(ROOT / cfg["data"]["schema"])
     p = _paths(cfg)
@@ -486,8 +502,7 @@ def cmd_ablate_repair(cfg: dict, args) -> None:
 
     schema = load_schema(ROOT / cfg["data"]["schema"])
     p = _paths(cfg)
-    seed = args.seed if args.seed is not None else cfg.get("noise", {}).get("seed", 7)
-    tag = _tag("report", seed)
+    tag = _tag("report", _resolve_seed(cfg, args))
     noisy = pd.read_parquet(p["processed"] / f"noisy_report_{tag}.parquet")
 
     thr = sieve_mod.SieveThresholds.from_json(
@@ -556,8 +571,7 @@ def cmd_repair(cfg: dict, args) -> None:
 
     schema = load_schema(ROOT / cfg["data"]["schema"])
     p = _paths(cfg)
-    seed = args.seed if args.seed is not None else cfg.get("noise", {}).get("seed", 7)
-    tag = _tag("report", seed)
+    tag = _tag("report", _resolve_seed(cfg, args))
     noisy = pd.read_parquet(p["processed"] / f"noisy_report_{tag}.parquet")
 
     thr = sieve_mod.SieveThresholds.from_json(
@@ -709,20 +723,53 @@ def cmd_sweep(cfg: dict, args) -> None:
 
 
 def cmd_generate(cfg: dict, args) -> None:
-    """Standalone generative model test."""
-    from tiger.generator import StableDiffusionGenerator
+    """Standalone generative test, and the only way to exercise the T2V prompt.
+
+    D10: this used to call `generate(caption, out_path)` with no category and
+    no attributes, so `build_prompt` fell straight through to `subject =
+    caption` and the fixed prompt -- colour, material, pattern, real category
+    noun -- was never what got rendered. The one command that can reach the
+    generator could not reach the thing D10 fixed.
+
+    `--pattern-panel` renders the same product across a set of patterns and
+    contact-sheets the result. That is the experiment `honest_limitations.md`
+    §2 needs: patterns were observed to be lost, the stated cause (diffusion
+    models drop them) was withdrawn because the pattern never entered the
+    prompt, and this is what decides whether the limitation survives now that
+    it does.
+    """
     import sys
-    from pathlib import Path
-    
+
+    from tiger import viz
+    from tiger.generator import StableDiffusionGenerator, build_prompt
+
     if not args.caption:
         print("Error: --caption is required for generate command")
         sys.exit(1)
-        
+
+    attrs = json.loads(args.attrs) if getattr(args, "attrs", None) else {}
+    category = getattr(args, "category", "") or ""
     out_path = Path(args.output) if args.output else Path("data/outputs/generated_test.jpg")
     generator = StableDiffusionGenerator(device=cfg["models"].get("device", "cuda"))
-    print(f"Generating image for caption: '{args.caption}'")
-    generator.generate(args.caption, out_path)
-    print(f"Saved to {out_path}")
+
+    patterns = [p.strip() for p in (getattr(args, "pattern_panel", "") or "").split(",") if p.strip()]
+    if not patterns:
+        prompt, _ = build_prompt(args.caption, category, attrs)
+        print(f"prompt: {prompt}")
+        generator.generate(args.caption, out_path, category=category, attrs=attrs)
+        print(f"wrote {out_path}")
+        return
+
+    tiles = []
+    for pat in patterns:
+        a = {**attrs, "pattern": pat}
+        path = out_path.with_name(f"{out_path.stem}_{pat}{out_path.suffix}")
+        prompt, subject = build_prompt(args.caption, category, a)
+        print(f"[{pat}] {prompt}")
+        generator.generate(args.caption, path, category=category, attrs=a)
+        tiles.append((subject, path))
+    panel = viz.build_generation_panel(tiles, out_path.with_name(f"{out_path.stem}_panel.png"))
+    print(f"wrote {panel}")
 
 
 def cmd_qualitative_grid(cfg: dict, args) -> None:
@@ -756,6 +803,14 @@ def main() -> None:
     ap.add_argument("--config", default="configs/tiger.yaml")
     ap.add_argument("--source", type=str, help="source directory for the import-fashion command")
     ap.add_argument("--caption", type=str, help="caption for the standalone generate command")
+    ap.add_argument("--category", type=str, default="",
+                    help="generate: category, so the prompt gets a real singular noun (D8)")
+    ap.add_argument("--attrs", type=str, default="",
+                    help='generate: attributes as JSON, e.g. \'{"color":"blue","material":"wool"}\' '
+                         "-- without these the prompt is just the caption (D10)")
+    ap.add_argument("--pattern-panel", type=str, default="",
+                    help="generate: comma-separated patterns to render side by side, "
+                         "e.g. solid,striped,dotted (D10's pattern-adherence check)")
     ap.add_argument("--output", type=str, help="output path for the standalone generate command")
     ap.add_argument("--seed", type=int, default=None, help="noise seed override")
     ap.add_argument("--seeds", default="7,8,9,10,11", help="sweep: comma-separated noise seeds")

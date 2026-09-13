@@ -338,3 +338,28 @@ def build_qualitative_grid(root: Path, seed: int = 7, out_path: Path | None = No
     out_path.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(out_path, format="PNG")
     return out_path
+
+
+def build_generation_panel(tiles: list[tuple[str, Path]], out_path: Path,
+                           tile: int = 224) -> Path:
+    """Contact sheet of generated images, one labelled tile each (D10).
+
+    The qualitative grid shows repairs in context; this shows the generator on
+    its own, which is what a claim about the *generator's* fidelity needs.
+    """
+    out_path = Path(out_path)
+    head_h, cap_h, pad = 20, 40, 10
+    width = len(tiles) * tile + (len(tiles) + 1) * pad
+    canvas = Image.new("RGB", (width, head_h + tile + cap_h + 2 * pad), (255, 255, 255))
+    draw = ImageDraw.Draw(canvas)
+    f_head, f_cap = _font(13), _font(11)
+    for i, (label, path) in enumerate(tiles):
+        x = pad + i * (tile + pad)
+        head = label.split(" with a ")[-1] if " with a " in label else label
+        draw.text((x, pad), head[:40], fill=(20, 20, 20), font=f_head)
+        canvas.paste(_thumb(Path(path).parent, Path(path).name, tile), (x, pad + head_h))
+        draw.multiline_text((x, pad + head_h + tile + 4), _wrap(draw, label, f_cap, tile, 2),
+                            fill=(60, 60, 60), font=f_cap, spacing=2)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    canvas.save(out_path, format="PNG")
+    return out_path

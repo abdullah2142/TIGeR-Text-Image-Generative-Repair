@@ -1440,10 +1440,40 @@ deterministic and respects `max_rows`, a run with nothing repaired returns
 `None` rather than an empty image, and a missing image is drawn as a labelled
 tile rather than raised (an E4 row legitimately has none).
 
-**Status:** DOING — everything except the run itself. One Kaggle run of either
-corrected notebook with `--generative-fallback` now produces the grid, ships
-the images it was built from, and lets §2/§4's withdrawn attribution be
-re-assessed against pictures this pipeline actually made.
+**A fourth finding, which changes the shape of the re-assessment: the
+generative fallback has never fired.** Full System and "No Generative Fallback"
+are identical in **every column** of the committed ABO ablation — same repaired
+count, same escalations, same accuracies — and the same holds on the synthetic
+run. Turning the generator off changed nothing because it was never on any
+path. The reason is in `solver.py:263`: generation is reachable only when
+`pool.best_for_text(...)` returns `None`, i.e. when the catalogue holds no
+other usable image in the same category. On a corpus with thousands of rows per
+category that never happens, and **that is correct behaviour** — retrieving a
+real photo should beat synthesising one.
+
+So the previous run generated nothing, and a re-run will generate nothing
+either. The qualitative grid will contain no synthesised image, and D10's
+question cannot be answered as a byproduct of the repair run. It has to be put
+to the generator directly.
+
+`generate` is the only command that can reach the generator, and it could not
+reach the thing D10 fixed: it called `generate(caption, out_path)` with no
+category and no attributes, so `build_prompt` fell through to
+`subject = caption` and rendered the *caption*, never the constructed prompt.
+It now takes `--category` and `--attrs`, prints the prompt it used, and offers
+`--pattern-panel solid,striped,dotted`, which renders one image per pattern and
+contact-sheets them via `viz.build_generation_panel`. That panel is the actual
+experiment §2 needs: the observation (patterns were lost) stands, the cause was
+withdrawn because the pattern never entered the prompt, and this is what
+decides whether the limitation survives now that it does. The ABO notebook
+gained a cell that runs it.
+
+**Status:** DOING — everything except the run itself. One Kaggle run of the ABO
+notebook now produces both figures: the qualitative grid, from artifacts the
+run finally persists, and the pattern panel, which is what §2's withdrawn
+attribution gets re-assessed against. Note for whoever reads the grid: it will
+show retrieval-based T2V repairs, not synthesised ones, and that is the
+pipeline working as designed.
 
 ---
 

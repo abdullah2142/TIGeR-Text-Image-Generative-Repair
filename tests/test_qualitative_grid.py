@@ -97,3 +97,48 @@ def test_missing_image_is_drawn_not_raised(run):
     rep.loc[1, "image_path"] = "data/sample/images/generated/does_not_exist.jpg"
     rep.to_parquet(run / "data/processed/repaired_report_seed7.parquet", index=False)
     assert viz.build_qualitative_grid(run, seed=7) is not None
+
+
+# ---------------------------------------------------------------------------
+# the seed a run is scored against must be the seed it was run with
+# ---------------------------------------------------------------------------
+
+def test_seed_override_is_written_back_into_cfg():
+    """`--seed` used to be resolved at the call site while the ablation kept
+    reading cfg's seed, so `ablate-repair --seed 9` scored the seed-9 frame
+    against the seed-7 noise audit. It now also picks the per-row filenames."""
+    from argparse import Namespace
+    from tiger.cli import _resolve_seed
+
+    cfg = {"noise": {"seed": 7}}
+    assert _resolve_seed(cfg, Namespace(seed=9)) == 9
+    assert cfg["noise"]["seed"] == 9              # the ablation reads this one
+
+    cfg = {"noise": {"seed": 7}}
+    assert _resolve_seed(cfg, Namespace(seed=None)) == 7
+    assert _resolve_seed({}, Namespace(seed=None)) == 7
+
+
+# ---------------------------------------------------------------------------
+# D10 · the generator's own figure (the grid shows repairs, not the generator)
+# ---------------------------------------------------------------------------
+
+def test_generation_panel_is_written(tmp_path):
+    paths = []
+    for pat, rgb in [("solid", (200, 35, 35)), ("striped", (45, 75, 200))]:
+        p = tmp_path / f"g_{pat}.jpg"
+        Image.new("RGB", (200, 200), rgb).save(p)
+        paths.append((f"red wool chair with a {pat} pattern", p))
+    out = viz.build_generation_panel(paths, tmp_path / "panel.png")
+    assert out.exists()
+    with Image.open(out) as im:
+        assert im.width > 2 * 224          # one tile per pattern
+
+
+def test_generation_panel_tolerates_a_missing_render(tmp_path):
+    """A refused or failed generation must not take the figure down with it."""
+    ok = tmp_path / "g_solid.jpg"
+    Image.new("RGB", (200, 200), (200, 35, 35)).save(ok)
+    out = viz.build_generation_panel(
+        [("solid", ok), ("striped", tmp_path / "never_written.jpg")], tmp_path / "panel.png")
+    assert out.exists()
