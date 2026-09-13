@@ -1756,26 +1756,33 @@ Regression test added: `tests/test_import_abo_formats.py::test_non_english_only_
 | Section | Items | Done | Open | Parked / blocked / withdrawn |
 |---|---|---|---|---|
 | A. Measurement correctness | 9 | 9 | — | — |
-| B. Repair accuracy | 8 | 2 | B2, B3, B5, B7 | B1 needs fashion imagery · B4 blocked on B0 |
-| C. Config & reproducibility | 8 | 6 | C5 (needs local data) | C7 discarded (not applicable) |
-| D. Robustness & design | 13 | 10 | D1 (needs a trained model), D10 (code fixed, regen pending) | D3 withdrawn |
+| B. Repair accuracy | 9 | 7 | B7 (wired, needs a run to choose an encoder) | B1 needs fashion imagery |
+| C. Config & reproducibility | 8 | 7 | — | C7 discarded (not applicable) |
+| D. Robustness & design | 13 | 11 | D10 (prompt fixed and pinned, regen needs a GPU) | D3 withdrawn |
 | E. Documentation | 12 | 12 | — | — |
 | F. Found in Phase 2 dry run | 2 | 2 | — | — |
-| **Total** | **52** | **40** | **8** | 0 parked · 2 blocked · 1 withdrawn · 1 discarded |
+| **Total** | **53** | **48** | **2** | 0 parked · 1 blocked · 1 withdrawn · 1 discarded |
 
-**Counts re-verified 2026-09-12** by parsing every `### <id>` header and its
+**Counts re-verified 2026-09-13** by parsing every `### <id>` header and its
 next `**Status:**` line programmatically (not hand-tallying, and not a plain
-grep count either — this run had 5 status values that aren't literally
-`DONE`/`TODO`: `UNBLOCKED` counted as open, `WITHDRAWN`/`BLOCKED` counted
-separately, B0's `✅ **DONE**` counted as done, `DOING` counted as open). Sums
-to exactly 52.
+grep count either — this run had 4 status values that aren't literally
+`DONE`/`TODO`: `WITHDRAWN`/`BLOCKED`/`DISCARDED` counted separately, B0's
+`✅ **DONE**` counted as done, `DOING` counted as open). Sums to exactly 53:
+52 plus `B8`, found while measuring `B2`/`B5`.
+
+**Both remaining open items are open for the same reason, and it is not a code
+reason.** `B7` needs a run to choose an encoder; `D10` needs a GPU to
+regenerate a figure. Everything decidable from code or from the data in this
+repository is decided.
 
 **Section A is fully closed** — A2's model pin is verified against a live key
 as of 2026-09-11 (see A2's entry).
 The measurement instrument is now trustworthy, so B and the remaining sections
 can be measured against a baseline that means something.
 
-**Test suite: 178 passing** (re-verified 2026-09-12, `.venv/bin/python -m pytest`).
+**Test suite: 203 passing** (re-verified 2026-09-13, `.venv/bin/python -m pytest`;
+178 + 25 from the `B2`/`B3`/`B5`/`B8` estimator work, `B4`'s region gate, `D1`'s
+calibration report, `B7`'s probe-encoder split and `D10`'s prompt builder).
 **Section E fully closed** the same day — see each entry above; the only
 partial one is `E6` (data/sample still not committed — the notebooks don't
 export it).

@@ -3,18 +3,34 @@
 Forward plan. The defect detail lives in `FIXES.md`; this is the ordering and
 the critical path. Written 2026-09-10, after the measurement-harness pass.
 
-**State (updated 2026-09-13):** 40 items done, 8 open, 0 parked, 2 blocked,
-1 withdrawn, 1 discarded (52 total). Phase 4 (Section E, paper corrections) is
-fully closed. D4 has hard proof it fires on real ABO data (98 rows reached
-pass 2+, 6 got both a T2V and V2T repair). `C7` discarded — was never
-applicable to this repo. The only genuinely open items left are: `B2`/`B3`/`B5`
-(repair-accuracy, Phase 3 — prioritize over `B7`: real B0 data now shows the
-pixel path, not the encoder, is the weaker estimator when they disagree —
-11.1% vs 33.7% correct), `B4` (newly unblocked — real B0 data now exists to
-calibrate against), `C5` (needs local data — partially done, thresholds
-committed), `D1` (needs a trained model — one now exists), `D10` (regen needs
-GPU, but Kaggle is available), `B1` (blocked, needs fashion imagery). 178
-tests passing.
+**State (updated 2026-09-13, second pass):** 48 items done, 2 open, 0 parked,
+1 blocked, 1 withdrawn, 1 discarded (53 total — 52 plus `B8`, found while
+measuring `B2`). Phase 3 (Section B, repair accuracy) and the housekeeping list
+are now closed apart from what needs compute. 203 tests passing.
+
+**Everything decidable from code or from the data in this repository is
+decided.** The two open items both need a machine this checkout does not have:
+
+- `B7` — the probe encoder can now be swapped independently of the reported
+  CLIP baseline (`models.probe_model_name`), but choosing and validating an
+  encoder needs a run. Note the claim that `compare_encoders` "already
+  supported" this was wrong; see `FIXES.md` B7.
+- `D10` — the T2V prompt is fixed and pinned by tests; regenerating the
+  qualitative grid needs a GPU.
+
+And one blocked item moved in the wrong direction:
+
+- `B1`, and got worse: B2's localisation samples *more* skin on
+  model shots than the old centre box did, and the standard skin mask would
+  delete wooden furniture on ABO (skin and oak occupy the same hue band). See
+  `FIXES.md` B1.
+
+**One thing to carry into the next run.** The V2T pixel estimator was reading
+the studio ground, not the product: `gray`, `multicolour` and `white` were 73%
+of its output on a furniture catalogue, scoring 37.1% / 1.7% / 13.8%. That is
+now fixed (B2/B3/B5/B8), but every repair-side number in `paper_assets/` was
+produced before it. **The ABO repair numbers need re-running**, and the
+estimator-attribution report is the place to look first.
 
 ---
 
@@ -87,7 +103,9 @@ Both notebooks are built and pushed.
 | 2.2 | `tiger_abo_corrected_run.ipynb` — the two ABO verticals → **repair** numbers. Phase 1 landed, so this is ready to run. |
 | 2.3 | Record the manifest. γ, both seeds, the allowlist and both model IDs are written to `run_manifest.json` so C1 cannot recur. |
 
-**Unblocks:** B4, E3, E8, and makes E1/E2/E4–E12 worth writing.
+**Unblocks:** B4, E3, E8, and makes E1/E2/E4–E12 worth writing. All since
+done — B4 was answered *by* the run's B0 report rather than unblocked by it
+(the calibration it asks for is not supportable on that data; see `FIXES.md`).
 
 **Expect movement in an unpredictable direction.** Four independent defects fed
 the old table and none biased it consistently.
@@ -102,21 +120,29 @@ at all. Both notebooks need a clean re-run from a fresh clone.
 
 ---
 
-## Phase 3 — Repair accuracy (Section B)
+## Phase 3 — Repair accuracy (Section B) ✅ DONE apart from B7 (2026-09-13)
 
-The actual goal. Sequence from the B0 estimator-attribution report, which
-Phase 2 produces — it says whether the pixel path or the encoder path is the
-bottleneck, so do not guess.
+The actual goal. Sequenced from the B0 estimator-attribution report rather than
+guessed — and the report was unambiguous: the pixel path, not the encoder, was
+the problem. `gray`, `multicolour` and `white` were 73% of its output on a
+furniture catalogue, correct 37.1% / 1.7% / 13.8% of the time. Those are the
+studio ground and a shrug.
 
 | | Task | Status |
 |---|---|---|
-| 3.1 | **B2** — product localisation. The fixed central 70% crop is exactly wrong for furniture, where a rug, a lamp and a sofa occupy different regions. | UNBLOCKED — `data/raw/abo/` is local |
-| 3.2 | **B5** — aspect ratio destroyed before cropping. Only 36.2% of ABO images are square (21–2871 px). Compounds B2. | UNBLOCKED |
-| 3.3 | **B4** — calibrate `pixel_color_confidence` against actual correctness instead of gating a raw pixel share at 0.55. | after B0 run |
-| 3.4 | **B3** — the white-discount rule at 85%. | TODO |
-| 3.5 | **B7** — CLIP is measured at 62% on attribute binding vs BLIP 88%. `compare_encoders` already supports the swap. | TODO |
+| 3.1 | **B2** — product localisation. The fixed central 70% crop replaced by a background flood: the product is what the studio ground cannot reach. Falls back to the old box on lifestyle shots, where there is no ground to flood. | DONE |
+| 3.2 | **B5** — aspect ratio destroyed before cropping. Fixed. The stated mechanism was wrong — a uniform resize preserves fractional position, so the centre box sampled the same region either way (measured, 194/200) — but distorted shape matters now that localisation is geometric. | DONE |
+| 3.3 | **B4** — calibrate `pixel_color_confidence`. Answered with the B0 data instead of tuned: the share does not rank correctness (corr 0.233, non-monotone above the gate), and B6 had already made the 0.55 gate inert (0 pixel-only rows). No calibrator fitted; a mechanism-based condition replaced the magic number. | DONE |
+| 3.4 | **B3** — the white-discount rule at 85%. Now decided by connectivity, which B2's flood already computes; the proportion rule survives only on the unlocalised fallback. | DONE |
+| 3.5 | **B7** — CLIP is 62% on attribute binding vs BLIP 88%. The probe encoder is now separable from the reported CLIP baseline (`models.probe_model_name`); choosing and validating one needs a run. | DOING |
+| 3.6 | **B8** — new, found while measuring the above. Saturation is `(max−min)/max`, so it explodes at the dark end and noise on a black product gets hue-binned as blue. Black scored 5% as rendered, 0% perturbed. Value now decides below `BLACK_V_MAX`. | DONE |
 
-B2, B5 and B3 are PIL/NumPy on images already on disk — cheap locally, no GPU.
+`data/raw/abo/` is **gone from this machine** — deleted after the Kaggle runs,
+which the notebook does itself to free 6 GB. So these were measured on the
+repo's own renderer plus one describable geometry perturbation
+(`tests/bench_color_estimator.py`): **68.3% → 97.1%** as rendered, **22.5% →
+90.0%** with the product moved off-centre into a non-square frame. Neither
+number estimates accuracy on real photography. That needs a re-run.
 
 ---
 
@@ -148,23 +174,49 @@ Not bugs. Each needs a decision before it needs a patch.
 Both Phase 5 decisions are now closed and both re-run and verified on real
 ABO data (2026-09-13) — see `FIXES.md` D4's hard-proof instrumentation note.
 
+**B6 has now been sized** (2026-09-13), which was the outstanding half of it.
+On the corrected ABO run it fires on 450 of 633 rows that reached the V2T value
+decision, all of which escalate instead of committing. On the 183 it lets
+through, the written colour is right 49.2% of the time against 12.1% for the
+rows it stops — so agreement between the two estimators is worth roughly 4x,
+and B6 is buying that at the cost of committing on 29% of the candidates. It
+also, incidentally, made B4's threshold inert: with disagreements escalated and
+agreements identical either way, the 0.55 gate no longer changes any written
+value.
+
 ---
 
 ## Housekeeping (any time)
 
 ~~`A2` pin a verified Gemini model ID~~ · ~~`C1` γ consistency~~ ·
-~~`C2` `--gamma` flag~~ · ~~`C4` hardcoded generated-image path~~ · `C5` commit the
-evaluation artifacts · ~~`C6` requirements/pyproject divergence~~ ·
+~~`C2` `--gamma` flag~~ · ~~`C4` hardcoded generated-image path~~ ·
+~~`C5` commit the evaluation artifacts~~ (done; `data/sample/` still can't be —
+that half is `E6`'s) · ~~`C6` requirements/pyproject divergence~~ ·
 ~~`C7` the 73 MB AWS installer in the repo root~~ (discarded — not applicable) ·
-`D1` `class_weight="balanced"` vs the
-calibration claim · ~~`D2` document the verifier's asymmetric failure handling~~ ·
-~~`D9`, `D11`–`D13`~~ done · `D10` code fixed, regen needs GPU (Kaggle available).
+~~`D1` `class_weight="balanced"` vs the calibration claim~~ (measured: ECE
+0.026, the weighting is not what sets the calibration — it buys E3 recall
+0.691 vs 0.064) · ~~`D2` document the verifier's asymmetric failure handling~~ ·
+~~`D9`, `D11`–`D13`~~ done · `D10` prompt fixed and pinned, regen needs GPU
+(Kaggle available).
+
+Nothing on this list is still open.
 
 ---
 
 ## If you only do three things
 
-1. **E2** — today, no run required. It is the claim most likely to be challenged.
-2. **Phase 1 + Phase 2** — produce numbers that can be defended.
-3. **B2 + B5** — cheap, local, no GPU, and they attack the component the whole
-   pipeline is named after.
+~~1. **E2**~~ · ~~2. **Phase 1 + Phase 2**~~ · ~~3. **B2 + B5**~~ — all done.
+
+The list from here, in order:
+
+1. **Re-run the ABO repair numbers.** The estimator that writes every V2T value
+   was reading the studio ground; B2/B3/B5/B8 changed what it reads. Nothing in
+   `paper_assets/` reflects that yet, and the estimator-attribution report says
+   whether it worked.
+2. **Re-fit B4 on that run.** The calibration it asks for was not supportable
+   on the old data (the share does not rank correctness, and only 65 rows were
+   decision-relevant). `pixel_color_region` now ships in the diagnostics so the
+   next attempt can condition on how the estimate was obtained.
+3. **Pick a probe encoder (B7).** The wiring is in and costs nothing while
+   `probe_model_name` is empty. BLIP will likely need an adapter —
+   `ClipEncoder` assumes the dual-encoder API.
