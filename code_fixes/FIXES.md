@@ -1384,12 +1384,18 @@ model is actually asked for can be pinned without a GPU. Five tests in
 table, and the caption fallback still works. There were no tests on this path
 at all before, which is how a `removesuffix` survived `D8` and `D9`.
 
-**Status:** DOING — the prompt is now correct *and* pinned (colour, material,
-pattern, and a real category noun). Regenerating the qualitative grid and
-re-assessing `honest_limitations.md` §2 / `paper_draft_materials.md` §4 still
-needs a GPU + `diffusers`, not available in this checkout. Note when it is
-re-run: the previous grid was generated with both defects live, so it is
-evidence about neither SDXL's pattern adherence nor this pipeline's.
+**The documentation half is done, and did not need the regen.** D10 asks to
+"correct §2 and §4 either way", and the correction does not depend on what a
+regenerated grid shows: the images in the current grid were produced by a
+prompt that never contained the pattern, so they are not evidence about SDXL's
+pattern adherence whatever they look like. `honest_limitations.md` §2 and
+`paper_draft_materials.md` §4 now report the observation (patterns were lost)
+and **withdraw the attribution** (that diffusion models drop them), marking the
+cause open pending regeneration.
+
+**Status:** DOING — prompt fixed and pinned, §2/§4 corrected. Only the
+regeneration is left, and it needs a GPU + `diffusers`, not available in this
+checkout.
 
 ---
 

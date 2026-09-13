@@ -53,6 +53,16 @@ recall) for the shipped balanced router and for an unbalanced refit on the same
 seeds. `train-arbiter` now writes the same measurement into the model file as
 `calibration_holdout` on every run.
 
+## These predate the colour estimator's repair
+
+Everything under `abo/` was produced before `B2`/`B3`/`B5`/`B8` fixed the V2T
+pixel estimator, which on that very run was reading the studio ground rather
+than the product (`gray`, `multicolour` and `white` were 73% of its output, at
+37.1% / 1.7% / 13.8% correct). The files are an accurate record of that run and
+the manifest says exactly what produced them — but they are not the system's
+current behaviour, and the repair-side numbers should not be quoted as if they
+were. See `honest_limitations.md` §6.
+
 ## What is still not here
 
 `data/sample/` — the generated-image samples. The notebooks do not export it,
