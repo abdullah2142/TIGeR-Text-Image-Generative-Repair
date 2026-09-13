@@ -312,6 +312,12 @@ def cmd_train_arbiter(cfg: dict, args) -> None:
     hold_ev, hold_lab = [e for e, _ in keep], [l for _, l in keep]
     rel = arbiter_mod.reliability_table(model, hold_ev, hold_lab)
     model.training_meta["reliability_holdout"] = rel
+    # D1: the gamma gate reads predict_proba as a probability, and the training
+    # objective is class-weighted. Measure the calibration every run instead of
+    # asserting it -- the number belongs next to the model it describes.
+    gamma = float(cfg.get("arbiter", {}).get("gamma", 0.60))
+    model.training_meta["calibration_holdout"] = arbiter_mod.calibration_report(
+        model, hold_ev, hold_lab, gamma=gamma)
 
     import numpy as np
     correct = 0
@@ -328,6 +334,12 @@ def cmd_train_arbiter(cfg: dict, args) -> None:
     print("reliability (holdout):")
     for b in rel:
         print(f"  conf~{b['mean_confidence']:.2f} -> acc {b['empirical_accuracy']:.2f} (n={b['n']})")
+    cal = model.training_meta["calibration_holdout"]
+    if cal:
+        gap = cal.get("gap_at_gamma")
+        gap_s = f"{gap:+.3f}" if gap is not None else "n/a"
+        print(f"calibration: ECE {cal['ece']:.3f} | gap at gamma={cal['gamma']} {gap_s} "
+              f"(n={cal['n_near_gamma']}) | {cal['share_above_gamma']:.1%} of rows above gamma")
     print(f"wrote {out}")
 
 

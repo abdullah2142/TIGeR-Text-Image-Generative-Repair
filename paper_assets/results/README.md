@@ -47,6 +47,12 @@ in two ways and is otherwise identical to it:
 Ablation counts are unchanged between the two runs (Full System 268 repaired,
 No Gamma Gate 498).
 
+`arbiter_calibration.json` is derived rather than emitted by the run: it is the
+`D1` calibration check on holdout seed 1014 (ECE, the signed gap at γ, per-class
+recall) for the shipped balanced router and for an unbalanced refit on the same
+seeds. `train-arbiter` now writes the same measurement into the model file as
+`calibration_holdout` on every run.
+
 ## What is still not here
 
 `data/sample/` — the generated-image samples. The notebooks do not export it,

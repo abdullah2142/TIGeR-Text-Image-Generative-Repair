@@ -1,0 +1,74 @@
+{
+  "balanced (shipped)": {
+    "n": 1653,
+    "ece": 0.02594935265454406,
+    "gamma": 0.6,
+    "gap_at_gamma": -0.024454049348836326,
+    "n_near_gamma": 443,
+    "share_above_gamma": 0.6007259528130672,
+    "accuracy_above_gamma": 0.7401812688821753,
+    "per_class_recall": {
+      "E1": 0.665,
+      "E2": 0.519,
+      "E3": 0.691,
+      "CLEAN": 0.691
+    },
+    "support": {
+      "E1": 382,
+      "E2": 466,
+      "E3": 94,
+      "CLEAN": 711
+    },
+    "accuracy": 0.636
+  },
+  "unbalanced": {
+    "n": 1653,
+    "ece": 0.024965566172283606,
+    "gamma": 0.6,
+    "gap_at_gamma": 0.05997177569437173,
+    "n_near_gamma": 271,
+    "share_above_gamma": 0.7386569872958257,
+    "accuracy_above_gamma": 0.7952497952497952,
+    "per_class_recall": {
+      "E1": 0.529,
+      "E2": 0.854,
+      "E3": 0.064,
+      "CLEAN": 0.831
+    },
+    "support": {
+      "E1": 382,
+      "E2": 466,
+      "E3": 94,
+      "CLEAN": 711
+    },
+    "accuracy": 0.724
+  },
+  "_note": "D1. Holdout seed 1014 of the corrected ABO run; trained on 1007-1013. reliability_holdout in tiger_arbiter_model.json is the same holdout, 5 equal-count bins. ECE uses 10 equal-width bins over [0,1].",
+  "reliability_holdout": [
+    {
+      "mean_confidence": 0.4737082459607717,
+      "empirical_accuracy": 0.42727272727272725,
+      "n": 330
+    },
+    {
+      "mean_confidence": 0.5658105497407417,
+      "empirical_accuracy": 0.5347432024169184,
+      "n": 331
+    },
+    {
+      "mean_confidence": 0.6391981799570924,
+      "empirical_accuracy": 0.6363636363636364,
+      "n": 330
+    },
+    {
+      "mean_confidence": 0.7202876314093528,
+      "empirical_accuracy": 0.7401812688821753,
+      "n": 331
+    },
+    {
+      "mean_confidence": 0.8301029029643167,
+      "empirical_accuracy": 0.8429003021148036,
+      "n": 331
+    }
+  ]
+}

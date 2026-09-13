@@ -963,7 +963,49 @@ regression was chosen *because* it is well-calibrated.
 exists). If calibration is poor, add Platt/isotonic recalibration on a holdout,
 or drop the balancing and handle imbalance in the threshold instead.
 
-**Status:** TODO
+**Measured (2026-09-13). The concern is not borne out: calibration is fine.**
+Held-out calibration seed 1014 of the corrected ABO run, model trained on
+1007–1013, n = 1,653 rows after dropping the rule-routed missing-modality rows:
+
+| | ECE | gap at γ=0.60 | rows ≥ γ | accuracy ≥ γ | E3 recall |
+|---|---|---|---|---|---|
+| **balanced (shipped)** | **0.026** | **−0.024** | 60.1% | 0.740 | **0.691** |
+| unbalanced | 0.025 | +0.060 | 73.9% | 0.795 | 0.064 |
+
+So neither branch of the stated fix applies. Recalibration is not warranted at
+ECE 0.026, and dropping the balancing does not improve calibration — the ECEs
+are within 0.001 of each other, so class weighting is not what is setting the
+calibration here.
+
+The sign at the boundary is worth keeping: at γ the balanced router is
+*under*-confident by 0.024, so the gate escalates a few rows it would have
+routed correctly. For a gate whose entire job is abstention that is the safe
+direction to be wrong in.
+
+**And dropping the balancing would be a clear regression, for a reason that has
+nothing to do with calibration.** It raises aggregate accuracy 0.636 → 0.724 —
+by predicting the majority classes. E3 recall goes **0.691 → 0.064**: the model
+predicts E3 eleven times on a holdout containing 94 of them. E3 is the class
+that routes to `BOTH`, the two-pass path `D4` exists to make real. The
+balancing is buying minority-class recall, and the aggregate accuracy it costs
+is the price of that.
+
+**What was changed:** `arbiter.calibration_report()` (next to the existing
+`reliability_table`) computes ECE over equal-width bins plus the signed gap in
+a ±0.05 window around γ — the aggregate can look fine while the router is
+miscalibrated exactly where the gate cuts, so the boundary is reported
+separately. `train-arbiter` now stores it as `calibration_holdout` in the model
+JSON and prints it, so the claim is re-measured on every run instead of being
+asserted once. The ABO numbers are committed at
+`paper_assets/results/abo/arbiter_calibration.json`, and `reviewer_defense.md`
+Attack 8 now cites them instead of asserting calibration.
+
+Tests: three in `tests/test_arbiter.py` — a perfectly calibrated router scores
+~0, an overconfident one is caught, and a router that is fine in aggregate but
+wrong at γ is caught by `gap_at_gamma`.
+
+**Status:** DONE — `class_weight="balanced"` stays, now with the measurement
+that justifies it
 
 ---
 

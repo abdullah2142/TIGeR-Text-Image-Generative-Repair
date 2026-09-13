@@ -174,6 +174,53 @@ def reliability_table(model: ArbiterModel, evidence_records: list[dict], labels:
     return out
 
 
+def calibration_report(model: ArbiterModel, evidence_records: list[dict], labels: list[str],
+                       gamma: float, n_bins: int = 10) -> dict:
+    """How far the router's stated confidence is from its empirical accuracy.
+
+    The gamma gate (Eq. 22) escalates on ``max p < gamma`` and the dismiss rule
+    fires on ``max p >= dismiss_threshold``, so both read ``predict_proba`` as a
+    probability. `class_weight="balanced"` reweights the training objective,
+    which is a standard way to *lose* calibration -- D1. This measures whether
+    that happened rather than assuming either way, and reports the error where
+    the decisions are actually taken, not only in aggregate.
+
+    Returns expected calibration error over equal-count bins, plus the signed
+    gap (empirical accuracy - stated confidence) in a window around `gamma`.
+    A negative gap means the router is under-confident there, so the gate
+    escalates rows it would in fact have routed correctly.
+    """
+    conf, hit = [], []
+    for ev, lab in zip(evidence_records, labels):
+        p = model.predict_proba(featurize(ev))
+        top = max(p, key=p.get)
+        conf.append(p[top])
+        hit.append(float(top == LABEL_TO_CLASS.get(lab, "CLEAN")))
+    conf, hit = np.asarray(conf), np.asarray(hit)
+    if conf.size == 0:
+        return {}
+
+    # Equal-WIDTH bins, the textbook definition. Equal-count bins would split a
+    # run of identical confidences into pure-outcome bins and report calibration
+    # error that is an artefact of the binning.
+    edges = np.linspace(0.0, 1.0, n_bins + 1)
+    edges[-1] += 1e-9
+    ece = sum(abs(hit[m].mean() - conf[m].mean()) * int(m.sum())
+              for a, b in zip(edges[:-1], edges[1:])
+              if (m := (conf >= a) & (conf < b)).any())
+    near = (conf >= gamma - 0.05) & (conf < gamma + 0.05)
+    above = conf >= gamma
+    return {
+        "n": int(conf.size),
+        "ece": float(ece / conf.size),
+        "gamma": float(gamma),
+        "gap_at_gamma": float(hit[near].mean() - conf[near].mean()) if near.any() else None,
+        "n_near_gamma": int(near.sum()),
+        "share_above_gamma": float(above.mean()),
+        "accuracy_above_gamma": float(hit[above].mean()) if above.any() else None,
+    }
+
+
 # ---------------------------------------------------------------------------
 # routing (Eq. 22 gate + policy)
 # ---------------------------------------------------------------------------
