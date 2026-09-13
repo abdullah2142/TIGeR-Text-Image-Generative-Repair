@@ -499,7 +499,91 @@ number applied to an uncalibrated quantity.
 `P(correct | share, agreement, category)` on scored cases and gate on that.
 Requires a B0 run first.
 
-**Status:** BLOCKED on B0 run
+**Measured (2026-09-13) against the corrected ABO run.** The B0 report exists
+now, so the question is answerable. `tests/bench_pixel_confidence.py`
+reproduces everything below from
+`paper_assets/results/abo/v2t_estimator_diagnostics.csv`. 738 report rows →
+277 unique estimator outcomes → 205 with both a pixel estimate and a
+ground-truth colour.
+
+**The share does not rank correctness.** It separates once, at the bottom, and
+carries no information above the gate:
+
+| pixel share | n | would the pixel value have been right |
+|---|---|---|
+| < 0.55 | 70 | 7.1% |
+| 0.55–0.60 | 15 | **40.0%** |
+| 0.60–0.70 | 19 | 26.3% |
+| 0.70–0.80 | 18 | 27.8% |
+| 0.80–0.90 | 27 | 33.3% |
+| ≥ 0.90 | 56 | 33.9% |
+
+`corr(share, correct) = 0.233`. A 0.9 share is right a third of the time and
+the *least* confident passing bucket is the most accurate one. So the field
+name is exactly as wrong as B4 says — but fitting `P(correct | share)` would
+be fitting a monotone model to a non-monotone signal, and the honest answer is
+that this quantity cannot be turned into a probability. No calibrator was
+fitted, on purpose.
+
+**Second finding, which changes what the gate is even for: B6 made it inert.**
+Since B6 escalates any genuine pixel-vs-probe disagreement, the gate can only
+change an outcome when exactly one estimator produced a value. In the real run
+that never happens on the pixel side:
+
+- both estimators produced a value: **593** rows
+- pixel only (the gate decides alone): **0** rows
+- probe only (nothing to gate): 40 rows
+- 450 disagreements → 0 values written; 183 agreements → 183 written
+
+When both agree, both branches of the `if/else` return the same string. So on
+this corpus the `0.55` threshold did not change a single written value. Tuning
+it would have been tuning a dead number, and any before/after it produced would
+have been noise.
+
+**Third finding, and this is the one worth carrying into the paper.** On the
+rows that *are* committed — both estimators agreeing — the written colour is
+right **49.2%** of the time (n=65), and the share does not rank those either
+(66.7% / 57.1% / 45.5% / 33.3% / 41.7% / 56.5% across ascending share bins).
+Agreement between two independent estimators roughly quadruples accuracy over
+disagreement (12.1%), which is B6 earning its place, but half of what the
+system commits is still wrong and no available scalar tells you which half.
+
+**Where the error actually lives** — not in the threshold, in the estimator:
+
+| pixel value | n | correct |
+|---|---|---|
+| `gray` | 62 | 37.1% |
+| `multicolour` | 58 | **1.7%** |
+| `white` | 29 | 13.8% |
+| `orange` | 11 | 0.0% |
+
+`gray`, `multicolour` and `white` are 73% of all pixel estimates on a furniture
+catalogue. Those are the studio ground, the estimator failing to find a
+dominant colour, and the studio ground again. That is B2/B3, and it is why the
+sequencing goes estimator first, calibration after.
+
+**What was changed:**
+1. The gate is no longer a bare magic number. It is `PIXEL_SHARE_MIN`, named a
+   *share*, with the measurement above recorded next to it, and it is now a
+   floor against a three-way split rather than a pretend probability.
+2. A second condition was added that *is* mechanism-based: the pixel estimate
+   is refused when `pixel_region == "center_box"`, i.e. when B2's localisation
+   could not find a studio ground and fell back to measuring a fixed box. A 0.9
+   share of an unknown region is not evidence about the product. (Evidence
+   written before B2 has no region field and is treated the same way, since it
+   came from the unlocalised estimator by definition.)
+3. `pixel_color_region` is plumbed through evidence → `RepairPlan` →
+   the repair log → the B0 diagnostics CSV, so the next run can condition
+   `P(correct | ·)` on *how* the estimate was obtained — which, unlike the
+   share, is a variable with a mechanism behind it.
+
+Tests: `test_pixel_value_used_when_the_product_was_localised` and
+`test_pixel_value_refused_when_the_product_was_not_localised`.
+
+**Status:** DONE as far as the data allows — the calibration B4 asks for was
+attempted and is not supportable on this corpus; the magic number is gone, the
+instrumentation to answer it properly ships, and the finding stands on its own.
+Re-fit after the B2/B3/B5/B8 estimator re-run.
 
 ---
 
@@ -787,7 +871,26 @@ and `data/thresholds/` genuinely do not exist and must be regenerated (E6).
 
 **Fix:** commit the summary CSVs (not the caches) under `paper_assets/results/`.
 
-**Status:** TODO
+**Done (2026-09-13).** `paper_assets/results/` now carries both runs' summary
+artifacts plus `README.md`, which records provenance: which notebook produced
+each directory, when, and what each file is. Specifically:
+
+- `abo/` refreshed to the **2026-09-12 19:58 re-run** (executed notebook
+  `tiger_abo_d4_check.ipynb`), which supersedes the run committed in `387b455`
+  on two counts and matches it everywhere else: the summary reports all five
+  outcome statuses rather than two (`E8`), and the estimator-attribution report
+  has 738 rows rather than 289 because `B6`'s disagreement escalations are now
+  captured. Ablation counts are unchanged (Full System 268, No Gamma Gate 498).
+- `synthetic/` gained `detection_metrics_sweep.json` (the per-seed confusion
+  matrices behind the detection table) and `ablations.json` (the detection
+  ablations behind `E9`) — the two artifacts that were still uncommitted.
+- Excluded on purpose: embedding caches, per-seed `.npz` arrays, per-seed
+  sieve/evidence dumps. They are large and regenerate from the notebook.
+
+`data/sample/` remains absent — the notebooks do not export it, so it needs a
+re-run that does. That half stays with `E6`.
+
+**Status:** DONE (except `data/sample/`, which is `E6`'s)
 
 ---
 

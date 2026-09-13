@@ -27,6 +27,13 @@ import numpy as np
 from tiger import text_views
 from tiger.schema import Schema
 
+# Floor on the winning colour's share of the measured pixels before the pixel
+# estimator may supply a value. Named a share rather than a confidence on
+# purpose: B4 measured it against correctness on the real ABO run and it does
+# not rank it (P(correct) is 0.40 at share 0.55-0.6 and 0.34 at share >= 0.9),
+# so it is a guard against a three-way split, not a probability.
+PIXEL_SHARE_MIN = 0.55
+
 
 @dataclass
 class PatchResult:
@@ -128,6 +135,7 @@ class RepairPlan:
     value_source: str = ""               # "pixel" | "probe" | ""
     pixel_value: str = ""                # HSV dominant-colour estimate
     pixel_conf: float | None = None      # winning colour's pixel share (NOT calibrated)
+    pixel_region: str = ""               # region the share was measured over (B2/B4)
     probe_value: str = ""                # CLIP per-field probe argmax
     estimators_agree: bool | None = None # pixel == probe (both non-empty)
 
@@ -173,22 +181,33 @@ def _corrected_value(field: str, ev: dict) -> tuple[str, dict]:
     (see RepairPlan's estimator-attribution fields).
     """
     probe_value = str((ev.get("probes") or {}).get(field, {}).get("pred", "") or "")
-    pixel_value, pixel_conf = "", None
+    pixel_value, pixel_conf, pixel_region = "", None, ""
 
     if field == "color":
         pc = ev.get("pixel_color")
         conf = ev.get("pixel_color_confidence")
         pixel_value = str(pc or "")
         pixel_conf = float(conf) if conf is not None else None
+        pixel_region = str(ev.get("pixel_color_region") or "")
 
     agree = bool(pixel_value and probe_value and pixel_value == probe_value)
     diag = {"pixel_value": pixel_value, "pixel_conf": pixel_conf,
-            "probe_value": probe_value, "estimators_agree": agree}
+            "pixel_region": pixel_region, "probe_value": probe_value,
+            "estimators_agree": agree}
 
-    # deterministic pixel estimate wins when confident; else CLIP probe
+    # The pixel estimate wins on two conditions, both of which are about the
+    # estimator's *mechanism* rather than its output (B4):
+    #   - it localised the product. `center_box` means it could not find a
+    #     studio ground and fell back to measuring a fixed box, so whatever it
+    #     returned is a measurement of an unknown region.
+    #   - its winning colour owns at least PIXEL_SHARE_MIN of the pixels it did
+    #     measure. This is a share, not a probability: the real ABO run shows it
+    #     does not rank correctness (B4), so it is kept as a floor against a
+    #     three-way split, not read as a confidence.
     if (field == "color" and pixel_value
             and pixel_value not in ("unknown", "multicolour")
-            and pixel_conf is not None and pixel_conf >= 0.55):
+            and pixel_region not in ("", "center_box")
+            and pixel_conf is not None and pixel_conf >= PIXEL_SHARE_MIN):
         return pixel_value, {**diag, "value_source": "pixel"}
 
     return probe_value, {**diag, "value_source": "probe"}

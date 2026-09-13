@@ -90,7 +90,13 @@ class Evidence:
     swap_best_other_product: str = ""
     # deterministic pixel evidence
     pixel_color: str = ""
+    # NOT a probability: the winning colour's share of the sampled pixels. See
+    # B4 -- it was measured against correctness on the real ABO run and does
+    # not rank it. `pixel_color_region` says which region that share was taken
+    # over ("foreground" | "flooded" | "center_box"), which is the part that
+    # carries information about whether the estimate can be trusted at all.
     pixel_color_confidence: float | None = None
+    pixel_color_region: str = ""
     pixel_agrees_declared: bool | None = None
     # text-only checks
     text_out_of_domain: bool = False
@@ -297,6 +303,7 @@ def analyze(df_signals: pd.DataFrame, arrays: dict, encoder: ClipEncoder, schema
             est = estimate_dominant_color(img_path)
             ev.pixel_color = est.top
             ev.pixel_color_confidence = est.confidence
+            ev.pixel_color_region = est.region
             if declared_color:
                 # striped/dotted products legitimately report "multicolour";
                 # count agreement if the declared colour is in the top-2 masses

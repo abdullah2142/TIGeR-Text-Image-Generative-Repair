@@ -28,6 +28,7 @@ def _unit(v):
 def test_v2t_plan_single_field_from_evidence(schema):
     ev = {"row_id": "r1", "category": "shirts", "product_id": "r1",
           "loo_top_field": "color", "pixel_color": "blue", "pixel_color_confidence": 0.9,
+          "pixel_color_region": "foreground",
           "probes": {"color": {"z": -3.0, "pred": "blue"}}}
     row = {"attributes": '{"color": "red", "material": "cotton", "pattern": "solid", "size": "M"}',
            "title": "Red Shirt", "category": "shirts"}
@@ -46,6 +47,7 @@ def test_v2t_escalates_on_estimator_disagreement(schema):
     """
     ev = {"row_id": "r1", "category": "shirts", "product_id": "r1",
           "loo_top_field": "color", "pixel_color": "blue", "pixel_color_confidence": 0.9,
+          "pixel_color_region": "foreground",
           "probes": {"color": {"z": -3.0, "pred": "red"}}}
     row = {"attributes": '{"color": "green", "material": "cotton", "pattern": "solid", "size": "M"}',
            "title": "Green Shirt", "category": "shirts"}
@@ -84,6 +86,7 @@ def test_v2t_skips_noop_patch(schema):
     # image already agrees with the declared value -> no repair needed
     ev = {"row_id": "r1", "category": "shirts", "product_id": "r1",
           "loo_top_field": "color", "pixel_color": "red", "pixel_color_confidence": 0.9,
+          "pixel_color_region": "foreground",
           "probes": {"color": {"z": -3.0, "pred": "red"}}}
     row = {"attributes": '{"color": "red"}', "title": "Red Shirt", "category": "shirts"}
     plan = plan_repair(ev, Route("V2T"), row, None, None, None, schema)
@@ -124,4 +127,30 @@ def test_t2v_unplannable_when_pool_empty(schema):
     ev = {"row_id": "r1", "product_id": "r1", "category": "shirts"}
     plan = plan_repair(ev, Route("T2V"), {"attributes": "{}"}, pool,
                        np.array(["shirts"]), emb[0], schema)
+    assert not plan.plannable
+
+
+def test_pixel_value_used_when_the_product_was_localised(schema):
+    """B4: with no probe value, the pixel estimator is the only candidate --
+    and it is allowed to supply one when it actually found the product."""
+    ev = {"row_id": "r1", "category": "shirts", "product_id": "r1",
+          "loo_top_field": "color", "pixel_color": "blue", "pixel_color_confidence": 0.9,
+          "pixel_color_region": "foreground", "probes": {"color": {"z": -3.0, "pred": ""}}}
+    row = {"attributes": '{"color": "red"}', "title": "Red Shirt", "category": "shirts"}
+    plan = plan_repair(ev, Route("V2T"), row, None, None, None, schema)
+    assert plan.plannable
+    assert plan.patch == {"color": "blue"}
+    assert plan.value_source == "pixel"
+    assert plan.pixel_region == "foreground"
+
+
+def test_pixel_value_refused_when_the_product_was_not_localised(schema):
+    """B4: `center_box` means the estimator could not find a studio ground and
+    measured a fixed box instead, so its 0.9 share is 0.9 of an unknown region.
+    A high share is not a reason to write that value into the catalogue."""
+    ev = {"row_id": "r1", "category": "shirts", "product_id": "r1",
+          "loo_top_field": "color", "pixel_color": "blue", "pixel_color_confidence": 0.9,
+          "pixel_color_region": "center_box", "probes": {"color": {"z": -3.0, "pred": ""}}}
+    row = {"attributes": '{"color": "red"}', "title": "Red Shirt", "category": "shirts"}
+    plan = plan_repair(ev, Route("V2T"), row, None, None, None, schema)
     assert not plan.plannable
