@@ -12,20 +12,33 @@ System colour accuracy **0.364 → 0.406** on more cases (55 → 64), attribute
 accuracy 0.351 → 0.394, repaired 268 → 276. Accuracy and coverage moved
 together because the two estimators agree more often (24.8% → 29.2%).
 
-**Two new items came out of that run, and both outrank what is left of the old
-list:**
+**The run's outcome breakdown opened a new front, and it now outranks the rest
+of the list.** Named rather than coded, because these are the ones that matter:
 
-- **`D14` ⚑ — the dismiss guard cancels the dismiss path.** 1 of 575 clean rows
-  dismissed, 564 escalated. The Sieve flags on probe z ≤ −2.0 and the Arbiter
-  refuses to dismiss while any probe z ≤ −2.0 — the same test on the same
-  quantity — so a probe-flagged row can never be cleared. This sets the
-  system's automation economics and is the first thing a reviewer will compute.
-  Also surfaces the companion number nobody reports: **10 of 575 clean rows
-  (1.7%) were edited**, i.e. made worse.
-- **`B9` — the colour domain cannot describe the corpus.** `multicolour` is 28%
-  of pixel verdicts and 1.7% correct; `orange` is 0/9 (wood). A twelve-value
-  flat domain against a catalogue that says "Espresso". The estimator is right
-  and has nowhere to put the answer.
+- **Clean rows cannot be cleared** (`D14`). 1 dismissal in 575 clean rows; 564
+  went to human review. 98% of clean-but-flagged rows become human work, which
+  is the pipeline's real cost. *First diagnosis was wrong* — the dismiss guard
+  is only 5.5% of the blockage (swept: removing it entirely recovers 1.1% of
+  clean rows). The cause is below.
+- **The title-contradiction flag is a near-anti-signal** (`D15`). It fires on
+  **78% of clean rows** and only 22% of image-swapped ones, and it vetoes
+  **93%** of the clean rows the router already wants to dismiss. Cause: brand
+  names ("Stone & Beam" → material `stone`), titles legitimately listing every
+  colour ("Blue, Grey, Brown"), and material words inside product names
+  ("Sterling Silver"). It is also 1 of the Arbiter's 14 features, so it
+  misinforms routing too.
+- **T2V installs whichever image is most category-typical** (`D16`). 10 of 575
+  clean rows (1.7%) were edited — made worse. The acceptance test asks only
+  whether similarity improved, and a generic wooden chair beats a specific
+  black leather chaise at matching the word "chair". Plus hubness: 304 installs
+  from 114 donors, one image installed on 18 rows.
+- **The colour vocabulary cannot describe the corpus** (`B9`). `multicolour` is
+  28% of pixel verdicts and 1.7% correct; `orange` is 0/9 (wood grain). Same
+  root cause as `D15` seen from the other side: a twelve-value flat domain
+  against a catalogue that writes "Espresso" and "Walnut".
+
+All four are **offline-measurable** — routing, dismissal and the title check are
+decisions over evidence already on disk, needing no GPU and no re-encoding.
 
 `B2` is closed but worth reading before more estimator work: localisation now
 fires on 87% of rows and buys nothing (foreground 27.5% vs center_box 26.9%),

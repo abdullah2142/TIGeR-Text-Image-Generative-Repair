@@ -265,11 +265,19 @@ def route(ev: dict, model: ArbiterModel, cfg: dict) -> Route:
                      f"max p={p_top:.2f} < gamma={gamma}: ambiguous (E4)")
 
     if top == "CLEAN":
-        # safety guard: never dismiss while a strong contrary signal is live
-        # (a confident-but-wrong CLEAN would silently drop a dirty row)
+        # Safety guard: never dismiss while a strong contrary signal is live
+        # (a confident-but-wrong CLEAN would silently drop a dirty row).
+        #
+        # D14: the threshold matters more than it looks. The Sieve flags a row
+        # when a probe z-margin falls to `sieve.probes.z_margin` (2.0, i.e.
+        # z <= -2.0); if this guard uses the same cut, every probe-flagged row
+        # arrives with the guard already tripped and can never be dismissed --
+        # the guard cancels the path it guards. Configurable so the trade can
+        # be swept; the default reproduces the original behaviour exactly.
+        contrary_z = float(acfg.get("dismiss_contrary_z", -2.0))
         probes = ev.get("probes") or {}
         strong_probe = any((probes.get(f) or {}).get("z") is not None
-                           and float(probes[f]["z"]) <= -2.0 for f in probes)
+                           and float(probes[f]["z"]) <= contrary_z for f in probes)
         contrary = (strong_probe or ev.get("title_contradiction")
                     or ev.get("text_out_of_domain"))
         if p_top >= dismiss_thr and not contrary:

@@ -1672,50 +1672,156 @@ the correctly-resolved `dim`) is the only one now.
 
 ---
 
-### D14 ⚑ · The dismiss guard cancels the dismiss path, so clean rows cannot be cleared
+### D14 ⚑ · Clean rows cannot be cleared — 1 dismissal in 575
 **Severity:** High — this sets the pipeline's automation economics
-**Where:** `tiger/arbiter.py::route` (dismiss guard) vs `configs/tiger.yaml` `sieve.probes.z_margin`
-**Found:** 2026-09-13, from the re-run's outcome breakdown
+**Where:** `tiger/arbiter.py::route` (dismiss branch) · `tiger/analyzer.py` (title check)
+**Found:** 2026-09-13 · **diagnosed 2026-09-14, and the first diagnosis was wrong**
 
 Of 575 genuinely clean rows that reached the repair cycle, **1 was dismissed**
-and **564 were escalated to human review**. The dismiss path — the pipeline's
-only way to say "the Sieve was wrong, this row is fine" — is effectively dead.
+and **564 escalated to human review**. The dismiss path — the only way the
+system can say "the Sieve was wrong, this row is fine" — is effectively dead,
+and 98% of clean-but-flagged rows become human work.
 
-The cause is structural, not a threshold that needs nudging. The Sieve flags a
-row when a probe z-margin is **≤ −2.0** (`z_margin: 2.0`). The Arbiter then
-refuses to dismiss while a "strong contrary signal" is live, defined as any
-probe z **≤ −2.0**. *Those are the same test on the same quantity.* Any row that
-reached the Arbiter *because* a probe fired therefore arrives with the guard
-already tripped, and can never be dismissed however confident the router is.
-The guard was written to stop a confident-but-wrong CLEAN from dropping a dirty
-row; as implemented it also stops every correct CLEAN.
+**The first diagnosis (recorded here 2026-09-13) was that the dismiss *guard*
+cancels itself:** the Sieve flags on probe z ≤ −2.0 and the guard refuses to
+dismiss on probe z ≤ −2.0, the same test on the same quantity. That reasoning
+is structurally correct and it is **not** the cause. Swept offline over 13,203
+flagged calibration rows (`tests/bench_dismiss_guard.py`, which needs no GPU —
+dismissal is a pure routing decision over evidence already on disk):
 
-**Consequence for the paper.** The headline cost of the system is not its error
-rate, it is that **98% of clean-but-flagged rows become human review**. A
-reviewer computing throughput will find this immediately, and the current
-framing (γ-gate as principled abstention) does not explain it — this is not the
-γ-gate, it fires before γ is consulted.
+| guard z | dismiss p | clean rows cleared | dirty rows leaked |
+|---|---|---|---|
+| −2.0 (shipped) | 0.80 | 15 (0.3%) | 1 |
+| −3.0 | 0.80 | 63 (1.1%) | 7 |
+| guard off | 0.80 | 65 (1.1%) | 9 |
+| guard off | 0.70 | 170 (3.0%) | 23 |
 
-**Related, and worth reporting alongside:** 10 of those 575 clean rows were
-*edited* (1.7%), i.e. the system made a clean row worse. The regenerated
-qualitative grid contains one — a clean black leather chaise, flagged, routed
-T2V, given a wooden chair. That number is not currently reported anywhere and
-is the natural companion to restoration accuracy.
+Removing the probe guard entirely recovers **1.1%** of clean rows, not most of
+them. Relaxing it to −3.0 gets nearly all of that benefit at precision 0.90, so
+it is worth doing — but it was never the binding constraint, and the earlier
+entry here overstated it.
 
-**Fix directions:**
-1. Make the guard's threshold stricter than the flagging threshold (e.g.
-   dismiss unless z ≤ −3.0), so it catches egregious contrary evidence rather
-   than the same evidence that raised the flag.
-2. Condition the guard on *which* signal flagged the row: a probe-flagged row
-   should not be blocked by that same probe.
-3. Make the guard evidence-relative rather than absolute — block dismissal when
-   the probe disagrees with the *router*, not when it merely fired.
+**The actual cause.** Decomposing the 945 clean rows the router already calls
+CLEAN at p ≥ 0.80:
 
-None of these is safe to pick without measuring; all three are cheap to sweep
-offline against the committed evidence, since dismissal is a routing decision
-and needs no re-encoding.
+| blocked by | n | share |
+|---|---|---|
+| `title_contradiction` | 880 | **93.1%** |
+| probe z ≤ −2.0 | 52 | 5.5% |
+| `text_out_of_domain` | 0 | 0% |
+| nothing — dismissable today | 15 | 1.6% |
+
+The router is *good* at this: it calls 69.9% of clean rows CLEAN, and 945 of
+them confidently. One noisy signal vetoes nearly all of them. See `D15`, which
+is the real defect; this item is the symptom that led to it.
+
+**Fix:** raise the probe guard to z ≤ −3.0 (measured above: 4× the clearances,
+precision 0.90) *and* fix `D15`. Neither alone is sufficient — the probe change
+alone leaves 93% of the blockage in place.
+
+**Status:** TODO — diagnosis complete, `dismiss_contrary_z` is now configurable
+(default −2.0, i.e. unchanged behaviour) so the sweep runs against the real
+routing code rather than a reimplementation of it
+
+---
+
+### D15 ⚑ · The title-contradiction flag fires on brand names, and it fires on clean rows most
+**Severity:** High — a near-anti-signal, and it is both an Arbiter feature and a dismiss veto
+**Where:** `tiger/analyzer.py` title check · feature `title_contradiction`
+**Found:** 2026-09-14, while diagnosing `D14`
+
+Fire rate by ground truth on an ABO calibration seed:
+
+| row is actually | title_contradiction fires |
+|---|---|
+| **clean** | **78.4%** |
+| `mutate_text` (text really is wrong) | 60.1% |
+| `swap_image` (image really is wrong) | 21.9% |
+
+It fires *more often on clean rows than on corrupted ones*. As a detector of
+text faults it is worse than a coin flip weighted the wrong way.
+
+**Why**, from the rows themselves — four distinct causes, none a real fault:
+
+| title | attributes | what the flag "found" |
+|---|---|---|
+| `Stone & Beam Stone Brown Swatch` | `color=gray` | **brand name** — "Stone & Beam" is an Amazon furniture brand; "stone" is a material in Ω |
+| `Rivet Modern Geometric Wool Area Rug, Blue, Grey, Brown` | `color=blue` | **legitimate secondary colours** — the title lists all three, the attribute records the primary |
+| `Platinum-Plated Sterling Silver ... Rings` | `color=white` | **material words in the product name** — "silver" read as a colour contradicting white |
+| `Sterling Silver Genuine Garnet ... Earrings` | `color=red` | **gemstone names** — garnet *is* red; the attribute is right |
+
+`D7` already fixed one class of false title contradictions (`_title_color`
+manufacturing them) on the synthetic catalogue. Real marketing titles are a
+different problem: they contain brand names, stone names, plating descriptions
+and every colour in the product, and any of those collides with a flat domain
+vocabulary.
+
+**This compounds the colour vocabulary gap (`B9`)** — both are the same root
+cause seen from two sides: a twelve-value flat domain applied to a catalogue
+that writes "Stone & Beam", "Walnut" and "Blue, Grey, Brown".
+
+**Fix options, cheapest first:**
+1. **Mask the brand prefix** before the check. ABO titles overwhelmingly start
+   `Amazon Brand – <Brand> …`; that span should never be scanned.
+2. **Require the contradiction to be exclusive**: a title naming *several*
+   domain values of the same field is listing, not contradicting. Only fire
+   when the title names exactly one value and it differs from the attribute.
+3. **Drop the material half of the check**, or restrict it to fields where the
+   title's vocabulary and Ω are the same register. "Sterling Silver" is a
+   product name, not a material claim.
+4. Consider retiring the feature. It is 1 of 14 and currently misinforms both
+   routing and dismissal; measuring routing accuracy with it removed is one
+   offline run.
+
+**Status:** TODO — measured, not yet fixed. Offline-measurable: it needs no
+re-encoding, only re-running the title check over committed evidence.
+
+---
+
+### D16 · T2V installs whichever image is most category-typical, and the verifier approves
+**Severity:** High — it is how a clean row gets damaged
+**Where:** `tiger/verify.py` acceptance test · `tiger/solver.py` candidate retrieval
+**Found:** 2026-09-14, from the regenerated qualitative grid
+
+10 of 575 clean rows (**1.7%**) were edited by the pipeline — made worse. The
+grid contains one: `B000P2068O`, *"Strathwood Aspen Leather Chaise, Brown"*, a
+clean row, whose correct black leather chaise image was replaced with a generic
+wooden chair. Every check passed:
+
+```
+c_before 0.264  ->  c_after 0.341   (delta +0.077, tau 0.225)   accepted
+```
+
+**The mechanism is that the acceptance test has no notion of identity.** It asks
+whether image-text similarity *improved*, and similarity is trivially improved
+by installing a more category-typical photograph: a generic wooden chair matches
+the word "chair" better than this specific chaise matches its own long,
+specific title. A correct-but-atypical image is therefore always beatable.
+
+**Second, related symptom: hub images.** 304 T2V installs drew on only **114
+distinct donors**, and the most popular single image was installed on **18
+different rows**. That is textbook retrieval hubness — a few images sit close to
+many captions in embedding space and win repeatedly. A donor installed 18 times
+is not 18 correct repairs.
+
+**Fix options:**
+1. **Do not let a row whose own similarity is already normal be eligible for
+   image replacement.** `c_before = 0.264` is healthy; the Sieve already
+   computes a per-category `sim_z`, and the verifier ignores it in favour of a
+   global tau. Gate T2V on the row being an outlier *for its category*.
+2. **Penalise hub donors** — cap how often one image may be installed across a
+   run, or divide the retrieval score by the donor's global attractiveness
+   (standard hubness correction).
+3. **Require the improvement to exceed what a category-typical image would give**
+   — i.e. compare against the category centroid, not against the row's own
+   previous score.
+
+Option 1 is the smallest change with the clearest justification, and it
+addresses the clean-row damage directly: a clean row is by definition not a
+similarity outlier.
 
 **Status:** TODO
+
 
 ---
 
