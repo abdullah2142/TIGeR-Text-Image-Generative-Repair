@@ -1393,9 +1393,32 @@ pattern adherence whatever they look like. `honest_limitations.md` §2 and
 and **withdraw the attribution** (that diffusion models drop them), marking the
 cause open pending regeneration.
 
-**Status:** DOING — prompt fixed and pinned, §2/§4 corrected. Only the
-regeneration is left, and it needs a GPU + `diffusers`, not available in this
-checkout.
+**The regeneration needs more than a GPU (checked 2026-09-13).** Earlier notes
+here said the grid just needed compute. It does not — running either notebook
+as-is would not regenerate it, for two independent reasons:
+
+1. **Nothing in the repository builds `qualitative_grid_final.png`.** No Python
+   module writes it and no notebook cell references it. It is a committed PNG
+   (dated 2026-08-26) that predates the pipeline's current shape. The ABO
+   notebook's export cell does `cp -r ... paper_figures /kaggle/working/` and
+   zips that, so the file makes a round trip out of the checkout and back —
+   which is why the copy in `tiger_abo_corrected_d4_check.zip` is **byte-identical**
+   to the committed one despite that run having executed
+   `ablate-repair --generative-fallback`.
+2. **The generated images are thrown away at the end of every run.** SDXL
+   writes to `{sample_dir}/images/generated/{row_id}.jpg` (`solver.py:269`), and
+   the export cell copies `data/outputs`, `data/thresholds`, `data/processed`
+   and `paper_figures` — not `data/sample`. This is the same gap as `E6`'s
+   uncommittable `data/sample/`.
+
+So closing D10 needs, in order: export `data/sample/images/generated/` from the
+notebook; write something that assembles the grid (a `tiger/viz.py` entry point
+would be the natural home — matplotlib is already declared under the `viz`
+extra); then re-run with `--generative-fallback` on a GPU. Only the last step
+needs hardware.
+
+**Status:** DOING — prompt fixed and pinned, §2/§4 corrected. The regeneration
+is blocked on missing plumbing *and* a GPU, not a GPU alone.
 
 ---
 

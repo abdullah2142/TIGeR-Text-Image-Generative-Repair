@@ -15,8 +15,10 @@ decided.** The two open items both need a machine this checkout does not have:
   CLIP baseline (`models.probe_model_name`), but choosing and validating an
   encoder needs a run. Note the claim that `compare_encoders` "already
   supported" this was wrong; see `FIXES.md` B7.
-- `D10` — the T2V prompt is fixed and pinned by tests; regenerating the
-  qualitative grid needs a GPU.
+- `D10` — the T2V prompt is fixed and pinned by tests. Regenerating the
+  qualitative grid needs more than a GPU: **nothing in the repo builds that
+  figure**, and the generated images are not exported from the run that makes
+  them. See `FIXES.md` D10 for the three steps.
 
 And one blocked item moved in the wrong direction:
 
@@ -196,8 +198,9 @@ that half is `E6`'s) · ~~`C6` requirements/pyproject divergence~~ ·
 ~~`D1` `class_weight="balanced"` vs the calibration claim~~ (measured: ECE
 0.026, the weighting is not what sets the calibration — it buys E3 recall
 0.691 vs 0.064) · ~~`D2` document the verifier's asymmetric failure handling~~ ·
-~~`D9`, `D11`–`D13`~~ done · `D10` prompt fixed and pinned, regen needs GPU
-(Kaggle available).
+~~`D9`, `D11`–`D13`~~ done · `D10` prompt fixed and pinned; the regen needs
+plumbing before it needs a GPU (no code builds the grid, and the generated
+images are never exported).
 
 Nothing on this list is still open.
 
