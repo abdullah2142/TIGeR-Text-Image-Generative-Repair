@@ -2,6 +2,42 @@
 
 from pathlib import Path
 
+from tiger import text_views
+
+
+def build_prompt(caption: str, category: str = "", attrs: dict | None = None) -> tuple[str, str]:
+    """Text-to-image prompt for a repaired row. Returns ``(prompt, subject)``.
+
+    D10: colour, material *and* pattern all reach the prompt. Only colour and
+    category used to, while `honest_limitations.md` explained the loss of
+    "striped"/"printed" as diffusion models struggling with fine-grained
+    pattern adherence -- an attribution the code could not support, because the
+    pattern was discarded before generation.
+
+    D8/D9: the category noun comes from `text_views.singular`, the same table
+    the probe and LOO captions use. A local `removesuffix("s")` here meant the
+    generator asked SDXL for a "wall_art" and a "light_fixture" -- underscore
+    tokens, and not nouns -- for exactly the categories D8 added real nouns for.
+
+    Pure and free of the diffusers import, so what the model is actually asked
+    for is testable without a GPU.
+    """
+    attrs = attrs or {}
+    color = str(attrs.get("color", "") or "")
+    material = str(attrs.get("material", "") or "")
+    pattern = str(attrs.get("pattern", "") or "")
+    cat_singular = text_views.singular(category) if category else ""
+
+    descriptors = " ".join(d for d in (color, material) if d)
+    subject = f"{descriptors} {cat_singular}" if descriptors and cat_singular else caption
+    if pattern and pattern != "solid" and cat_singular:
+        subject = f"{subject} with a {pattern} pattern"
+
+    prompt = (f"Professional studio product photo of a single {subject}, "
+              f"perfectly centered on a pure bright white background, studio lighting")
+    return prompt, subject
+
+
 class StableDiffusionGenerator:
     def __init__(self, device: str = "cuda", model_id: str = "stabilityai/sdxl-turbo"):
         try:
@@ -43,20 +79,8 @@ class StableDiffusionGenerator:
     def generate(self, caption: str, out_path: Path, category: str = "", attrs: dict = None) -> Path:
         """Generate a product image matching the caption and attributes, and save to out_path."""
         import torch
-        attrs = attrs or {}
-        
-        color = attrs.get("color", "")
-        material = attrs.get("material", "")
-        pattern = attrs.get("pattern", "")
-        cat_singular = category.removesuffix("s") if category else ""
 
-        # SDXL understands natural language much better, so we just construct a clear sentence
-        descriptors = " ".join(d for d in (color, material) if d)
-        subject = f"{descriptors} {cat_singular}" if descriptors and cat_singular else caption
-        if pattern and pattern != "solid" and cat_singular:
-            subject = f"{subject} with a {pattern} pattern"
-        
-        prompt = f"Professional studio product photo of a single {subject}, perfectly centered on a pure bright white background, studio lighting"
+        prompt, subject = build_prompt(caption, category, attrs)
         print(f"[Generative Fallback] Synthesizing (SDXL-Turbo): '{subject}'")
         
         generator = torch.Generator(device=self.device).manual_seed(self.seed)

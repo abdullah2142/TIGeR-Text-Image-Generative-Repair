@@ -366,7 +366,41 @@ draws a flat-fill polygon on a 238–250 grey ground: no skin, no models. The
 Fashion and ABO datasets are not in the repo (C5/E6). Changing the estimator with
 no data that exercises the failure is editing blind.
 
-**Status:** BLOCKED on fashion imagery specifically — ABO is available but is the wrong corpus for a skin-tone effect
+**Two updates from the B2 work (2026-09-13), both of which make this worse
+rather than better:**
+
+**1. B2's localisation increases the exposure.** The old central 70% box on a
+full-body model shot mostly sampled the torso, i.e. the garment. The
+background flood keeps *everything* the studio ground cannot reach — arms,
+legs and face included. On fashion imagery the new estimator therefore samples
+strictly more skin than the one this defect was written against. It changes
+nothing today (no fashion vertical), but the severity is higher than recorded
+if fashion ever returns.
+
+**2. The stated fix cannot be applied unconditionally — it would delete
+wooden furniture.** "Mask hue 5–35° with bounded saturation/value" is the
+standard recipe, and on this corpus that range is *wood*:
+
+| | hue | s | v |
+|---|---|---|---|
+| light skin | 35.7° | 0.48 | 0.95 |
+| mid skin | 33.8° | 0.53 | 0.88 |
+| deep skin | 28.0° | 0.74 | 0.55 |
+| oak | 32.8° | 0.45 | 0.76 |
+| walnut | 30.0° | 0.67 | 0.40 |
+| synthgen `brown` | 26.5° | 0.62 | 0.49 |
+
+They are not merely adjacent, they interleave. A skin mask on the ABO
+furnishing vertical would remove the product from wooden chairs, tables and
+stools — the categories where `material` coverage is best and where B2's
+localisation just started paying off. So the fix has to be category-conditional
+(apply on apparel worn by a model, never on furniture), which makes it a larger
+change than "mask and renormalise", and it still cannot be validated without
+the imagery.
+
+**Status:** BLOCKED on fashion imagery specifically — ABO is available but is
+the wrong corpus for a skin-tone effect, and is actively the wrong corpus to
+apply the fix to
 
 ---
 
@@ -1329,11 +1363,33 @@ support.
 **Fix:** include pattern and material in the prompt, regenerate the qualitative
 grid, and re-assess whether the limitation survives. Correct §2 and §4 either way.
 
-**Status:** DOING — `tiger/generator.py` now includes `material` and appends a
-`pattern` clause to the prompt (previously color+category only). Regenerating
-the qualitative grid and re-assessing `honest_limitations.md` §2 /
-`paper_draft_materials.md` §4 needs a GPU + `diffusers`, not available in this
-checkout — still pending.
+**Update (2026-09-13): a second defect in the same four lines, and the fix is
+now testable without a GPU.**
+
+The prompt was also building its category noun with a local
+`category.removesuffix("s")`. `D8` exists because that class of singularisation
+produces non-nouns and underscore tokens for the ABO categories, and `D8` gave
+every category a real noun in `text_views.CATEGORY_SINGULAR` — but only the
+caption/probe/LOO views were moved onto it. The generator kept its own copy, so
+the T2V fallback was asking SDXL for a **"blue wall_art"** and a **"brass
+light_fixture"**. Those are two of the categories `D8` added nouns *for*, and
+the generative fallback is what produces the qualitative grid this item is
+about re-generating. Now `text_views.singular()`, the same table.
+
+Prompt construction is extracted into `generator.build_prompt(caption,
+category, attrs)`, a pure function with no `diffusers` import, so what the
+model is actually asked for can be pinned without a GPU. Five tests in
+`tests/test_generator_prompt.py`: material and pattern reach the prompt,
+`solid` is not described as a pattern, the category noun comes from the shared
+table, and the caption fallback still works. There were no tests on this path
+at all before, which is how a `removesuffix` survived `D8` and `D9`.
+
+**Status:** DOING — the prompt is now correct *and* pinned (colour, material,
+pattern, and a real category noun). Regenerating the qualitative grid and
+re-assessing `honest_limitations.md` §2 / `paper_draft_materials.md` §4 still
+needs a GPU + `diffusers`, not available in this checkout. Note when it is
+re-run: the previous grid was generated with both defects live, so it is
+evidence about neither SDXL's pattern adherence nor this pipeline's.
 
 ---
 
