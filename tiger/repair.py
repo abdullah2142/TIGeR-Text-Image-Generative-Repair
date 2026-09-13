@@ -29,6 +29,7 @@ import numpy as np
 import pandas as pd
 
 from tiger import analyzer as analyzer_mod
+from tiger import encoders as encoders_mod
 from tiger import arbiter as arbiter_mod
 from tiger import sieve as sieve_mod
 from tiger import solver as solver_mod
@@ -88,7 +89,9 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
         oc.log.append(entry)
 
     for pass_i in range(1, max_passes + 1):
-        sig, arrays = sieve_mod.compute_signals(working, encoder, schema, cfg, root)
+        sig, arrays = sieve_mod.compute_signals(
+            working, encoder, schema, cfg, root,
+            probe_encoder=encoders_mod.probe_encoder_from_cfg(cfg, root))
         flagged = sieve_mod.apply_thresholds(sig, thr, fusion=fusion)
         _promote_clean_pending(outcomes, flagged)
 
@@ -234,7 +237,9 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
     # would fall into the "still pending after the cap" bucket below and be
     # wrongly marked unrepaired despite having been successfully fixed.
     if any(oc.final_status == "pending" for oc in outcomes.values()):
-        sig, _ = sieve_mod.compute_signals(working, encoder, schema, cfg, root)
+        sig, _ = sieve_mod.compute_signals(
+            working, encoder, schema, cfg, root,
+            probe_encoder=encoders_mod.probe_encoder_from_cfg(cfg, root))
         _promote_clean_pending(outcomes, sieve_mod.apply_thresholds(sig, thr, fusion=fusion))
 
     # anything still flagged-and-unresolved after the cap -> human

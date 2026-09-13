@@ -14,6 +14,12 @@ data:
 
 models:
   clip_model_name: "openai/clip-vit-base-patch32"   # reported baseline (do not change)
+  # B7: run the per-field probes on a different encoder from the similarity
+  # path. Empty = share `clip_model_name` (the shipped configuration, and the
+  # one every reported number was produced with). Setting it changes only the
+  # probes, at the cost of a second pass over the images. See FIXES.md B7 for
+  # what is and is not known to work here.
+  probe_model_name: ""
   device: "cpu"
   batch_size: 32
   # candidate encoders for the upgrade-path comparison (roadmap 3.3) and the

@@ -184,3 +184,37 @@ class ClipEncoder:
             else:
                 ok[i] = False
         return out, ok
+
+
+# ---------------------------------------------------------------------------
+# probe encoder (B7)
+# ---------------------------------------------------------------------------
+
+_PROBE_ENCODERS: dict[tuple, "ClipEncoder"] = {}
+
+
+def probe_encoder_from_cfg(cfg: dict, root: str | Path) -> "ClipEncoder | None":
+    """The encoder the per-field probes should use, or None to share the main one.
+
+    `models.probe_model_name` is empty in the shipped config, which is what
+    every reported number was produced with. Setting it moves *only* the
+    contrastive probes onto another encoder -- the attribute-binding task ARO
+    measures CLIP at 62% on -- while sim_full, the swap check and the LOO
+    deltas stay on `clip_model_name`, the reported baseline. It costs one extra
+    pass over the images.
+
+    Resolved from config rather than threaded through every call site: the
+    sieve, the repair cycle's re-diagnosis passes and the ablations must all
+    probe with the same encoder or the numbers stop meaning one thing.
+    Instances are memoised so the model is loaded once per process.
+    """
+    m = cfg.get("models", {})
+    name = str(m.get("probe_model_name", "") or "").strip()
+    if not name or name == m.get("clip_model_name"):
+        return None
+    cache_dir = Path(root) / cfg["data"]["cache_dir"]
+    key = (name, m.get("device", "cpu"), int(m.get("batch_size", 32)), str(cache_dir))
+    if key not in _PROBE_ENCODERS:
+        _PROBE_ENCODERS[key] = ClipEncoder(name, device=key[1], batch_size=key[2],
+                                           cache_dir=cache_dir)
+    return _PROBE_ENCODERS[key]

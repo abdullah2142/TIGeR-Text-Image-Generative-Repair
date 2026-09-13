@@ -711,7 +711,57 @@ prompt-ensembled, normalised at `tiger/sieve.py:128`) — the encoder is the lim
    embeddings, which recovers cross-modal binding **from the existing embedding
    cache** with no re-encoding and no retraining.
 
-**Status:** TODO
+**"`compare_encoders` already supports it" was wrong (checked 2026-09-13).**
+`compare-encoders` scores candidate encoders offline on per-field probe
+accuracy (`tiger/eval/encoder_compare.py`) and prints a table. It never touched
+the live pipeline. In the pipeline there was exactly one encoder —
+`_encoder(cfg)` built from `models.clip_model_name` — and `sieve.compute_signals`
+used that same object for `sim_full`, the title view, the swap check *and* the
+per-field probes. There was no swap to perform: changing the probe encoder
+meant changing the reported CLIP baseline for every other signal at the same
+time, which is not what B7 asks for.
+
+**Option 1 is now actually available.** `models.probe_model_name` (empty by
+default, so nothing changes for any existing configuration) puts the probes on
+their own encoder while `sim_full`, the swap check and the LOO deltas stay on
+`clip_model_name`. The probes then get a second image-embedding pass from the
+probe encoder — necessarily, since an image and a caption can only be compared
+inside one embedding space. The embedding cache is already keyed per model
+name, so the two do not collide.
+
+Resolution lives in one place, `encoders.probe_encoder_from_cfg(cfg, root)`,
+memoised per process, and is used by the sieve, by the repair cycle's
+re-diagnosis passes (`repair.py` runs `compute_signals` itself, twice) and
+therefore by the ablations. Threading it through call sites instead was tried
+first and immediately produced the bug it invites: detection probing with one
+encoder and re-diagnosis with another. They must agree or the numbers stop
+meaning one thing.
+
+**What is not done, and what is not known:**
+- **No encoder has actually been swapped.** This is wiring, not a result. The
+  swap needs a run, and `torch`/`transformers` are not installed in this
+  checkout (nor is there a GPU) — the mechanism is unit-tested with encoder
+  doubles, not with a real second model.
+- **BLIP specifically may not drop in.** `ClipEncoder` calls
+  `AutoModel.get_text_features` / `get_image_features`, the dual-encoder API.
+  That holds for CLIP and SigLIP (both already in `compare_encoders`). BLIP's
+  retrieval model is an image-text-matching architecture with a different
+  interface, and XVLM is not in `transformers` at all. Either will need an
+  encoder adapter behind the same two methods. **Unverified** — stated from the
+  interface `ClipEncoder` requires, not from having loaded them.
+- Option 2 (the Koishigarina text-embedding transform) is untouched. It remains
+  the cheaper path precisely because it needs no re-encoding.
+- The probe z-thresholds are calibrated per encoder, so a swap requires
+  re-running `calibrate` before `detect`. Nothing enforces that yet.
+
+Tests: `tests/test_probe_encoder_split.py` — the probe encoder decides
+`probe_*_pred` while the primary still decides `sim_full`; a probe encoder that
+cannot read an image drops that row from the probes without marking the row's
+image missing; and the resolver returns `None` unless a genuinely different
+model is named.
+
+**Status:** DOING — option 1 is wired and tested, and the "already supported"
+claim is corrected. Choosing and validating an encoder needs a run.
 
 ---
 

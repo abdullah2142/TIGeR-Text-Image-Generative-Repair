@@ -68,12 +68,17 @@ class SieveThresholds:
 # ---------------------------------------------------------------------------
 
 def compute_signals(df: pd.DataFrame, encoder: ClipEncoder, schema: Schema,
-                    cfg: dict, root: Path) -> tuple[pd.DataFrame, dict]:
+                    cfg: dict, root: Path,
+                    probe_encoder: ClipEncoder | None = None) -> tuple[pd.DataFrame, dict]:
     """Compute similarity + probe signal columns.
 
     Returns (df_copy, arrays) where arrays holds image_emb, caption_emb and
     image_ok aligned to df_copy's positional index (kept out of the DataFrame
     so it stays parquet-serialisable).
+
+    `probe_encoder` runs the per-field contrastive probes on a different
+    encoder from the similarity path (B7). Default None: one encoder, and the
+    behaviour is bit-identical to before the parameter existed.
     """
     df = df.reset_index(drop=True).copy()
     probes_cfg = cfg.get("sieve", {}).get("probes", {})
@@ -91,19 +96,37 @@ def compute_signals(df: pd.DataFrame, encoder: ClipEncoder, schema: Schema,
 
     # ---------- embeddings ----------
     img_paths = [str((root / p).resolve()) if p else "" for p in df["image_path"].astype(str)]
-    image_emb = np.zeros((len(df), 1), dtype=np.float32)
-    ok = np.zeros(len(df), dtype=bool)
     valid_paths = [p if p and Path(p).exists() else "" for p in img_paths]
-    to_encode = [p for p in valid_paths if p]
-    if to_encode:
-        emb_all, ok_all = encoder.encode_images(to_encode)
-        image_emb = np.zeros((len(df), emb_all.shape[1]), dtype=np.float32)
-        j = 0
-        for i, p in enumerate(valid_paths):
-            if p:
-                image_emb[i] = emb_all[j]
-                ok[i] = ok_all[j]
-                j += 1
+
+    def _encode_images(enc) -> tuple[np.ndarray, np.ndarray]:
+        emb = np.zeros((len(df), 1), dtype=np.float32)
+        good = np.zeros(len(df), dtype=bool)
+        to_encode = [p for p in valid_paths if p]
+        if to_encode:
+            emb_all, ok_all = enc.encode_images(to_encode)
+            emb = np.zeros((len(df), emb_all.shape[1]), dtype=np.float32)
+            j = 0
+            for i, p in enumerate(valid_paths):
+                if p:
+                    emb[i] = emb_all[j]
+                    good[i] = ok_all[j]
+                    j += 1
+        return emb, good
+
+    image_emb, ok = _encode_images(encoder)
+
+    # B7: the probes may run on a different encoder from the similarity path.
+    # CLIP is measured at 62% on ARO attribute binding against BLIP's 88%, and
+    # the probes are the attribute-centric part of the pipeline -- but sim_full,
+    # the swap check and the LOO deltas are the *reported* CLIP baseline and
+    # must not move. Two encoders means encoding the images twice; that is the
+    # cost of changing one signal without changing the others. Same encoder by
+    # default, in which case nothing here runs at all.
+    if probe_encoder is not None:
+        probe_image_emb, probe_ok = _encode_images(probe_encoder)
+        probe_ok &= ok
+    else:
+        probe_image_emb, probe_ok = image_emb, ok
 
     df["is_image_missing"] = df.get("is_image_missing", False)
     df["is_image_missing"] = df["is_image_missing"].astype(bool) | ~ok
@@ -132,16 +155,16 @@ def compute_signals(df: pd.DataFrame, encoder: ClipEncoder, schema: Schema,
             cand_embs = []
             for v in domain:
                 templates = text_views.field_caption_templates(cat, fld, v)
-                e = encoder.encode_texts(templates).mean(axis=0)
+                e = (probe_encoder or encoder).encode_texts(templates).mean(axis=0)
                 e = e / (np.linalg.norm(e) + 1e-12)
                 cand_embs.append(e)
             cand = np.stack(cand_embs)  # (K, D)
 
-            m = (df["category"].astype(str) == cat) & ok
+            m = (df["category"].astype(str) == cat) & probe_ok
             idxs = df.index[m].tolist()
             if not idxs:
                 continue
-            scores = image_emb[idxs] @ cand.T  # (n, K)
+            scores = probe_image_emb[idxs] @ cand.T  # (n, K)
             for pos, i in enumerate(idxs):
                 declared = schema.normalize(fld, attrs_list[i].get(fld, "")) if attrs_list[i].get(fld) else ""
                 pred_j = int(np.argmax(scores[pos]))
@@ -166,6 +189,8 @@ def compute_signals(df: pd.DataFrame, encoder: ClipEncoder, schema: Schema,
     df["flag_title_contradiction"] = contra
 
     encoder.save_cache()
+    if probe_encoder is not None:
+        probe_encoder.save_cache()
     arrays = {"image_emb": image_emb, "caption_emb": cap_emb, "image_ok": ok}
     return df, arrays
 

@@ -38,7 +38,7 @@ from tiger.data import noise as noise_mod
 from tiger.data import synthgen
 from tiger.data import fashion_import
 from tiger.data import import_abo as abo_import
-from tiger.encoders import ClipEncoder
+from tiger.encoders import ClipEncoder, probe_encoder_from_cfg
 from tiger.eval import detection as det_eval
 from tiger.schema import load_schema
 
@@ -83,6 +83,13 @@ def _encoder(cfg: dict) -> ClipEncoder:
     return ClipEncoder(m["clip_model_name"], device=m.get("device", "cpu"),
                        batch_size=int(m.get("batch_size", 32)),
                        cache_dir=_paths(cfg)["cache"])
+
+
+def _probe_encoder(cfg: dict):
+    """B7: the probes' encoder, or None to share the main one. See
+    `encoders.probe_encoder_from_cfg` -- resolved from config in one place so
+    the sieve, the repair cycle and the ablations cannot disagree about it."""
+    return probe_encoder_from_cfg(cfg, ROOT)
 
 
 def cmd_synthgen(cfg: dict, args) -> None:
@@ -176,7 +183,8 @@ def cmd_calibrate(cfg: dict, args) -> None:
     cal = df[df["split"] == "calibration"].reset_index(drop=True)
 
     enc = _encoder(cfg)
-    sig, arrays = sieve_mod.compute_signals(cal, enc, schema, cfg, ROOT)
+    sig, arrays = sieve_mod.compute_signals(cal, enc, schema, cfg, ROOT,
+                                            probe_encoder=_probe_encoder(cfg))
     thr = sieve_mod.calibrate(sig, cfg, schema)
 
     out = ROOT / "data/thresholds/tiger_locked_thresholds.json"
@@ -213,7 +221,8 @@ def cmd_detect(cfg: dict, args) -> None:
 
     enc = _encoder(cfg)
     fusion = _load_fusion(getattr(args, "fusion", False))
-    sig, arrays = sieve_mod.compute_signals(noisy, enc, schema, cfg, ROOT)
+    sig, arrays = sieve_mod.compute_signals(noisy, enc, schema, cfg, ROOT,
+                                            probe_encoder=_probe_encoder(cfg))
     flagged = sieve_mod.apply_thresholds(sig, thr, fusion=fusion)
 
     import numpy as np
@@ -636,7 +645,8 @@ def cmd_repair(cfg: dict, args) -> None:
         print(f"\n[Audit] Color Text Restoration (vs secret ground truth): {v2t_correct}/{v2t_total} ({v2t_correct/v2t_total:.1%})")
 
     # before/after re-flag context (reported, NOT the acceptance criterion -- F7)
-    sig_a, _ = sieve_mod.compute_signals(repaired, enc, schema, cfg, ROOT)
+    sig_a, _ = sieve_mod.compute_signals(repaired, enc, schema, cfg, ROOT,
+                                         probe_encoder=_probe_encoder(cfg))
     flg_a = sieve_mod.apply_thresholds(sig_a, thr, fusion=_load_fusion(getattr(args, "fusion", False)))
     still_flagged = int(flg_a['flagged'].sum())
     
