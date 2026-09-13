@@ -3,36 +3,35 @@
 Forward plan. The defect detail lives in `FIXES.md`; this is the ordering and
 the critical path. Written 2026-09-10, after the measurement-harness pass.
 
-**State (updated 2026-09-13, second pass):** 48 items done, 2 open, 0 parked,
-1 blocked, 1 withdrawn, 1 discarded (53 total — 52 plus `B8`, found while
-measuring `B2`). Phase 3 (Section B, repair accuracy) and the housekeeping list
-are now closed apart from what needs compute. 203 tests passing.
+**State (updated 2026-09-13, after the corrected-estimator run):** the original
+52-item backlog is closed apart from `B7` (wired, no encoder chosen) and `B1`
+(blocked on fashion imagery). 212 tests passing.
 
-**Everything decidable from code or from the data in this repository is
-decided.** The two open items both need a machine this checkout does not have:
+The 2026-09-13 ABO run is the first with the rebuilt colour estimator: Full
+System colour accuracy **0.364 → 0.406** on more cases (55 → 64), attribute
+accuracy 0.351 → 0.394, repaired 268 → 276. Accuracy and coverage moved
+together because the two estimators agree more often (24.8% → 29.2%).
 
-- `B7` — the probe encoder can now be swapped independently of the reported
-  CLIP baseline (`models.probe_model_name`), but choosing and validating an
-  encoder needs a run. Note the claim that `compare_encoders` "already
-  supported" this was wrong; see `FIXES.md` B7.
-- `D10` — the T2V prompt is fixed and pinned by tests. Regenerating the
-  qualitative grid needs more than a GPU: **nothing in the repo builds that
-  figure**, and the generated images are not exported from the run that makes
-  them. See `FIXES.md` D10 for the three steps.
+**Two new items came out of that run, and both outrank what is left of the old
+list:**
 
-And one blocked item moved in the wrong direction:
+- **`D14` ⚑ — the dismiss guard cancels the dismiss path.** 1 of 575 clean rows
+  dismissed, 564 escalated. The Sieve flags on probe z ≤ −2.0 and the Arbiter
+  refuses to dismiss while any probe z ≤ −2.0 — the same test on the same
+  quantity — so a probe-flagged row can never be cleared. This sets the
+  system's automation economics and is the first thing a reviewer will compute.
+  Also surfaces the companion number nobody reports: **10 of 575 clean rows
+  (1.7%) were edited**, i.e. made worse.
+- **`B9` — the colour domain cannot describe the corpus.** `multicolour` is 28%
+  of pixel verdicts and 1.7% correct; `orange` is 0/9 (wood). A twelve-value
+  flat domain against a catalogue that says "Espresso". The estimator is right
+  and has nowhere to put the answer.
 
-- `B1`, and got worse: B2's localisation samples *more* skin on
-  model shots than the old centre box did, and the standard skin mask would
-  delete wooden furniture on ABO (skin and oak occupy the same hue band). See
-  `FIXES.md` B1.
-
-**One thing to carry into the next run.** The V2T pixel estimator was reading
-the studio ground, not the product: `gray`, `multicolour` and `white` were 73%
-of its output on a furniture catalogue, scoring 37.1% / 1.7% / 13.8%. That is
-now fixed (B2/B3/B5/B8), but every repair-side number in `paper_assets/` was
-produced before it. **The ABO repair numbers need re-running**, and the
-estimator-attribution report is the place to look first.
+`B2` is closed but worth reading before more estimator work: localisation now
+fires on 87% of rows and buys nothing (foreground 27.5% vs center_box 26.9%),
+because ABO product shots are already centred. The pixel path is not where the
+remaining accuracy is — the probe scores 38.7% against its 27.3%, which makes
+`B7` the higher-leverage lever.
 
 ---
 

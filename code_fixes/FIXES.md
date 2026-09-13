@@ -910,6 +910,41 @@ measuring something else.
 
 ---
 
+### B9 · The colour domain cannot describe the corpus, so 28% of estimates are "multicolour"
+**Severity:** High — now the largest single bucket of estimator error
+**Where:** `configs/schema.yaml` colour domain (12 values) · `tiger/colors.py` `MULTI_DOMINANCE_MIN`
+**Found:** 2026-09-13, while sizing B2 on the re-run
+
+With localisation fixed, `multicolour` is the pixel estimator's most common
+verdict — **58 of 209** scored rows (28%) — and it is correct **1.7%** of the
+time. `orange` is 0/9 (wood grain read as orange). Together that is a third of
+the pixel path's output, almost none of it usable.
+
+This is not a vision failure. The estimator is right that no single colour
+dominates a patterned rug or a wood grain; it has nowhere to put that answer,
+because the schema offers twelve flat colour names and the catalogue's declared
+values are things like "Dark Brown" and "Espresso". `multicolour` is
+simultaneously a legal domain value *and* the estimator's way of saying "I
+decline", and those two meanings are not distinguishable downstream.
+
+**Options, cheapest first:**
+1. Separate the two meanings: return `undetermined` (abstain, never written)
+   rather than `multicolour` (a real declared value). The B6 machinery already
+   escalates rows it cannot resolve; this lets it fire for the right reason.
+2. Extend the domain with the neutral/wood family the corpus actually uses
+   (beige, tan, natural, espresso) and map them in `surface_forms`. Changes the
+   schema, so it changes every probe and every LOO delta — needs a full re-run.
+3. Report colour as a distribution rather than a label, and score the repair on
+   whether the declared value is in the top-2. `ColorEstimate.top2` already
+   carries this; nothing consumes it.
+
+Option 1 is a contained change and would move the honest numbers immediately,
+because a row that currently commits a wrong `multicolour` would escalate.
+
+**Status:** TODO
+
+---
+
 ## C. Configuration & reproducibility
 
 ### C1 · γ has four different values across the repo
@@ -1634,6 +1669,53 @@ later, with a comment already admitting it (`# simpler: resolve dim lazily below
 
 **Status:** DONE — removed; the real `out` allocation thirty lines down (using
 the correctly-resolved `dim`) is the only one now.
+
+---
+
+### D14 ⚑ · The dismiss guard cancels the dismiss path, so clean rows cannot be cleared
+**Severity:** High — this sets the pipeline's automation economics
+**Where:** `tiger/arbiter.py::route` (dismiss guard) vs `configs/tiger.yaml` `sieve.probes.z_margin`
+**Found:** 2026-09-13, from the re-run's outcome breakdown
+
+Of 575 genuinely clean rows that reached the repair cycle, **1 was dismissed**
+and **564 were escalated to human review**. The dismiss path — the pipeline's
+only way to say "the Sieve was wrong, this row is fine" — is effectively dead.
+
+The cause is structural, not a threshold that needs nudging. The Sieve flags a
+row when a probe z-margin is **≤ −2.0** (`z_margin: 2.0`). The Arbiter then
+refuses to dismiss while a "strong contrary signal" is live, defined as any
+probe z **≤ −2.0**. *Those are the same test on the same quantity.* Any row that
+reached the Arbiter *because* a probe fired therefore arrives with the guard
+already tripped, and can never be dismissed however confident the router is.
+The guard was written to stop a confident-but-wrong CLEAN from dropping a dirty
+row; as implemented it also stops every correct CLEAN.
+
+**Consequence for the paper.** The headline cost of the system is not its error
+rate, it is that **98% of clean-but-flagged rows become human review**. A
+reviewer computing throughput will find this immediately, and the current
+framing (γ-gate as principled abstention) does not explain it — this is not the
+γ-gate, it fires before γ is consulted.
+
+**Related, and worth reporting alongside:** 10 of those 575 clean rows were
+*edited* (1.7%), i.e. the system made a clean row worse. The regenerated
+qualitative grid contains one — a clean black leather chaise, flagged, routed
+T2V, given a wooden chair. That number is not currently reported anywhere and
+is the natural companion to restoration accuracy.
+
+**Fix directions:**
+1. Make the guard's threshold stricter than the flagging threshold (e.g.
+   dismiss unless z ≤ −3.0), so it catches egregious contrary evidence rather
+   than the same evidence that raised the flag.
+2. Condition the guard on *which* signal flagged the row: a probe-flagged row
+   should not be blocked by that same probe.
+3. Make the guard evidence-relative rather than absolute — block dismissal when
+   the probe disagrees with the *router*, not when it merely fired.
+
+None of these is safe to pick without measuring; all three are cheap to sweep
+offline against the committed evidence, since dismissal is a routing decision
+and needs no re-encoding.
+
+**Status:** TODO
 
 ---
 
