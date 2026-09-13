@@ -399,7 +399,56 @@ subject is not reliably centred or frame-filling -- a chair, a phone case and a
 rug occupy very different regions. The fixed central 70% box is exactly the wrong
 assumption for that corpus, and 398k images are available to measure it against.
 
-**Status:** UNBLOCKED — measurable on `data/raw/abo/`
+**Correction (2026-09-13): `data/raw/abo/` is gone from this machine.** The raw
+release was deleted after the Kaggle runs (the notebook itself does
+`rm -rf /kaggle/working/abo` to free 6 GB, and the local copy went the same
+way). ABO images now live only on Kaggle. Sizing on real photography therefore
+needs a re-run; the fix itself does not.
+
+**Fix implemented (option 2, background removal).** `tiger/colors.py` now
+localises the product by connectivity instead of by position: the studio ground
+is flooded inward from the image border and what the flood cannot reach is the
+product. The growth tolerance is derived from the border's *own* spread
+(`3 × median border distance`, clamped to 0.04–0.18) so a flat ground stays
+tight enough not to cross a low-contrast product edge, while a graduated ground
+is still absorbed whole. Three outcomes, all recorded on the estimate as
+`region` for later attribution:
+
+- `foreground` — a ground was found and something survived it (the normal case).
+- `center_box` — the border is not a uniform ground (lifestyle/in-context shot);
+  the old central 70% box is used, because a flood would run into the scene.
+- `flooded` — the flood reached everything, which means product and ground are
+  the same colour (a white product on white); the whole frame is measured, and
+  that colour is the answer.
+
+**Measured, on synthgen (the corpus that exists locally).** 480 solid-colour
+renders, 11 colours, 4 categories, seed 20260913:
+
+| corpus | old | new |
+|---|---|---|
+| synthgen as rendered | 68.3% | **97.1%** |
+| geometry-perturbed (product cropped out, pasted at a random position/scale onto a random-aspect canvas) | 22.5% | **90.0%** |
+
+The first row is the honest surprise. synthgen centres every shape at 36–44%
+scale, so the central box was supposed to be *correct by construction* — and
+the old estimator still only scored 68.3%, because the box is 70% of the frame
+while the product is under half of it, so the studio ground outvoted the product
+and the answer came back `multicolour`. That is the same failure the real ABO
+run shows: `multicolour` was the pixel estimator's second most common output
+(58/205 rows) and was correct **1.7%** of the time.
+
+The second row is B2 proper. Note that neither number is an estimate of ABO
+accuracy — the perturbation was built to contain the failure mode. What they
+establish is the mechanism and the direction.
+
+Regression tests: `test_offcentre_product_is_localised`,
+`test_bottom_band_product_is_localised`,
+`test_localisation_ignores_background_gradient` and
+`test_lifestyle_shot_falls_back_to_centre_box` (the guard: no uniform ground
+means no flood). All four return the wrong colour on the pre-fix estimator.
+
+**Status:** DONE — mechanism fixed and pinned; magnitude on real photography
+still wants a Kaggle re-run
 
 ---
 
@@ -416,7 +465,25 @@ brittle at exactly the common case.
 the border?) rather than a global proportion threshold. Fall back to the
 proportion rule only when the mask is unavailable.
 
-**Status:** TODO
+**Fix implemented, exactly as stated** — and it costs nothing extra, because
+B2's flood already answers "is this white connected to the border?". When the
+flood ran (`region` is `foreground` or `flooded`), background white is already
+out of the sample and any white left is on the product, so the 85% rule is not
+applied at all. The proportion rule survives only on the `center_box` fallback,
+where white background genuinely does still leak into the sample.
+
+The white-on-white case that has no spatial answer is handled by `flooded`:
+if the flood reaches everything, product and ground are the same colour, so
+measuring the whole frame returns it. That is strictly better than the old
+behaviour, which fell through to whatever shadow noise ranked second.
+
+Regression test: `test_white_product_survives_the_shadow_that_used_to_outvote_it`
+— a white product with a grey shadow skirt at 79% white inside the old central
+box. Pre-fix the 85% rule discounted the white and returned `gray`; post-fix it
+returns `white`. Plus `test_white_product_on_white_ground_is_still_white`, which
+pins the `flooded` path.
+
+**Status:** DONE
 
 ---
 
@@ -458,7 +525,36 @@ missed; not in the repo is not the same as not available.
 21–2871 px), so `resize((size, size))` distorts nearly two thirds of the corpus
 before the centre crop is taken. This compounds B2 on the same data.
 
-**Status:** UNBLOCKED — measurable on `data/raw/abo/`
+**The stated mechanism was wrong, and this matters for how B5 is written up.**
+"Shifts which body region lands in the centre box" does not follow: a square
+resize is a uniform rescale of each axis, so the central 15–85% box covers the
+same *fractional* region of the original image either way. Squashing a 1:3
+image does not move the product out of the box. Measured rather than argued: on
+200 centred products in frames from 1:2.9 to 2.9:1, the square-resize estimator
+and an aspect-preserving one restricted to the same central box agree on
+**194/200**. The six disagreements are resampling artefacts (below), not the
+product leaving the box.
+
+What the square resize actually costs:
+1. **It destroys shape**, which is invisible to a positional crop but not to
+   B2's flood: connectivity, the border frame's width, and the geometry of the
+   product edge are all computed on distorted pixels once localisation exists.
+   A 1:3 product came out 1:1 before it was ever localised.
+2. **Asymmetric resampling.** On a 2871×500 image the long axis is downsampled
+   30× while the short axis is upsampled 5×, so thin features survive on one
+   axis and vanish on the other, and colour proportions shift with the aspect
+   ratio rather than with the product.
+
+**Fix implemented:** `_load_rgb` scales the long edge to `size` and lets the
+short edge follow, so nothing is distorted. Everything downstream (border
+frame, flood, centre-box fallback) works on the true shape.
+
+Regression tests: `test_resize_preserves_aspect_ratio` (a 160×480 image loads
+as 32×96, not 96×96) and `test_tall_product_keeps_its_shape_through_the_estimator`
+(a 1:3 bar in a 1:3 frame is localised as a 1:3 region — it measured 1:1 before).
+
+**Status:** DONE — severity confirmed Low on its own; it is load-bearing only
+because B2's localisation is geometric
 
 ---
 
@@ -532,6 +628,44 @@ prompt-ensembled, normalised at `tiger/sieve.py:128`) — the encoder is the lim
    cache** with no re-encoding and no retraining.
 
 **Status:** TODO
+
+---
+
+### B8 · Saturation is unreliable at the dark end, so black products are hue-binned
+**Severity:** High — found while measuring B2/B5 (2026-09-13), not previously listed
+**Where:** `tiger/colors.py` — the achromatic/chromatic split
+
+Saturation is `(max − min) / max`. The denominator is the pixel's own value, so
+on a near-black pixel a difference of a few RGB levels is a large saturation:
+`(20, 22, 35)` scores `s = 0.43` and sails past `ACHROMATIC_SAT_MAX = 0.18` into
+the hue binner, which calls it **blue**. `(18, 30, 22)` becomes green. Only
+pixels whose channels happen to be nearly equal — `(28, 28, 30)`, `s = 0.067` —
+were ever classified black.
+
+Sensor noise and JPEG chroma subsampling produce exactly this spread in dark
+regions of real photographs, so this is not an artefact of the synthetic
+renderer that surfaced it.
+
+**Measured:** on 480 synthgen renders the old estimator identified black
+products correctly **5%** of the time (2/44) as rendered, and **0%** once the
+geometry was perturbed. Every other colour scored 51–100%. Black is one of the
+most common furniture and homeware colours, so this is not a corner case.
+
+**Fix:** value decides first. Below `BLACK_V_MAX` a pixel is black regardless of
+saturation; the saturation split only applies above it, where saturation means
+something. One consequence worth stating: a strongly saturated but very dark
+hue (`v ≤ 0.22`, i.e. every channel under 56/255) is now black rather than
+"dark navy". That is the right call at that value — and the brown rule, which
+lives at `v < 0.6`, is untouched.
+
+After the fix black reaches **84%** on the perturbed corpus (0% before), and
+overall accuracy moves 82.7% → 90.0% perturbed and 88.3% → 97.1% as rendered.
+
+Regression tests: `test_noisy_black_product_is_black_not_blue` (jittered
+near-black fill, the realistic case) and `test_dark_pixels_do_not_become_hues`
+(the rule stated directly). Both return `blue` on the pre-fix estimator.
+
+**Status:** DONE
 
 ---
 
