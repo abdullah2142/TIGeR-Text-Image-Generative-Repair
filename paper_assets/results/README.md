@@ -30,22 +30,35 @@ synthetic catalogue. Seeds 7–11 for the noise sweep, 1007–1014 for calibrati
 ## `abo/` — repair numbers
 
 Produced by `tiger_abo_corrected_run.ipynb` on the two ABO verticals. The
-committed copy is the **2026-09-12 re-run** (executed notebook:
-`tiger_abo_d4_check.ipynb`), which is the same pipeline after `D4` landed and
-with `D4`'s pass instrumentation added. It supersedes the 2026-09-12 01:28 run
-in two ways and is otherwise identical to it:
+committed copy is the **2026-09-13 run**, the first with the rebuilt colour
+estimator (`B2`/`B3`/`B5`/`B8`). It supersedes the 2026-09-12 run, whose numbers
+were produced by the estimator that measured a fixed central crop of a
+square-squashed image.
 
-- `repair_ablations_summary.csv` reports all five outcome statuses
-  (`Repaired`/`Escalated`/`Dismissed`/`Acquire Image`/`Unrepaired`) rather than
-  two, which is what closed `E8`'s unexplained 17-row denominator gap.
-- `v2t_estimator_diagnostics.csv` has 738 rows rather than 289, because `B6`'s
-  estimator-disagreement escalations are now captured. Those rows are the whole
-  point of the report — a disagreement writes nothing, so before the fix every
-  disagreeing row silently vanished from the file meant to attribute
-  pixel-vs-probe error.
+What moved, Full System:
 
-Ablation counts are unchanged between the two runs (Full System 268 repaired,
-No Gamma Gate 498).
+| | 2026-09-12 | 2026-09-13 |
+|---|---|---|
+| Colour accuracy | 0.364 (55 cases) | **0.406** (64 cases) |
+| Attribute accuracy | 0.351 (57) | **0.394** (66) |
+| Repaired | 268 | 276 |
+| T2V accuracy | 0.379 (214) | 0.381 (215) |
+
+Accuracy and coverage rose together, which is the direction that matters: the
+estimator agreeing with the CLIP probe more often (24.8% → 29.2%) means fewer
+rows escalate on estimator conflict, so more repairs are attempted *and* more
+of them are right. T2V is flat, as expected — image repair does not consult the
+colour estimator for its value.
+
+`v2t_estimator_diagnostics.csv` gained a `pixel_region` column recording how
+each estimate was obtained (`foreground` / `center_box` / `flooded`), which is
+what makes `B4`'s calibration question answerable on the next run rather than
+guessable.
+
+Two earlier improvements carried forward from the 2026-09-12 run: the summary
+reports all five outcome statuses rather than two (`E8`), and the estimator
+report captures `B6`'s disagreement escalations rather than silently dropping
+them (766 rows here, against 289 before that fix).
 
 `arbiter_calibration.json` is derived rather than emitted by the run: it is the
 `D1` calibration check on holdout seed 1014 (ECE, the signed gap at γ, per-class
@@ -63,7 +76,22 @@ the manifest says exactly what produced them — but they are not the system's
 current behaviour, and the repair-side numbers should not be quoted as if they
 were. See `honest_limitations.md` §6.
 
+## Figures
+
+`paper_figures/` holds two artifacts this run produced rather than carried:
+
+- `qualitative_grid_final.png` — clean / corrupted / repaired triptychs, built
+  by `tiger.cli qualitative-grid` from the run's own per-row frame and outcome
+  log. Every earlier version of this file was a hand-made PNG that round-tripped
+  through the results zip unchanged; see `code_fixes/FIXES.md` D10.
+- `generation_pattern_panel_panel.png` — the generator asked directly, one
+  render per pattern with everything else fixed. Needed because the generative
+  fallback never fires on a catalogue this size (`paper_concepts.md` §5), so the
+  pattern question cannot be answered as a byproduct of a repair run.
+
 ## What is still not here
 
-`data/sample/` — the generated-image samples. The notebooks do not export it,
-so it cannot be committed without a re-run that does. Tracked as `E6`.
+`data/sample/` — the source catalogue and its images. The notebooks now export
+the *generated* images (`data/sample/images/generated/`) into the results zip,
+but not the imported catalogue, which is reconstructible from ABO via
+`tiger.cli import-abo`. Tracked as `E6`.

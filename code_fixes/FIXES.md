@@ -481,8 +481,35 @@ Regression tests: `test_offcentre_product_is_localised`,
 `test_lifestyle_shot_falls_back_to_centre_box` (the guard: no uniform ground
 means no flood). All four return the wrong colour on the pre-fix estimator.
 
-**Status:** DONE — mechanism fixed and pinned; magnitude on real photography
-still wants a Kaggle re-run
+**Sized on real ABO photography (2026-09-13 re-run). The mechanism works; the
+magnitude does not transfer.** 87% of rows (182/209) were genuinely localised —
+the flood found a studio ground and something survived it — so B2 is doing what
+it was built to do. But accuracy is flat across the outcomes:
+
+| region | n | pixel estimate correct |
+|---|---|---|
+| `foreground` (localised) | 182 | 27.5% |
+| `center_box` (fallback) | 26 | 26.9% |
+| `flooded` | 1 | — |
+
+Localised and unlocalised rows score the same. Overall the pixel path moved
+**23.9% → 27.3%**, against +67 points on the geometry-perturbed synthetic
+corpus. So the synthetic benchmark measured a real defect that is not the
+binding constraint here: ABO product shots are mostly *already* centred and
+frame-filling, which is exactly the condition the old central box assumed.
+
+**What the bottleneck actually is**, from the same report — `multicolour` is
+now the single most common pixel output (58/209, 28%) and is right **1.7%** of
+the time, and `orange` is 0/9 (wood read as orange). That is not a localisation
+failure, it is a *vocabulary* failure: a 12-value colour domain cannot describe
+a patterned rug or a wood grain, so the estimator correctly reports "no single
+colour dominates" and the pipeline has nowhere to put that answer.
+
+**Status:** DONE — mechanism fixed, pinned, and now sized on real data. Keeping
+the localisation (it is correct, and it is what makes `pixel_conf` meaningful —
+see B4), but further work on *localisation* has low expected value on this
+corpus. The `multicolour` bucket is the next target and it is a schema
+question, not a computer-vision one.
 
 ---
 
@@ -614,10 +641,48 @@ sequencing goes estimator first, calibration after.
 Tests: `test_pixel_value_used_when_the_product_was_localised` and
 `test_pixel_value_refused_when_the_product_was_not_localised`.
 
-**Status:** DONE as far as the data allows — the calibration B4 asks for was
-attempted and is not supportable on this corpus; the magic number is gone, the
-instrumentation to answer it properly ships, and the finding stands on its own.
-Re-fit after the B2/B3/B5/B8 estimator re-run.
+**Re-fit after the estimator fix (2026-09-13), and the verdict changes.** The
+share was uninformative because the estimator was measuring the wrong region.
+Once it measures the product, "how much of the product is this colour" starts
+to mean something:
+
+| pixel share | correct — before | correct — after |
+|---|---|---|
+| < 0.55 | 7.1% | 7.0% |
+| 0.55–0.60 | **40.0%** | 24.0% |
+| 0.60–0.70 | 26.3% | 33.3% |
+| 0.70–0.80 | 27.8% | 41.4% |
+| 0.80–0.90 | 33.3% | 45.8% |
+| ≥ 0.90 | 33.9% | **53.3%** |
+| **corr(share, correct)** | **0.233** | **0.346** |
+
+It is now **monotone above the gate** — every bucket beats the one below it,
+where before the least-confident passing bucket was the most accurate. The
+0.55 cut also separates harder (7.0% vs 37.7%). So the quantity B4 called "not
+a confidence" has been turned into something that ranks correctness, not by
+calibrating it but by fixing what it measures. That is worth stating plainly in
+the paper: **the confidence was uninformative because the estimator was
+broken**, not because pixel share is inherently meaningless.
+
+**Two things still hold, and stop this being closed outright.**
+
+1. *It still does not rank the rows that matter.* On committed repairs (both
+   estimators agreeing) accuracy by share is 42.9 / 45.0 / 55.6 / 46.2 / 57.1
+   across ascending buckets, n=79 — noisy and near-flat. Once two independent
+   estimators agree, the share adds little on top of the agreement itself.
+2. *The gate is still inert.* 619 rows had both estimators, **0** had pixel
+   only. As before, the threshold changed no written value.
+
+And the headline number barely moved: committed colour accuracy is **49.4%**
+(was 49.2%). The estimator got better, agreement rose (24.8% → 29.2%, which is
+why more repairs were attempted — 55 → 64 V2T cases), but *what gets committed*
+is still right about half the time.
+
+**Status:** DONE — asked and answered twice, and the second answer is the
+useful one. A calibrator is now fittable in principle; it is not worth fitting
+while the gate it would feed is unreachable and the share is flat on the
+decision set. Revisit if `multicolour` (B2) is dealt with, which is what would
+give the pixel path more rows to be confident about.
 
 ---
 
@@ -833,7 +898,15 @@ Regression tests: `test_noisy_black_product_is_black_not_blue` (jittered
 near-black fill, the realistic case) and `test_dark_pixels_do_not_become_hues`
 (the rule stated directly). Both return `blue` on the pre-fix estimator.
 
-**Status:** DONE
+**Confirmed on real data (2026-09-13 re-run).** `black` does not appear in the
+pre-fix run's six most common pixel outputs at all — black products were being
+hue-binned into blue, green and pink and so never surfaced as an answer. Post-
+fix it is the estimator's fourth most common output at **66.7% correct**
+(15 cases), the highest accuracy of any colour it returns. This is the clearest
+single-defect win in the estimator work, and it was found by accident while
+measuring something else.
+
+**Status:** DONE — and verified on ABO, not only on the renderer that exposed it
 
 ---
 
@@ -1468,12 +1541,46 @@ withdrawn because the pattern never entered the prompt, and this is what
 decides whether the limitation survives now that it does. The ABO notebook
 gained a cell that runs it.
 
-**Status:** DOING — everything except the run itself. One Kaggle run of the ABO
-notebook now produces both figures: the qualitative grid, from artifacts the
-run finally persists, and the pattern panel, which is what §2's withdrawn
-attribution gets re-assessed against. Note for whoever reads the grid: it will
-show retrieval-based T2V repairs, not synthesised ones, and that is the
-pipeline working as designed.
+**Run 2026-09-13. Both figures exist, and the pattern question has an answer.**
+
+`paper_figures/generation_pattern_panel_panel.png`: the same product —
+`a brown wooden dining chair`, `{"color":"brown","material":"wood"}` — rendered
+at `pattern` = solid / striped / dotted, everything else held fixed.
+
+- **The prompt fix works.** All three renders are plainly brown, plainly
+  wooden, plainly chairs. Colour, material and the category noun all survive
+  into the image, which is what `D8`+`D10`'s prompt work was for.
+- **The pattern does not.** None of the three shows a stripe or a dot. The
+  "striped" and "dotted" renders differ from "solid" only as different draws of
+  the same chair.
+
+So the limitation in `honest_limitations.md` §2 **survives**, and for the first
+time there is direct evidence for it rather than an assumption. The attribution
+that was withdrawn — diffusion models drop fine-grained pattern — is now
+supportable, *with three caveats that must travel with it*:
+
+1. **n = 3, one product, one category.** This is an illustration, not a
+   measurement. Do not report a rate.
+2. **The category may be doing the work.** A striped *chair* is a semantically
+   odd request; a striped *rug* is not. ABO has rugs. Re-running the panel on
+   `rug` would separate "the model ignores pattern" from "the model ignores
+   implausible pattern", and until that is done the claim is confounded.
+3. **SDXL-Turbo at 4 steps, `guidance_scale=0.0`** is a deliberately fast
+   configuration, and low guidance is known to weaken prompt adherence. The
+   finding is about *this generator as configured*, not about diffusion models.
+
+The qualitative grid (`paper_figures/qualitative_grid_final.png`) also
+regenerated, and is doing its job: six rows showing three clean repairs, one
+wrong-colour image swap, one wrong material written (`stone` onto a platinum
+ring), and one **clean row damaged** — subtype `clean`, flagged, routed to T2V
+and given a wooden chair in place of a black leather chaise. That last row is
+the honest picture of the 49% committed accuracy, and it is the row a reviewer
+will find.
+
+**Status:** DONE for what D10 asked — prompt fixed, pinned, §2/§4 corrected,
+and the regeneration done with a real result. The follow-up (the same panel on
+`rug`, to de-confound caveat 2) is logged as its own item rather than left
+inside a closed one.
 
 ---
 
