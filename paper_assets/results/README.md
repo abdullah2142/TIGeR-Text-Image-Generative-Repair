@@ -30,25 +30,33 @@ synthetic catalogue. Seeds 7–11 for the noise sweep, 1007–1014 for calibrati
 ## `abo/` — repair numbers
 
 Produced by `tiger_abo_corrected_run.ipynb` on the two ABO verticals. The
-committed copy is the **2026-09-13 run**, the first with the rebuilt colour
-estimator (`B2`/`B3`/`B5`/`B8`). It supersedes the 2026-09-12 run, whose numbers
-were produced by the estimator that measured a fixed central crop of a
-square-squashed image.
+committed copy is the **2026-09-14 run**, the first with the routing fixes
+(`D14` dismiss guard, `D15` title check, `B9` decline-vs-disagree) on top of the
+rebuilt colour estimator. It supersedes the 2026-09-13 run.
 
 What moved, Full System:
 
-| | 2026-09-12 | 2026-09-13 |
+| | 2026-09-13 | 2026-09-14 |
 |---|---|---|
-| Colour accuracy | 0.364 (55 cases) | **0.406** (64 cases) |
-| Attribute accuracy | 0.351 (57) | **0.394** (66) |
-| Repaired | 268 | 276 |
-| T2V accuracy | 0.379 (214) | 0.381 (215) |
+| Rows reaching the repair cycle | 1,587 | **1,251** |
+| — of those, genuinely clean | 575 | **315** |
+| Clean rows escalated to a human | 564 | **286** |
+| Clean rows dismissed | 1 | **28** |
+| Clean rows edited (damaged) | 10 | 10 |
+| Repaired | 276 | **296** |
+| Colour accuracy | 0.406 (64 cases) | 0.388 (**80** cases) |
+| Correct colour repairs | 26 | **31** |
+| T2V accuracy | 0.381 (215) | 0.371 (224) |
 
-Accuracy and coverage rose together, which is the direction that matters: the
-estimator agreeing with the CLIP probe more often (24.8% → 29.2%) means fewer
-rows escalate on estimator conflict, so more repairs are attempted *and* more
-of them are right. T2V is flat, as expected — image repair does not consult the
-colour estimator for its value.
+Read the accuracy drop together with the case count: more rows are repaired and
+more repairs are correct, at a slightly lower rate, because rows that used to
+escalate now get a repair. The human-review load on clean rows fell by 49%.
+
+**Detection changed too, which the previous run's notes said it would not.**
+The title-contradiction check is a Sieve signal as well as a routing feature, so
+fixing it removes false flags at detection: flag precision **63.8% → 74.8%**,
+for a 7.5% relative recall cost. Detection metrics from before 2026-09-14 are
+stale.
 
 `v2t_estimator_diagnostics.csv` gained a `pixel_region` column recording how
 each estimate was obtained (`foreground` / `center_box` / `flooded`), which is

@@ -36,9 +36,9 @@
       "z_margin": null
     },
     "flag_title_contradiction": {
-      "precision": 0.41,
-      "precision_any_dirty": 0.41,
-      "fired": 7563,
+      "precision": 0.496,
+      "precision_any_dirty": 0.496,
+      "fired": 3107,
       "quarantined": false,
       "z_margin": null
     }

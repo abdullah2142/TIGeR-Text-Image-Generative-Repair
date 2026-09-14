@@ -968,6 +968,23 @@ Options 2 (extend the domain) and 3 (report a distribution) are untouched and
 remain the real answer to the *vocabulary* problem; this fix stops the
 vocabulary gap from also corrupting the escalation bookkeeping.
 
+**Confirmed on the 2026-09-14 run.** Rows recorded as estimator *conflicts*
+fell **438 → 313**, with **118** now correctly recorded as the pixel estimator
+declining. Full System V2T colour, by estimator situation:
+
+| situation | rows | wrote | correct |
+|---|---|---|---|
+| both estimators agreed | 44 | 44 | **56.8%** |
+| **pixel declined → probe alone** | 24 | 13 | **46.2%** |
+| genuine conflict | 36 | **0** | — (escalated, `B6` working) |
+
+**The prediction in this entry was too pessimistic.** It expected probe-alone
+rows to land at the probe's solo rate of 38.7%; they came in at **46.2%**,
+close to the 56.8% that two agreeing estimators buy. Declining is evidently not
+random with respect to difficulty — a row where the pixel estimator knows it
+cannot answer is not the same as a row where it answers badly, and the probe
+does comparatively well on exactly those rows.
+
 **Status:** DONE for the bookkeeping half — the domain itself is still too
 small for the corpus, which is options 2/3 and needs a schema change plus a run
 
@@ -1768,7 +1785,24 @@ while no longer vetoing itself.
 The decomposition was right: the title check was the blockage (71× of the 75×),
 the guard threshold the remainder.
 
-**Status:** DONE — pending a run to confirm end-to-end
+**Confirmed end-to-end (2026-09-14 run).** Clean rows escalated to a human
+**564 → 286**, a 49% cut in the pipeline's human-review load. Dismissals 1 → 28.
+
+Two things the offline sweep did not predict, both worth recording:
+
+1. **Dismissal precision is 68%, not 93%** — 19 of the 28 dismissed rows were
+   genuinely clean, 9 were dirty (7 `mutate_text`, 2 `swap_image`) and are now
+   silently kept in the catalogue. As a share of dirty rows that is ~1%, in line
+   with the sweep; the *precision* is worse only because the denominator
+   changed. Which leads to:
+2. **The clean rows that were easiest to dismiss are now never flagged at all**
+   (see `D15`), so the clean rows still reaching the Arbiter are the harder
+   ones: 19 dismissed of 315, i.e. 6%, against the 19.6% the sweep projected
+   over the old, larger population. The sweep was right about the mechanism and
+   optimistic about the rate, because it held the flagged population fixed while
+   the fix it was measuring also shrinks that population.
+
+**Status:** DONE
 
 ---
 
@@ -1849,6 +1883,22 @@ vocabulary, not the colour one, so the colour check never needed it.
 It keeps well over half its true positives while dropping two-thirds of its
 false ones. The knock-on effect on dismissal is `D14`: 15 → 1,123 clean rows
 cleared.
+
+**Confirmed on the 2026-09-14 run, with a larger effect than predicted — this
+flag is also a Sieve detection signal, not only a routing feature.** Fixing it
+removes false flags at detection, which the offline sweep could not see:
+
+| | before | after |
+|---|---|---|
+| rows reaching the repair cycle | 1,587 | **1,251** |
+| of those, genuinely clean | 575 | **315** (−45%) |
+| of those, genuinely dirty | 1,012 | 936 (−7.5%) |
+| **flag precision** | **63.8%** | **74.8%** |
+
+**+11 points of detection precision for 7.5% relative recall.** An earlier note
+in this backlog said the estimator work left detection numbers untouched; that
+was true of the estimator and is *not* true of this fix. Detection metrics must
+be regenerated, not carried forward.
 
 Tests: `tests/test_title_contradiction.py` — a single contradicting colour
 still fires, aliases still normalise (`D7`), multi-colour titles and jewellery
