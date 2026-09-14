@@ -146,6 +146,7 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
                     # analysis that reads the estimator-attribution fields.
                     entry.update(value_source=plan.value_source, pixel_value=plan.pixel_value,
                                  pixel_conf=plan.pixel_conf, pixel_region=plan.pixel_region,
+                                 pixel_declined=plan.pixel_declined,
                                  probe_value=plan.probe_value,
                                  estimators_agree=plan.estimators_agree)
                 finalize(row_id, "escalated", pass_i, entry)
@@ -179,6 +180,7 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
                          "pixel_value": plan.pixel_value,
                          "pixel_conf": plan.pixel_conf,
                          "pixel_region": plan.pixel_region,
+                         "pixel_declined": plan.pixel_declined,
                          "probe_value": plan.probe_value,
                          "estimators_agree": plan.estimators_agree,
                          "verdict": verdict.to_dict()}

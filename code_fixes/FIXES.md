@@ -938,10 +938,38 @@ decline", and those two meanings are not distinguishable downstream.
    whether the declared value is in the top-2. `ColorEstimate.top2` already
    carries this; nothing consumes it.
 
-Option 1 is a contained change and would move the honest numbers immediately,
-because a row that currently commits a wrong `multicolour` would escalate.
+**Fixed 2026-09-14 — and the actual cost was not where this entry predicted.**
+`multicolour` is barely ever *written* (4 rows, 0 correct). Its damage was done
+somewhere else entirely: it was being compared against the probe's answer as
+though it were a value, so `B6`'s conflict check fired and the row escalated
+with the reason **"estimators disagree"** when only one estimator had spoken.
 
-**Status:** TODO
+On the ABO run that is **175 of 280 unique rows**. The giveaway is that the
+pixel/probe "agreement" rate inside that group is **1.7%** — which is what you
+get comparing a refusal against an answer, not what a genuine conflict looks
+like.
+
+`_corrected_value` now maps `multicolour`/`unknown` from the pixel estimator to
+*no opinion* (`pixel_value=""`, `pixel_declined=True`). A colour row where the
+estimator declined is then the same situation as `material` or `pattern`, which
+have no pixel estimator at all: one opinion, planned normally. `B6`'s escalation
+is untouched for real conflicts — two values that differ.
+
+**Expected effect on the next run:** ~175 rows stop escalating as false
+conflicts and instead get a probe-decided repair. That is a coverage/accuracy
+trade, and it should be reported as one: the probe alone is right 38.7% against
+the 49.4% that two agreeing estimators buy. It also repairs `B6`'s headline —
+"450 disagreements" was counting refusals as conflicts.
+
+`pixel_declined` is carried through evidence → plan → repair log → the
+diagnostics CSV, so the next run can separate the three cases cleanly.
+
+Options 2 (extend the domain) and 3 (report a distribution) are untouched and
+remain the real answer to the *vocabulary* problem; this fix stops the
+vocabulary gap from also corrupting the escalation bookkeeping.
+
+**Status:** DONE for the bookkeeping half — the domain itself is still too
+small for the corpus, which is options 2/3 and needs a schema change plus a run
 
 ---
 
@@ -1874,6 +1902,50 @@ addresses the clean-row damage directly: a clean row is by definition not a
 similarity outlier.
 
 **Status:** TODO
+
+
+---
+
+### D17 ⚑ · The independent verifier cannot reject a T2V repair — 0 of 304
+**Severity:** High — it is presented as the pipeline's semantic safety net
+**Where:** `tiger/verify.py::IndependentVerifier.check_t2v`
+**Found:** 2026-09-14, while looking for what should have stopped `D16`
+
+On the reported run the independent verifier (SigLIP) approved **304 of 304**
+image repairs, including all 7 that damaged clean rows. On the text side it is
+working normally — it rejected **30 of 107** V2T repairs. The asymmetry is not
+a tuning accident, it is structural:
+
+```python
+def check_t2v(self, old_image_path, new_image_path, caption):
+    ...
+    return float(imgs[1] @ t) > old_s      # new image beats old, on caption similarity
+```
+
+The candidate was *selected* by maximising caption similarity. Asking a second
+encoder whether the winner of that contest wins that contest returns yes
+essentially always. The V2T check works precisely because it asks something
+different — whether the independent encoder's *own probe* predicts the patched
+value — so it can and does disagree.
+
+This is the F7 circularity the independent verifier exists to cure, surviving
+in the half nobody measured. `paper_concepts.md` §6 describes it as "a final
+semantic safety checkpoint ... catching wrong-direction repairs"; on T2V it
+has never caught anything.
+
+**Proposed fix (designed, not shipped — it cannot be validated without a run):**
+ask the independent encoder to agree on the *choice*, not on the direction.
+Pass it CLIP's top-2 candidates and require the winner to beat the runner-up
+under the independent encoder too. Cross-encoder disagreement about *which*
+candidate is best is genuine evidence, and it is the same "two estimators must
+agree or we abstain" principle the V2T path already uses (`B6`). Cost is one
+extra image encode per repair.
+
+Not shipped because `torch`/`transformers` are unavailable in this checkout, so
+the change could not be measured — and shipping an unmeasured behaviour change
+is what this backlog exists to stop.
+
+**Status:** TODO — diagnosed and designed; needs a run to validate
 
 
 ---

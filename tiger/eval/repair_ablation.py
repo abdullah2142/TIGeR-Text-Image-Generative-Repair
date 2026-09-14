@@ -237,6 +237,7 @@ def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schem
                     "pixel_value": pv,
                     "pixel_conf": d.get("pixel_conf"),
                     "pixel_region": d.get("pixel_region", ""),
+                    "pixel_declined": d.get("pixel_declined", False),
                     "probe_value": bv,
                     "estimators_agree": d.get("estimators_agree"),
                     # counterfactuals: would each estimator alone have been right?
@@ -266,6 +267,7 @@ def run_repair_ablations(noisy_df: pd.DataFrame, enc: ClipEncoder, schema: Schem
                     "pixel_value": pv,
                     "pixel_conf": d.get("pixel_conf"),
                     "pixel_region": d.get("pixel_region", ""),
+                    "pixel_declined": d.get("pixel_declined", False),
                     "probe_value": bv,
                     "estimators_agree": d.get("estimators_agree"),
                     "pixel_correct": (int(pv == truth) if pv else None),

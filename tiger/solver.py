@@ -136,6 +136,7 @@ class RepairPlan:
     pixel_value: str = ""                # HSV dominant-colour estimate
     pixel_conf: float | None = None      # winning colour's pixel share (NOT calibrated)
     pixel_region: str = ""               # region the share was measured over (B2/B4)
+    pixel_declined: bool = False         # estimator reported no dominant colour (B9)
     probe_value: str = ""                # CLIP per-field probe argmax
     estimators_agree: bool | None = None # pixel == probe (both non-empty)
 
@@ -181,7 +182,7 @@ def _corrected_value(field: str, ev: dict) -> tuple[str, dict]:
     (see RepairPlan's estimator-attribution fields).
     """
     probe_value = str((ev.get("probes") or {}).get(field, {}).get("pred", "") or "")
-    pixel_value, pixel_conf, pixel_region = "", None, ""
+    pixel_value, pixel_conf, pixel_region, pixel_declined = "", None, "", False
 
     if field == "color":
         pc = ev.get("pixel_color")
@@ -189,11 +190,22 @@ def _corrected_value(field: str, ev: dict) -> tuple[str, dict]:
         pixel_value = str(pc or "")
         pixel_conf = float(conf) if conf is not None else None
         pixel_region = str(ev.get("pixel_color_region") or "")
+        # B9: "multicolour" and "unknown" are the estimator declining, not
+        # answering -- it is reporting that no single colour dominates. Treating
+        # them as values made every such row look like a two-estimator conflict
+        # to B6's check below, so it escalated with the reason "estimators
+        # disagree" when only one estimator ever spoke. On the ABO run that was
+        # 175 of 280 rows, and the pixel/probe "agreement" rate inside them was
+        # 1.7%, which is what a decline compared against a value looks like.
+        # A declined colour is the same situation as material or pattern, which
+        # have no pixel estimator at all: one opinion, planned normally.
+        if pixel_value in ("unknown", "multicolour"):
+            pixel_declined, pixel_value = True, ""
 
     agree = bool(pixel_value and probe_value and pixel_value == probe_value)
     diag = {"pixel_value": pixel_value, "pixel_conf": pixel_conf,
-            "pixel_region": pixel_region, "probe_value": probe_value,
-            "estimators_agree": agree}
+            "pixel_region": pixel_region, "pixel_declined": pixel_declined,
+            "probe_value": probe_value, "estimators_agree": agree}
 
     # The pixel estimate wins on two conditions, both of which are about the
     # estimator's *mechanism* rather than its output (B4):
@@ -205,7 +217,6 @@ def _corrected_value(field: str, ev: dict) -> tuple[str, dict]:
     #     does not rank correctness (B4), so it is kept as a floor against a
     #     three-way split, not read as a confidence.
     if (field == "color" and pixel_value
-            and pixel_value not in ("unknown", "multicolour")
             and pixel_region not in ("", "center_box")
             and pixel_conf is not None and pixel_conf >= PIXEL_SHARE_MIN):
         return pixel_value, {**diag, "value_source": "pixel"}

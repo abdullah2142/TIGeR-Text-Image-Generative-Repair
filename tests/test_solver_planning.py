@@ -154,3 +154,46 @@ def test_pixel_value_refused_when_the_product_was_not_localised(schema):
     row = {"attributes": '{"color": "red"}', "title": "Red Shirt", "category": "shirts"}
     plan = plan_repair(ev, Route("V2T"), row, None, None, None, schema)
     assert not plan.plannable
+
+
+def test_declined_pixel_estimate_is_not_a_disagreement(schema):
+    """B9: "multicolour" is the pixel estimator reporting that no single colour
+    dominates -- it is declining, not answering. Treating it as a value made the
+    row look like a two-estimator conflict and escalate under B6, when only the
+    probe ever spoke. A colour row where the estimator declined is the same
+    situation as material or pattern, which have no pixel estimator at all."""
+    ev = {"row_id": "r1", "category": "shirts", "product_id": "r1",
+          "loo_top_field": "color", "pixel_color": "multicolour",
+          "pixel_color_confidence": 0.4, "pixel_color_region": "foreground",
+          "probes": {"color": {"z": -3.0, "pred": "blue"}}}
+    row = {"attributes": '{"color": "red"}', "title": "Red Shirt", "category": "shirts"}
+    plan = plan_repair(ev, Route("V2T"), row, None, None, None, schema)
+    assert plan.plannable
+    assert plan.patch == {"color": "blue"}      # the probe decides alone
+    assert plan.value_source == "probe"
+    assert plan.pixel_declined is True
+    assert plan.pixel_value == ""               # no opinion, not a conflicting one
+    assert plan.estimators_agree is False       # nothing to agree with
+
+
+def test_unknown_pixel_estimate_is_also_a_decline(schema):
+    ev = {"row_id": "r1", "category": "shirts", "product_id": "r1",
+          "loo_top_field": "color", "pixel_color": "unknown",
+          "pixel_color_confidence": 0.0, "pixel_color_region": "foreground",
+          "probes": {"color": {"z": -3.0, "pred": "blue"}}}
+    row = {"attributes": '{"color": "red"}', "title": "Red Shirt", "category": "shirts"}
+    plan = plan_repair(ev, Route("V2T"), row, None, None, None, schema)
+    assert plan.plannable and plan.pixel_declined is True
+
+
+def test_a_real_disagreement_still_escalates(schema):
+    """The B6 escalation must survive: two actual values that differ."""
+    ev = {"row_id": "r1", "category": "shirts", "product_id": "r1",
+          "loo_top_field": "color", "pixel_color": "green",
+          "pixel_color_confidence": 0.9, "pixel_color_region": "foreground",
+          "probes": {"color": {"z": -3.0, "pred": "blue"}}}
+    row = {"attributes": '{"color": "red"}', "title": "Red Shirt", "category": "shirts"}
+    plan = plan_repair(ev, Route("V2T"), row, None, None, None, schema)
+    assert not plan.plannable
+    assert "disagree" in plan.notes
+    assert plan.pixel_declined is False
