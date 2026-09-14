@@ -219,11 +219,21 @@ def generate(
             color = rng.choice(color_domain)
             material = rng.choice(MATERIALS.get(category, material_domain))
             pattern = _weighted(rng, PATTERN_WEIGHTS)
-            size_v = rng.choice(SIZES[category]) if category in SIZES else ""
             brand = rng.choice(BRANDS)
 
             attrs = {"color": color, "material": material, "pattern": pattern,
-                     "size": size_v, "brand": brand}
+                     "brand": brand}
+            # The size key is OMITTED for categories with no size enum, not set
+            # to "". The comment above always said these rows "get no size at
+            # all", but writing an empty string is not the same as writing
+            # nothing: `size` is an enum, "" is not in its domain, so every one
+            # of these rows failed schema validation and tripped
+            # `flag_text_out_of_domain`. 15 of the 19 categories have no size,
+            # so on a clean catalogue that is ~79% of rows flagged as dirty by
+            # construction -- the single largest false-positive source in the
+            # detection table.
+            if category in SIZES:
+                attrs["size"] = rng.choice(SIZES[category])
             title = make_title(rng, category, color, material, brand)
 
             img_rel = f"{out_dir}/images/{product_id}.jpg"

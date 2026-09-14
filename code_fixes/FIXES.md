@@ -2021,6 +2021,54 @@ is what this backlog exists to stop.
 
 ---
 
+### D18 ⚑ · A clean synthetic catalogue flags 79% of itself, via an empty `size`
+**Severity:** High — the largest single false-positive source in the detection table
+**Where:** `tiger/data/synthgen.py::generate` · surfaced by `flag_text_out_of_domain`
+**Found:** 2026-09-14, while adding detection metrics to the ABO notebook
+
+```python
+size_v = rng.choice(SIZES[category]) if category in SIZES else ""
+attrs = {..., "size": size_v, ...}
+```
+
+The comment directly above this line says categories outside the fashion dicts
+"get no size at all". They got `""`, which is not the same thing: the key is
+*present* with a value outside the `size` enum, so `schema.validate_attrs`
+returns a domain violation and `flag_text_out_of_domain` fires. 15 of the 19
+schema categories have no size, so a **clean** catalogue flags most of itself.
+
+Measured on a freshly generated clean catalogue:
+
+| | rows failing schema validation |
+|---|---|
+| before | 301 / 381 (**79.0%**) — 300 of them `domain:size` |
+| after | 1 / 381 (0.3%) — the planted `forced_gen_000` row, `honest_limitations.md` §5 |
+
+**This is the precision drag in the committed detection numbers.** In
+`paper_assets/results/synthetic/detection_metrics_sweep.json`,
+`flag_text_out_of_domain` fired on **2,271 rows at 0.302 precision** — by far
+the most-fired signal and the least precise — against overall pooled precision
+of 0.336. Every other signal scores 0.65–1.00. The reported detection precision
+is therefore depressed by a generator bug, not by the detector.
+
+**Fix:** omit the key when the category has no size enum, which is what the
+comment always claimed. One line.
+
+`test_non_fashion_category_gets_no_size` **asserted `size == ""`**, so the test
+suite was pinning the defect in place. Corrected, plus
+`test_clean_rows_pass_schema_validation` (a clean catalogue must not flag
+itself) and `test_sized_categories_still_get_a_valid_size`.
+
+**Consequence:** the synthetic detection numbers are stale and will *improve*.
+Contrary to the note in `D15` — which correctly said the title check is inert on
+synthetic titles — there **is** now a reason to re-run the synthetic notebook
+for detection, and this is it.
+
+**Status:** DONE — pending the re-run that re-measures the table
+
+
+---
+
 ## E. Documentation contradicted by the code
 
 Fix **after** the corrected ablation run — the numbers will move.
