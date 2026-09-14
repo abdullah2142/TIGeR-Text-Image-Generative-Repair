@@ -398,9 +398,13 @@ localisation just started paying off. So the fix has to be category-conditional
 change than "mask and renormalise", and it still cannot be validated without
 the imagery.
 
-**Status:** BLOCKED on fashion imagery specifically — ABO is available but is
-the wrong corpus for a skin-tone effect, and is actively the wrong corpus to
-apply the fix to
+**Status:** DISCARDED (2026-09-14, user decision) — the project has no fashion
+vertical. Both ABO verticals are furnishing and accessories, so no evaluated row
+contains a model shot, and the defect cannot affect any reported number. The
+mechanism is real and the entry is kept for the record: if a fashion vertical
+ever returns, read the two 2026-09-13 updates above first — `B2`'s localisation
+makes the exposure *worse*, not better, and the standard HSV skin mask is unsafe
+on this corpus because skin (hue 28–36°) and wood (26–33°) interleave.
 
 ---
 
@@ -859,8 +863,32 @@ cannot read an image drops that row from the probes without marking the row's
 image missing; and the resolver returns `None` unless a genuinely different
 model is named.
 
-**Status:** DOING — option 1 is wired and tested, and the "already supported"
-claim is corrected. Choosing and validating an encoder needs a run.
+**The selection question has never been asked (2026-09-14).** `compare-encoders`
+exists to answer exactly it — per-field probe accuracy per encoder on the clean
+catalogue, which is the criterion the review specified — and there is **no
+`encoder_comparison.json` anywhere in the repo**, nor a cell invoking it in
+either notebook. So "CLIP is the weakest available encoder for attribute
+binding" currently rests entirely on ARO's published numbers, measured on ARO's
+data, not on this corpus.
+
+That is a cheap gap to close and it has now been added to the ABO notebook, run
+before `train-arbiter` so it costs only the encode: **SigLIP is already
+installed** as the independent verifier, so comparing CLIP against it needs no
+new dependency and no adapter. Three outcomes, all useful:
+
+- SigLIP wins on colour/material/pattern → set `models.probe_model_name` and
+  the probes move while the reported CLIP baseline stays put.
+- CLIP wins → B7's premise does not hold on this data, which is worth a
+  sentence in the paper and closes the item.
+- They tie → the encoder is not the binding constraint and the probe ceiling
+  lies elsewhere.
+
+BLIP remains the interesting candidate (88% on ARO) and still needs an adapter,
+since `ClipEncoder` assumes the dual-encoder `get_text_features` API. Measure
+the free comparison first.
+
+**Status:** DOING — wiring done; the comparison that decides what to swap to
+now runs in the notebook
 
 ---
 
@@ -2316,6 +2344,41 @@ verified value is 0.983 (59/60), with `swap_image_same_category` as the separate
 
 **Status:** DONE — `tiger_project_doc.md` §8's subtype table now shows 0.983
 (59/60) labelled "subtype-level", distinct from README's 0.975 coarse label.
+
+---
+
+### E13 · The "No VLM Judge" ablation row does not ablate the VLM judge
+**Severity:** Medium — a results-table label that names the wrong component
+**Where:** `tiger/eval/repair_ablation.py` (`vlm_judge=` parameter) · `tiger/cli.py:548`
+**Found:** 2026-09-14
+
+`run_repair_ablations` takes a parameter called `vlm_judge` and the results
+table labels the row that disables it **"No VLM Judge"**. The CLI passes
+whatever independent verifier it built into that parameter:
+
+```python
+results = repair_ablation.run_repair_ablations(..., vlm_judge=independent, ...)
+```
+
+With `--vlm-judge` that object is Gemini. With `--independent` it is the SigLIP
+`IndependentVerifier`. **Both notebooks run `ablate-repair --independent`**, so
+in every committed result the row labelled "No VLM Judge" is ablating *SigLIP*,
+and no VLM was involved in any reported number at all.
+
+The numbers are not wrong — a real component was ablated and its effect
+correctly measured. The *name* is wrong, and it is wrong in the direction that
+overclaims: it implies a multimodal LLM judge contributed to the reported
+system when the contribution came from a second image encoder.
+
+This is `E9`'s defect repeated on the repair table — labels crediting a
+mechanism other than the one that ran.
+
+**Fix:** rename the parameter to `independent` and the row to "No Independent
+Verifier", or make the label reflect which object was actually supplied.
+Cosmetic in code, load-bearing in the paper.
+
+**Status:** TODO
+
 
 ---
 
