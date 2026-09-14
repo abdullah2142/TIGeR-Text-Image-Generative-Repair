@@ -13,6 +13,8 @@ from PIL import Image
 from tiger import sieve
 from tiger.schema import Schema
 
+ROOT_DIR = Path(__file__).resolve().parents[1]
+
 SCHEMA = Schema(
     attributes={"color": {"type": "enum", "values": ["red", "blue"]}},
     categories=["shirts"],
@@ -126,3 +128,40 @@ def test_probe_encoder_is_memoised(tmp_path):
     b = probe_encoder_from_cfg(cfg, tmp_path)
     assert a is not None and a is b
     assert a.model_name == "google/siglip-base-patch16-224"
+
+
+# ---------------------------------------------------------------------------
+# the shipped configuration (B7, decided by measurement 2026-09-14)
+# ---------------------------------------------------------------------------
+
+def test_shipped_config_probes_on_siglip_and_scores_on_clip():
+    """The probes move, the reported baseline does not. If these ever collapse
+    to one model the detection numbers stop being comparable to the published
+    CLIP baseline, and nothing else would notice."""
+    from tiger import cli
+    from tiger.encoders import probe_encoder_from_cfg
+
+    cfg = cli.load_cfg()
+    assert cfg["models"]["clip_model_name"] == "openai/clip-vit-base-patch32"
+    probe = probe_encoder_from_cfg(cfg, cli.ROOT)
+    assert probe is not None, "probe_model_name is unset; B7's measured swap is not live"
+    assert probe.model_name == "google/siglip-base-patch16-224"
+    assert probe.model_name != cfg["models"]["clip_model_name"]
+
+
+def test_probe_prompts_fit_siglips_shorter_context():
+    """SigLIP pads to a fixed 64-token context where CLIP truncates at 77. The
+    probe encoder only ever sees field-caption templates -- never the full
+    captions or titles, which stay on CLIP -- so the budget is not tight, but
+    an unbounded category noun would silently truncate (cf. F2)."""
+    from tiger import text_views
+    from tiger.schema import load_schema
+
+    schema = load_schema(ROOT_DIR / "configs/schema.yaml")
+    longest = 0
+    for cat in schema.categories:
+        for fld in ("color", "material", "pattern"):
+            for v in schema.domain(fld):
+                for t in text_views.field_caption_templates(cat, fld, v):
+                    longest = max(longest, len(t.split()))
+    assert longest <= 20, f"longest probe prompt is {longest} words; SigLIP pads to 64 tokens"

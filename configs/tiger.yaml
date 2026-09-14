@@ -14,12 +14,23 @@ data:
 
 models:
   clip_model_name: "openai/clip-vit-base-patch32"   # reported baseline (do not change)
-  # B7: run the per-field probes on a different encoder from the similarity
-  # path. Empty = share `clip_model_name` (the shipped configuration, and the
-  # one every reported number was produced with). Setting it changes only the
-  # probes, at the cost of a second pass over the images. See FIXES.md B7 for
-  # what is and is not known to work here.
-  probe_model_name: ""
+  # B7: the per-field probes run on their own encoder, separate from the
+  # similarity path. Measured on the clean ABO catalogue (2026-09-14,
+  # `compare-encoders`, committed at paper_assets/results/abo/encoder_comparison.json):
+  #
+  #             CLIP ViT-B/32   SigLIP base/16      n
+  #   colour        0.545           0.604         7,791
+  #   material      0.206           0.328         5,877
+  #
+  # Material is the field the roadmap calls the paper's weakest number, and
+  # SigLIP gains 12.2 points on it (+59% relative). Only the probes move --
+  # sim_full, the swap check and the LOO deltas stay on clip_model_name, so the
+  # reported CLIP baseline and the detection comparison are untouched.
+  #
+  # Costs one extra pass over the images (cached per model by content hash).
+  # Probe z-thresholds are per-encoder, so `calibrate` MUST be re-run before
+  # `detect` after changing this. Set back to "" to share one encoder.
+  probe_model_name: "google/siglip-base-patch16-224"
   device: "cpu"
   batch_size: 32
   # candidate encoders for the upgrade-path comparison (roadmap 3.3) and the

@@ -919,8 +919,27 @@ because probe z-thresholds are per-encoder.
 BLIP (88% on ARO) remains the untested candidate and still needs an adapter.
 SigLIP is free, installed, and now measured.
 
-**Status:** DONE (measured) — the swap itself is a config change plus a
-recalibration run
+**Swapped 2026-09-14.** `models.probe_model_name` is now
+`google/siglip-base-patch16-224`. `calibrate`, `detect` and the repair cycle's
+re-diagnosis passes all resolve it through `encoders.probe_encoder_from_cfg`,
+and the notebooks run `calibrate` before `detect`, so the per-encoder probe
+z-thresholds are refitted automatically — that ordering is what makes the swap
+safe, and it is why the guard cell now asserts both model names.
+
+Two tests pin the shipped state: the probes must be on SigLIP while scoring
+stays on CLIP (collapsing them to one model would silently break comparability
+with the published baseline and nothing else would notice), and every probe
+prompt must fit SigLIP's fixed 64-token context — the longest is 10 words, and
+the probe encoder never sees full captions or titles, which stay on CLIP.
+
+**What the next run should show.** The probes feed `flag_probe_*` at detection
+and the probe z-scores at routing, so expect movement in: `mutate_text` recall
+(0.477 on the last ABO run), `flag_probe_material` precision (0.703), and the
+share of V2T repairs the probe decides alone. Colour accuracy may move less
+than material — the pixel estimator still contributes there, the probe is the
+only estimator for material.
+
+**Status:** DONE — measured, swapped, guarded; the next run sizes the effect
 
 ---
 
