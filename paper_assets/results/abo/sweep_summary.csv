@@ -1,0 +1,2 @@
+Configuration,Precision,Recall,F1,Recall (missing_image),Recall (mixed),Recall (mutate_text),Recall (swap_image)
+Pooled (All Seeds),0.7073439220003145,0.6105606081172797,0.6553985137694885,1.0,0.89,0.47693672383205205,0.6769706336939721

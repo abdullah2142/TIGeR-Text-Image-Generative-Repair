@@ -887,8 +887,40 @@ BLIP remains the interesting candidate (88% on ARO) and still needs an adapter,
 since `ClipEncoder` assumes the dual-encoder `get_text_features` API. Measure
 the free comparison first.
 
-**Status:** DOING — wiring done; the comparison that decides what to swap to
-now runs in the notebook
+**Answered (2026-09-14 run). SigLIP wins, and by most on the field the paper
+calls its weakest.** Per-field probe accuracy on the clean ABO catalogue:
+
+| field | CLIP ViT-B/32 | SigLIP base/16 | n |
+|---|---|---|---|
+| colour | 0.545 | **0.604** | 7,791 |
+| **material** | 0.206 | **0.328** | 5,877 |
+| pattern | — | — | 0 (no ABO row carries one) |
+
+Material improves **+12.2 points, a 59% relative gain** — and `material_flip`
+recall of 0.200 was described in the roadmap as "the weakest number in the
+paper". Colour gains 5.9 points.
+
+**This overturns an earlier recorded decision, and the reason is instructive.**
+`project_chronicle.md` says SigLIP "did not provide a statistically significant
+upgrade … Both models struggled identically with identifying material", and
+concludes the limitation was the *visual data*, not the encoder. That was
+measured on the **synthetic** catalogue, whose flat-fill silhouettes genuinely
+carry no material texture — so both encoders were being asked to read
+information that was not in the image. On real photographs the encoders
+separate clearly. The old conclusion was not wrong; it was corpus-bound, and
+generalising it to real data was the error.
+
+**Action:** set `models.probe_model_name: "google/siglip-base-patch16-224"`.
+The B7 wiring moves only the probes; `sim_full`, the swap check and the LOO
+deltas stay on CLIP, so the reported baseline is untouched and the detection
+numbers stay comparable. Requires re-running `calibrate` before `detect`,
+because probe z-thresholds are per-encoder.
+
+BLIP (88% on ARO) remains the untested candidate and still needs an adapter.
+SigLIP is free, installed, and now measured.
+
+**Status:** DONE (measured) — the swap itself is a config change plus a
+recalibration run
 
 ---
 
@@ -1999,8 +2031,22 @@ on this data the clean and dirty populations are not separable by any
 similarity statistic available. The leverage is a product-identity-aware judge
 (`D17`) or a stronger encoder (`B7`).
 
-**Status:** TODO — two candidate fixes eliminated by measurement; the remaining
-lead is `D17`
+**Partially addressed by `D17` (2026-09-14 run).** Clean rows damaged fell
+**10 → 7**: the runner-up check caught 3 of the 10, at the cost of declining
+113 image repairs. So an identity-adjacent question *does* catch some of this,
+and the remaining 7 are cases where both encoders agreed on the same wrong
+candidate.
+
+That residue is the real ceiling. Two encoders trained on similar objectives
+agree on the same category-typical image, and no question posed in similarity
+space separates them. The remaining untried mechanism is a judge that reasons
+about identity rather than similarity — Gemini is wired as its own ablation row
+(`ENABLE_VLM_ROW` in the ABO notebook) and deliberately left off; see the note
+there for when spending the quota is justified.
+
+**Status:** PARTIAL — 30% of the damage removed by `D17`; the rest needs an
+identity-aware judge or a better encoder, both of which are now set up and
+neither of which is free
 
 
 ---
@@ -2055,13 +2101,39 @@ still rejects a swap worse than the original, and falls back cleanly with no
 runner-up. Plus two in `tests/test_solver_planning.py` pinning that the plan
 carries the runner-up and leaves it empty when the pool has one candidate.
 
-**Not yet validated on data.** `torch`/`transformers` are unavailable in this
-checkout, so the rejection *rate* is unknown: the mechanism is tested, the
-effect is not. The next ABO run measures it, and the number to watch is the
-T2V `independent_ok` split — anything other than 100% True is already evidence
-the check can do its job.
+**Measured (2026-09-14 run). It works, and the effect is large.**
 
-**Status:** DONE (mechanism) — needs the next run to size
+| | before | after |
+|---|---|---|
+| T2V swaps rejected by the verifier | **0 / 304** | **131 / 261 (50.2%)** |
+| V2T repairs rejected (unchanged mechanism) | 30 / 107 | 37 / 116 |
+
+Half of all image swaps are now rejected — the two encoders disagree about
+*which* candidate belongs that often. The old question could not surface this
+because the candidate was selected to win it.
+
+**What it bought, Full System:**
+
+| | before | after |
+|---|---|---|
+| Image-repair accuracy | 0.371 (224 cases) | **0.450** (111 cases) |
+| Colour accuracy | 0.388 (80) | **0.476** (63) |
+| Repaired | 296 | 183 |
+| Clean rows damaged (`D16`) | 10 | **7** |
+
+**This is a risk–coverage trade and must be reported as one.** Of the 113
+image repairs no longer made, roughly **80 would have been wrong and 33 would
+have been right** (the rejected set was ~29% correct against 45% for the set
+kept). For catalogue repair — where writing a wrong image corrupts a record
+while declining merely leaves it for a human — that is a favourable trade, but
+it is a trade, not a free gain. The honest presentation is the risk–coverage
+curve `B6` already recommends, not the accuracy number alone.
+
+The verifier is discriminating but not sharply: it shaves the weaker half
+rather than separating right from wrong. That is the same ceiling `D16` hit
+from the other direction, and it is a CLIP/SigLIP discrimination limit.
+
+**Status:** DONE — mechanism built, measured, and the trade quantified
 
 
 ---

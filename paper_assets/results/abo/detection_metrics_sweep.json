@@ -1,0 +1,1010 @@
+{
+  "seeds": [
+    7,
+    8,
+    9,
+    10,
+    11
+  ],
+  "per_seed": [
+    {
+      "n_rows": 4977,
+      "n_products": 4977,
+      "confusion": {
+        "tp": 936,
+        "fp": 377,
+        "tn": 3124,
+        "fn": 540
+      },
+      "precision": 0.7128712871287128,
+      "recall": 0.6341463414634146,
+      "f1": 0.6712083183936896,
+      "precision_wilson95": [
+        0.6878062194819744,
+        0.7366943430761951
+      ],
+      "recall_wilson95": [
+        0.6092543706094166,
+        0.6583418369846935
+      ],
+      "recall_by_label": {
+        "missing_image": {
+          "recall": 1.0,
+          "caught": 50,
+          "total": 50,
+          "wilson95": [
+            0.9286499658256813,
+            1.0
+          ]
+        },
+        "mixed": {
+          "recall": 0.9,
+          "caught": 90,
+          "total": 100,
+          "wilson95": [
+            0.8256326956323347,
+            0.9447714583868639
+          ]
+        },
+        "mutate_text": {
+          "recall": 0.5036818851251841,
+          "caught": 342,
+          "total": 679,
+          "wilson95": [
+            0.46615917537406887,
+            0.541163167025691
+          ]
+        },
+        "swap_image": {
+          "recall": 0.7017001545595054,
+          "caught": 454,
+          "total": 647,
+          "wilson95": [
+            0.6653398338748906,
+            0.735679400298217
+          ]
+        }
+      },
+      "recall_by_subtype": {
+        "attribute_drop": {
+          "recall": 0.05,
+          "caught": 4,
+          "total": 80
+        },
+        "color_flip": {
+          "recall": 0.6053511705685619,
+          "caught": 181,
+          "total": 299
+        },
+        "material_flip": {
+          "recall": 0.38,
+          "caught": 38,
+          "total": 100
+        },
+        "missing_image": {
+          "recall": 1.0,
+          "caught": 50,
+          "total": 50
+        },
+        "mixed_swap_color": {
+          "recall": 0.9,
+          "caught": 90,
+          "total": 100
+        },
+        "near_color_flip": {
+          "recall": 0.47,
+          "caught": 47,
+          "total": 100
+        },
+        "swap_image": {
+          "recall": 0.7971887550200804,
+          "caught": 397,
+          "total": 498
+        },
+        "swap_image_same_category": {
+          "recall": 0.3825503355704698,
+          "caught": 57,
+          "total": 149
+        },
+        "title_contradiction": {
+          "recall": 0.72,
+          "caught": 72,
+          "total": 100
+        }
+      },
+      "signal_precision": {
+        "flag_missing_image": {
+          "fired": 50,
+          "precision": 1.0,
+          "hits_by_label": {
+            "missing_image": 50
+          }
+        },
+        "flag_missing_text": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_low_sim": {
+          "fired": 581,
+          "precision": 0.8967297762478486,
+          "hits_by_label": {
+            "swap_image": 384,
+            "mixed": 79,
+            "mutate_text": 58
+          }
+        },
+        "flag_probe_color": {
+          "fired": 463,
+          "precision": 0.8077753779697624,
+          "hits_by_label": {
+            "mutate_text": 182,
+            "swap_image": 146,
+            "mixed": 46
+          }
+        },
+        "flag_probe_material": {
+          "fired": 206,
+          "precision": 0.6844660194174758,
+          "hits_by_label": {
+            "swap_image": 91,
+            "mutate_text": 31,
+            "mixed": 19
+          }
+        },
+        "flag_probe_pattern": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_text_out_of_domain": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_title_contradiction": {
+          "fired": 418,
+          "precision": 0.5382775119617225,
+          "hits_by_label": {
+            "mutate_text": 160,
+            "swap_image": 39,
+            "mixed": 24,
+            "missing_image": 2
+          }
+        }
+      }
+    },
+    {
+      "n_rows": 4977,
+      "n_products": 4977,
+      "confusion": {
+        "tp": 887,
+        "fp": 365,
+        "tn": 3137,
+        "fn": 588
+      },
+      "precision": 0.7084664536741214,
+      "recall": 0.6013559322033898,
+      "f1": 0.6505317198386504,
+      "precision_wilson95": [
+        0.6826848794071755,
+        0.7329726366362491
+      ],
+      "recall_wilson95": [
+        0.5761364729810952,
+        0.6260488050094617
+      ],
+      "recall_by_label": {
+        "missing_image": {
+          "recall": 1.0,
+          "caught": 50,
+          "total": 50,
+          "wilson95": [
+            0.9286499658256813,
+            1.0
+          ]
+        },
+        "mixed": {
+          "recall": 0.85,
+          "caught": 85,
+          "total": 100,
+          "wilson95": [
+            0.7671626666784216,
+            0.906940968088377
+          ]
+        },
+        "mutate_text": {
+          "recall": 0.4749262536873156,
+          "caught": 322,
+          "total": 678,
+          "wilson95": [
+            0.43758397870691823,
+            0.5125510673213675
+          ]
+        },
+        "swap_image": {
+          "recall": 0.6646058732612056,
+          "caught": 430,
+          "total": 647,
+          "wilson95": [
+            0.6273487130417484,
+            0.6999198573753854
+          ]
+        }
+      },
+      "recall_by_subtype": {
+        "attribute_drop": {
+          "recall": 0.02531645569620253,
+          "caught": 2,
+          "total": 79
+        },
+        "color_flip": {
+          "recall": 0.5886287625418061,
+          "caught": 176,
+          "total": 299
+        },
+        "material_flip": {
+          "recall": 0.29,
+          "caught": 29,
+          "total": 100
+        },
+        "missing_image": {
+          "recall": 1.0,
+          "caught": 50,
+          "total": 50
+        },
+        "mixed_swap_color": {
+          "recall": 0.85,
+          "caught": 85,
+          "total": 100
+        },
+        "near_color_flip": {
+          "recall": 0.55,
+          "caught": 55,
+          "total": 100
+        },
+        "swap_image": {
+          "recall": 0.7690763052208835,
+          "caught": 383,
+          "total": 498
+        },
+        "swap_image_same_category": {
+          "recall": 0.31543624161073824,
+          "caught": 47,
+          "total": 149
+        },
+        "title_contradiction": {
+          "recall": 0.6,
+          "caught": 60,
+          "total": 100
+        }
+      },
+      "signal_precision": {
+        "flag_missing_image": {
+          "fired": 50,
+          "precision": 1.0,
+          "hits_by_label": {
+            "missing_image": 50
+          }
+        },
+        "flag_missing_text": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_low_sim": {
+          "fired": 566,
+          "precision": 0.892226148409894,
+          "hits_by_label": {
+            "swap_image": 376,
+            "mixed": 76,
+            "mutate_text": 53
+          }
+        },
+        "flag_probe_color": {
+          "fired": 446,
+          "precision": 0.7914798206278026,
+          "hits_by_label": {
+            "mutate_text": 186,
+            "swap_image": 131,
+            "mixed": 36
+          }
+        },
+        "flag_probe_material": {
+          "fired": 159,
+          "precision": 0.6855345911949685,
+          "hits_by_label": {
+            "swap_image": 70,
+            "mutate_text": 25,
+            "mixed": 14
+          }
+        },
+        "flag_probe_pattern": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_text_out_of_domain": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_title_contradiction": {
+          "fired": 388,
+          "precision": 0.5077319587628866,
+          "hits_by_label": {
+            "mutate_text": 140,
+            "swap_image": 35,
+            "mixed": 19,
+            "missing_image": 3
+          }
+        }
+      }
+    },
+    {
+      "n_rows": 4977,
+      "n_products": 4977,
+      "confusion": {
+        "tp": 879,
+        "fp": 386,
+        "tn": 3121,
+        "fn": 591
+      },
+      "precision": 0.6948616600790514,
+      "recall": 0.5979591836734693,
+      "f1": 0.6427787934186472,
+      "precision_wilson95": [
+        0.6689281274306039,
+        0.7196152494574174
+      ],
+      "recall_wilson95": [
+        0.5726702052869186,
+        0.6227374965990913
+      ],
+      "recall_by_label": {
+        "missing_image": {
+          "recall": 1.0,
+          "caught": 50,
+          "total": 50,
+          "wilson95": [
+            0.9286499658256813,
+            1.0
+          ]
+        },
+        "mixed": {
+          "recall": 0.92,
+          "caught": 92,
+          "total": 100,
+          "wilson95": [
+            0.8500173312059693,
+            0.9589070305141891
+          ]
+        },
+        "mutate_text": {
+          "recall": 0.4576523031203566,
+          "caught": 308,
+          "total": 673,
+          "wilson95": [
+            0.42035837120700714,
+            0.49542694695310585
+          ]
+        },
+        "swap_image": {
+          "recall": 0.6630602782071098,
+          "caught": 429,
+          "total": 647,
+          "wilson95": [
+            0.6257713162933219,
+            0.6984243098006463
+          ]
+        }
+      },
+      "recall_by_subtype": {
+        "attribute_drop": {
+          "recall": 0.04054054054054054,
+          "caught": 3,
+          "total": 74
+        },
+        "color_flip": {
+          "recall": 0.5819397993311036,
+          "caught": 174,
+          "total": 299
+        },
+        "material_flip": {
+          "recall": 0.29,
+          "caught": 29,
+          "total": 100
+        },
+        "missing_image": {
+          "recall": 1.0,
+          "caught": 50,
+          "total": 50
+        },
+        "mixed_swap_color": {
+          "recall": 0.92,
+          "caught": 92,
+          "total": 100
+        },
+        "near_color_flip": {
+          "recall": 0.4,
+          "caught": 40,
+          "total": 100
+        },
+        "swap_image": {
+          "recall": 0.7610441767068273,
+          "caught": 379,
+          "total": 498
+        },
+        "swap_image_same_category": {
+          "recall": 0.33557046979865773,
+          "caught": 50,
+          "total": 149
+        },
+        "title_contradiction": {
+          "recall": 0.62,
+          "caught": 62,
+          "total": 100
+        }
+      },
+      "signal_precision": {
+        "flag_missing_image": {
+          "fired": 50,
+          "precision": 1.0,
+          "hits_by_label": {
+            "missing_image": 50
+          }
+        },
+        "flag_missing_text": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_low_sim": {
+          "fired": 561,
+          "precision": 0.875222816399287,
+          "hits_by_label": {
+            "swap_image": 368,
+            "mixed": 79,
+            "mutate_text": 44
+          }
+        },
+        "flag_probe_color": {
+          "fired": 453,
+          "precision": 0.7924944812362031,
+          "hits_by_label": {
+            "mutate_text": 165,
+            "swap_image": 153,
+            "mixed": 41
+          }
+        },
+        "flag_probe_material": {
+          "fired": 176,
+          "precision": 0.6988636363636364,
+          "hits_by_label": {
+            "swap_image": 86,
+            "mutate_text": 27,
+            "mixed": 10
+          }
+        },
+        "flag_probe_pattern": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_text_out_of_domain": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_title_contradiction": {
+          "fired": 399,
+          "precision": 0.48872180451127817,
+          "hits_by_label": {
+            "mutate_text": 134,
+            "swap_image": 38,
+            "mixed": 21,
+            "missing_image": 2
+          }
+        }
+      }
+    },
+    {
+      "n_rows": 4977,
+      "n_products": 4977,
+      "confusion": {
+        "tp": 876,
+        "fp": 379,
+        "tn": 3126,
+        "fn": 596
+      },
+      "precision": 0.69800796812749,
+      "recall": 0.595108695652174,
+      "f1": 0.6424642464246424,
+      "precision_wilson95": [
+        0.6720336374177005,
+        0.7227737791786368
+      ],
+      "recall_wilson95": [
+        0.5698159123140745,
+        0.6199063451422813
+      ],
+      "recall_by_label": {
+        "missing_image": {
+          "recall": 1.0,
+          "caught": 50,
+          "total": 50,
+          "wilson95": [
+            0.9286499658256813,
+            1.0
+          ]
+        },
+        "mixed": {
+          "recall": 0.89,
+          "caught": 89,
+          "total": 100,
+          "wilson95": [
+            0.8136853697209698,
+            0.9374586804477487
+          ]
+        },
+        "mutate_text": {
+          "recall": 0.4696296296296296,
+          "caught": 317,
+          "total": 675,
+          "wilson95": [
+            0.43225721807847833,
+            0.5073457761988317
+          ]
+        },
+        "swap_image": {
+          "recall": 0.6491499227202473,
+          "caught": 420,
+          "total": 647,
+          "wilson95": [
+            0.6115939940628248,
+            0.6849451331226533
+          ]
+        }
+      },
+      "recall_by_subtype": {
+        "attribute_drop": {
+          "recall": 0.06578947368421052,
+          "caught": 5,
+          "total": 76
+        },
+        "color_flip": {
+          "recall": 0.5986622073578596,
+          "caught": 179,
+          "total": 299
+        },
+        "material_flip": {
+          "recall": 0.34,
+          "caught": 34,
+          "total": 100
+        },
+        "missing_image": {
+          "recall": 1.0,
+          "caught": 50,
+          "total": 50
+        },
+        "mixed_swap_color": {
+          "recall": 0.89,
+          "caught": 89,
+          "total": 100
+        },
+        "near_color_flip": {
+          "recall": 0.45,
+          "caught": 45,
+          "total": 100
+        },
+        "swap_image": {
+          "recall": 0.7530120481927711,
+          "caught": 375,
+          "total": 498
+        },
+        "swap_image_same_category": {
+          "recall": 0.30201342281879195,
+          "caught": 45,
+          "total": 149
+        },
+        "title_contradiction": {
+          "recall": 0.54,
+          "caught": 54,
+          "total": 100
+        }
+      },
+      "signal_precision": {
+        "flag_missing_image": {
+          "fired": 50,
+          "precision": 1.0,
+          "hits_by_label": {
+            "missing_image": 50
+          }
+        },
+        "flag_missing_text": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_low_sim": {
+          "fired": 562,
+          "precision": 0.8843416370106761,
+          "hits_by_label": {
+            "swap_image": 373,
+            "mixed": 70,
+            "mutate_text": 54
+          }
+        },
+        "flag_probe_color": {
+          "fired": 455,
+          "precision": 0.7934065934065934,
+          "hits_by_label": {
+            "mutate_text": 172,
+            "swap_image": 145,
+            "mixed": 44
+          }
+        },
+        "flag_probe_material": {
+          "fired": 202,
+          "precision": 0.7128712871287128,
+          "hits_by_label": {
+            "swap_image": 95,
+            "mutate_text": 32,
+            "mixed": 17
+          }
+        },
+        "flag_probe_pattern": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_text_out_of_domain": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_title_contradiction": {
+          "fired": 385,
+          "precision": 0.4883116883116883,
+          "hits_by_label": {
+            "mutate_text": 135,
+            "swap_image": 35,
+            "mixed": 15,
+            "missing_image": 3
+          }
+        }
+      }
+    },
+    {
+      "n_rows": 4977,
+      "n_products": 4977,
+      "confusion": {
+        "tp": 920,
+        "fp": 354,
+        "tn": 3149,
+        "fn": 554
+      },
+      "precision": 0.7221350078492935,
+      "recall": 0.6241519674355496,
+      "f1": 0.6695778748180494,
+      "precision_wilson95": [
+        0.6968972558323228,
+        0.746037142296522
+      ],
+      "recall_wilson95": [
+        0.5991330162278576,
+        0.6485254608376141
+      ],
+      "recall_by_label": {
+        "missing_image": {
+          "recall": 1.0,
+          "caught": 50,
+          "total": 50,
+          "wilson95": [
+            0.9286499658256813,
+            1.0
+          ]
+        },
+        "mixed": {
+          "recall": 0.89,
+          "caught": 89,
+          "total": 100,
+          "wilson95": [
+            0.8136853697209698,
+            0.9374586804477487
+          ]
+        },
+        "mutate_text": {
+          "recall": 0.47858197932053176,
+          "caught": 324,
+          "total": 677,
+          "wilson95": [
+            0.44117905847914546,
+            0.5162265994594999
+          ]
+        },
+        "swap_image": {
+          "recall": 0.7063369397217929,
+          "caught": 457,
+          "total": 647,
+          "wilson95": [
+            0.6701074336162172,
+            0.7401306335263871
+          ]
+        }
+      },
+      "recall_by_subtype": {
+        "attribute_drop": {
+          "recall": 0.08974358974358974,
+          "caught": 7,
+          "total": 78
+        },
+        "color_flip": {
+          "recall": 0.6187290969899666,
+          "caught": 185,
+          "total": 299
+        },
+        "material_flip": {
+          "recall": 0.26,
+          "caught": 26,
+          "total": 100
+        },
+        "missing_image": {
+          "recall": 1.0,
+          "caught": 50,
+          "total": 50
+        },
+        "mixed_swap_color": {
+          "recall": 0.89,
+          "caught": 89,
+          "total": 100
+        },
+        "near_color_flip": {
+          "recall": 0.45,
+          "caught": 45,
+          "total": 100
+        },
+        "swap_image": {
+          "recall": 0.8152610441767069,
+          "caught": 406,
+          "total": 498
+        },
+        "swap_image_same_category": {
+          "recall": 0.3422818791946309,
+          "caught": 51,
+          "total": 149
+        },
+        "title_contradiction": {
+          "recall": 0.61,
+          "caught": 61,
+          "total": 100
+        }
+      },
+      "signal_precision": {
+        "flag_missing_image": {
+          "fired": 50,
+          "precision": 1.0,
+          "hits_by_label": {
+            "missing_image": 50
+          }
+        },
+        "flag_missing_text": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_low_sim": {
+          "fired": 602,
+          "precision": 0.8986710963455149,
+          "hits_by_label": {
+            "swap_image": 400,
+            "mixed": 83,
+            "mutate_text": 58
+          }
+        },
+        "flag_probe_color": {
+          "fired": 462,
+          "precision": 0.8051948051948052,
+          "hits_by_label": {
+            "mutate_text": 176,
+            "swap_image": 155,
+            "mixed": 41
+          }
+        },
+        "flag_probe_material": {
+          "fired": 170,
+          "precision": 0.7352941176470589,
+          "hits_by_label": {
+            "swap_image": 79,
+            "mutate_text": 36,
+            "mixed": 10
+          }
+        },
+        "flag_probe_pattern": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_text_out_of_domain": {
+          "fired": 0,
+          "precision": null
+        },
+        "flag_title_contradiction": {
+          "fired": 396,
+          "precision": 0.5252525252525253,
+          "hits_by_label": {
+            "mutate_text": 144,
+            "swap_image": 39,
+            "mixed": 19,
+            "missing_image": 6
+          }
+        }
+      }
+    }
+  ],
+  "pooled": {
+    "n_rows": 24885,
+    "n_products": 4977,
+    "confusion": {
+      "tp": 4498,
+      "fp": 1861,
+      "tn": 15657,
+      "fn": 2869
+    },
+    "precision": 0.7073439220003145,
+    "recall": 0.6105606081172797,
+    "f1": 0.6553985137694885,
+    "precision_wilson95": [
+      0.696038478912606,
+      0.7183989950612863
+    ],
+    "recall_wilson95": [
+      0.5993706139433597,
+      0.6216353563925108
+    ],
+    "recall_by_label": {
+      "missing_image": {
+        "recall": 1.0,
+        "caught": 250,
+        "total": 250,
+        "wilson95": [
+          0.9848661527503766,
+          1.0
+        ]
+      },
+      "mixed": {
+        "recall": 0.89,
+        "caught": 445,
+        "total": 500,
+        "wilson95": [
+          0.8595438141340721,
+          0.9145089834118234
+        ]
+      },
+      "mutate_text": {
+        "recall": 0.47693672383205205,
+        "caught": 1613,
+        "total": 3382,
+        "wilson95": [
+          0.46013883287799767,
+          0.493786950300991
+        ]
+      },
+      "swap_image": {
+        "recall": 0.6769706336939721,
+        "caught": 2190,
+        "total": 3235,
+        "wilson95": [
+          0.6606541229152048,
+          0.6928673336450666
+        ]
+      }
+    },
+    "recall_by_subtype": {
+      "attribute_drop": {
+        "recall": 0.05426356589147287,
+        "caught": 21,
+        "total": 387
+      },
+      "color_flip": {
+        "recall": 0.5986622073578596,
+        "caught": 895,
+        "total": 1495
+      },
+      "material_flip": {
+        "recall": 0.312,
+        "caught": 156,
+        "total": 500
+      },
+      "missing_image": {
+        "recall": 1.0,
+        "caught": 250,
+        "total": 250
+      },
+      "mixed_swap_color": {
+        "recall": 0.89,
+        "caught": 445,
+        "total": 500
+      },
+      "near_color_flip": {
+        "recall": 0.464,
+        "caught": 232,
+        "total": 500
+      },
+      "swap_image": {
+        "recall": 0.7791164658634538,
+        "caught": 1940,
+        "total": 2490
+      },
+      "swap_image_same_category": {
+        "recall": 0.33557046979865773,
+        "caught": 250,
+        "total": 745
+      },
+      "title_contradiction": {
+        "recall": 0.618,
+        "caught": 309,
+        "total": 500
+      }
+    },
+    "signal_precision": {
+      "flag_missing_image": {
+        "fired": 250,
+        "precision": 1.0,
+        "hits_by_label": {
+          "missing_image": 250
+        }
+      },
+      "flag_missing_text": {
+        "fired": 0,
+        "precision": null
+      },
+      "flag_low_sim": {
+        "fired": 2872,
+        "precision": 0.8896239554317549,
+        "hits_by_label": {
+          "swap_image": 1901,
+          "mixed": 387,
+          "mutate_text": 267
+        }
+      },
+      "flag_probe_color": {
+        "fired": 2279,
+        "precision": 0.7981570864414217,
+        "hits_by_label": {
+          "mutate_text": 881,
+          "swap_image": 730,
+          "mixed": 208
+        }
+      },
+      "flag_probe_material": {
+        "fired": 913,
+        "precision": 0.7031763417305587,
+        "hits_by_label": {
+          "swap_image": 421,
+          "mutate_text": 151,
+          "mixed": 70
+        }
+      },
+      "flag_probe_pattern": {
+        "fired": 0,
+        "precision": null
+      },
+      "flag_text_out_of_domain": {
+        "fired": 0,
+        "precision": null
+      },
+      "flag_title_contradiction": {
+        "fired": 1986,
+        "precision": 0.5100704934541792,
+        "hits_by_label": {
+          "mutate_text": 713,
+          "swap_image": 186,
+          "mixed": 98,
+          "missing_image": 16
+        }
+      }
+    },
+    "bootstrap95_product_level": {
+      "precision": [
+        0.6895432238502011,
+        0.725400305768027
+      ],
+      "recall": [
+        0.5986327750943992,
+        0.6222842215017715
+      ],
+      "f1": [
+        0.6450751982074096,
+        0.6655821730714354
+      ],
+      "n_bootstrap": 2000
+    }
+  }
+}

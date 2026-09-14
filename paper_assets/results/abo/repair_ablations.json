@@ -1,27 +1,27 @@
 {
   "full": {
-    "total_attempted": 1173,
-    "repaired": 296,
-    "escalated": 877,
-    "dismissed": 28,
+    "total_attempted": 1174,
+    "repaired": 183,
+    "escalated": 991,
+    "dismissed": 27,
     "acquire_image": 50,
     "passes_used_distribution": {
-      "1": 1210,
-      "2": 41
+      "1": 1231,
+      "2": 20
     },
-    "multi_pass_rows": 41,
-    "both_directions_rows": 8,
+    "multi_pass_rows": 20,
+    "both_directions_rows": 0,
     "unrepaired": 0,
     "total_all_statuses": 1251,
-    "color_accuracy": 0.3875,
-    "v2t_total": 80,
-    "attr_accuracy": 0.3780487804878049,
-    "attr_total": 82,
+    "color_accuracy": 0.47619047619047616,
+    "v2t_total": 63,
+    "attr_accuracy": 0.46153846153846156,
+    "attr_total": 65,
     "attr_by_field": {
       "color": {
-        "correct": 31,
-        "n": 80,
-        "accuracy": 0.3875
+        "correct": 30,
+        "n": 63,
+        "accuracy": 0.47619047619047616
       },
       "material": {
         "correct": 0,
@@ -29,38 +29,38 @@
         "accuracy": 0.0
       }
     },
-    "t2v_accuracy": 0.3705357142857143,
-    "t2v_total": 224
+    "t2v_accuracy": 0.45045045045045046,
+    "t2v_total": 111
   },
   "no_arbiter": {
     "total_attempted": 1201,
-    "repaired": 10,
-    "escalated": 1191,
+    "repaired": 5,
+    "escalated": 1196,
     "dismissed": 0,
     "acquire_image": 50,
     "passes_used_distribution": {
-      "1": 1246,
-      "2": 5
+      "1": 1249,
+      "2": 2
     },
-    "multi_pass_rows": 5,
+    "multi_pass_rows": 2,
     "both_directions_rows": 0,
     "unrepaired": 0,
     "total_all_statuses": 1251,
     "color_accuracy": 0.0,
-    "v2t_total": 2,
+    "v2t_total": 1,
     "attr_accuracy": 0.0,
-    "attr_total": 2,
+    "attr_total": 1,
     "attr_by_field": {
       "color": {
         "correct": 0,
-        "n": 2,
+        "n": 1,
         "accuracy": 0.0
       }
     },
     "t2v_accuracy": 0.4,
-    "t2v_total": 10
+    "t2v_total": 5
   },
-  "no_vlm": {
+  "no_independent": {
     "total_attempted": 1173,
     "repaired": 325,
     "escalated": 848,
@@ -94,28 +94,28 @@
     "t2v_total": 225
   },
   "no_gen": {
-    "total_attempted": 1173,
-    "repaired": 296,
-    "escalated": 877,
-    "dismissed": 28,
+    "total_attempted": 1174,
+    "repaired": 183,
+    "escalated": 991,
+    "dismissed": 27,
     "acquire_image": 50,
     "passes_used_distribution": {
-      "1": 1210,
-      "2": 41
+      "1": 1231,
+      "2": 20
     },
-    "multi_pass_rows": 41,
-    "both_directions_rows": 8,
+    "multi_pass_rows": 20,
+    "both_directions_rows": 0,
     "unrepaired": 0,
     "total_all_statuses": 1251,
-    "color_accuracy": 0.3875,
-    "v2t_total": 80,
-    "attr_accuracy": 0.3780487804878049,
-    "attr_total": 82,
+    "color_accuracy": 0.47619047619047616,
+    "v2t_total": 63,
+    "attr_accuracy": 0.46153846153846156,
+    "attr_total": 65,
     "attr_by_field": {
       "color": {
-        "correct": 31,
-        "n": 80,
-        "accuracy": 0.3875
+        "correct": 30,
+        "n": 63,
+        "accuracy": 0.47619047619047616
       },
       "material": {
         "correct": 0,
@@ -123,32 +123,32 @@
         "accuracy": 0.0
       }
     },
-    "t2v_accuracy": 0.3705357142857143,
-    "t2v_total": 224
+    "t2v_accuracy": 0.45045045045045046,
+    "t2v_total": 111
   },
   "no_gamma": {
-    "total_attempted": 1170,
-    "repaired": 583,
-    "escalated": 587,
-    "dismissed": 31,
+    "total_attempted": 1171,
+    "repaired": 366,
+    "escalated": 805,
+    "dismissed": 30,
     "acquire_image": 50,
     "passes_used_distribution": {
-      "1": 1182,
-      "2": 69
+      "1": 1217,
+      "2": 34
     },
-    "multi_pass_rows": 69,
-    "both_directions_rows": 19,
+    "multi_pass_rows": 34,
+    "both_directions_rows": 6,
     "unrepaired": 0,
     "total_all_statuses": 1251,
-    "color_accuracy": 0.3333333333333333,
-    "v2t_total": 153,
-    "attr_accuracy": 0.3227848101265823,
-    "attr_total": 158,
+    "color_accuracy": 0.4132231404958678,
+    "v2t_total": 121,
+    "attr_accuracy": 0.3968253968253968,
+    "attr_total": 126,
     "attr_by_field": {
       "color": {
-        "correct": 51,
-        "n": 153,
-        "accuracy": 0.3333333333333333
+        "correct": 50,
+        "n": 121,
+        "accuracy": 0.4132231404958678
       },
       "material": {
         "correct": 0,
@@ -156,8 +156,8 @@
         "accuracy": 0.0
       }
     },
-    "t2v_accuracy": 0.3938053097345133,
-    "t2v_total": 452
+    "t2v_accuracy": 0.41702127659574467,
+    "t2v_total": 235
   },
   "_v2t_cases": [
     {
@@ -191,54 +191,6 @@
       "estimators_agree": false,
       "pixel_correct": 0,
       "probe_correct": 0
-    },
-    {
-      "config": "full",
-      "row_id": "B005GD4KIY",
-      "true_color": "red",
-      "written_color": null,
-      "correct": null,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "leather",
-      "estimators_agree": false,
-      "pixel_correct": null,
-      "probe_correct": 0
-    },
-    {
-      "config": "full",
-      "row_id": "B006A06O4K",
-      "true_color": "white",
-      "written_color": "brown",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "full",
-      "row_id": "B00BIG2LEI",
-      "true_color": "yellow",
-      "written_color": "orange",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
     },
     {
       "config": "full",
@@ -402,22 +354,6 @@
     },
     {
       "config": "full",
-      "row_id": "B01DTZVX08",
-      "true_color": "white",
-      "written_color": "gray",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "full",
       "row_id": "B01GPY6R4C",
       "true_color": "",
       "written_color": null,
@@ -482,22 +418,6 @@
     },
     {
       "config": "full",
-      "row_id": "B01MZB15L9",
-      "true_color": "gray",
-      "written_color": "black",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "full",
       "row_id": "B06XDQ1PQL",
       "true_color": "",
       "written_color": null,
@@ -546,22 +466,6 @@
     },
     {
       "config": "full",
-      "row_id": "B0719SX5NS",
-      "true_color": "white",
-      "written_color": "blue",
-      "correct": 0,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": 0.4250389841835598,
-      "pixel_region": "center_box",
-      "pixel_declined": true,
-      "probe_value": "blue",
-      "estimators_agree": false,
-      "pixel_correct": null,
-      "probe_correct": 0
-    },
-    {
-      "config": "full",
       "row_id": "B071FJZVPH",
       "true_color": "white",
       "written_color": null,
@@ -590,22 +494,6 @@
       "probe_value": "green",
       "estimators_agree": false,
       "pixel_correct": 0,
-      "probe_correct": 0
-    },
-    {
-      "config": "full",
-      "row_id": "B072FVHSZQ",
-      "true_color": "gray",
-      "written_color": null,
-      "correct": null,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "silicone",
-      "estimators_agree": false,
-      "pixel_correct": null,
       "probe_correct": 0
     },
     {
@@ -661,38 +549,6 @@
       "row_id": "B073P19B2D",
       "true_color": "black",
       "written_color": "yellow",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "full",
-      "row_id": "B073P1S8VQ",
-      "true_color": "black",
-      "written_color": "blue",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "full",
-      "row_id": "B073P6DSBQ",
-      "true_color": "multicolour",
-      "written_color": "orange",
       "correct": 0,
       "value_source": "",
       "pixel_value": "",
@@ -850,38 +706,6 @@
     },
     {
       "config": "full",
-      "row_id": "B07B4D84TW",
-      "true_color": "gray",
-      "written_color": null,
-      "correct": null,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "rubber",
-      "estimators_agree": false,
-      "pixel_correct": null,
-      "probe_correct": 0
-    },
-    {
-      "config": "full",
-      "row_id": "B07B4MF2N5",
-      "true_color": "brown",
-      "written_color": "brown",
-      "correct": 1,
-      "value_source": "pixel",
-      "pixel_value": "brown",
-      "pixel_conf": 0.8833196384552178,
-      "pixel_region": "foreground",
-      "pixel_declined": false,
-      "probe_value": "brown",
-      "estimators_agree": true,
-      "pixel_correct": 1,
-      "probe_correct": 1
-    },
-    {
-      "config": "full",
       "row_id": "B07B4MHTG1",
       "true_color": "white",
       "written_color": "white",
@@ -994,22 +818,6 @@
     },
     {
       "config": "full",
-      "row_id": "B07BL636P7",
-      "true_color": "purple",
-      "written_color": "gray",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "full",
       "row_id": "B07BL6BTJN",
       "true_color": "gray",
       "written_color": null,
@@ -1038,22 +846,6 @@
       "probe_value": "gray",
       "estimators_agree": false,
       "pixel_correct": 1,
-      "probe_correct": 0
-    },
-    {
-      "config": "full",
-      "row_id": "B07CSTYZKM",
-      "true_color": "green",
-      "written_color": null,
-      "correct": null,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": 0.4842032967032967,
-      "pixel_region": "foreground",
-      "pixel_declined": true,
-      "probe_value": "brown",
-      "estimators_agree": false,
-      "pixel_correct": null,
       "probe_correct": 0
     },
     {
@@ -1103,38 +895,6 @@
       "estimators_agree": true,
       "pixel_correct": 1,
       "probe_correct": 1
-    },
-    {
-      "config": "full",
-      "row_id": "B07DBF1R71",
-      "true_color": "black",
-      "written_color": "yellow",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "full",
-      "row_id": "B07DBHB67R",
-      "true_color": "brown",
-      "written_color": "yellow",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
     },
     {
       "config": "full",
@@ -1314,22 +1074,6 @@
     },
     {
       "config": "full",
-      "row_id": "B07HKGHSJJ",
-      "true_color": "brown",
-      "written_color": "gray",
-      "correct": 0,
-      "value_source": "pixel",
-      "pixel_value": "gray",
-      "pixel_conf": 0.6362401521325727,
-      "pixel_region": "foreground",
-      "pixel_declined": false,
-      "probe_value": "gray",
-      "estimators_agree": true,
-      "pixel_correct": 0,
-      "probe_correct": 0
-    },
-    {
-      "config": "full",
       "row_id": "B07HSHKHHB",
       "true_color": "",
       "written_color": "gray",
@@ -1474,22 +1218,6 @@
     },
     {
       "config": "full",
-      "row_id": "B07K35ZXB6",
-      "true_color": "yellow",
-      "written_color": "purple",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "full",
       "row_id": "B07L3D5TFY",
       "true_color": "",
       "written_color": "white",
@@ -1551,22 +1279,6 @@
       "estimators_agree": false,
       "pixel_correct": 0,
       "probe_correct": 1
-    },
-    {
-      "config": "full",
-      "row_id": "B07P5LLWKZ",
-      "true_color": "black",
-      "written_color": "brown",
-      "correct": 0,
-      "value_source": "pixel",
-      "pixel_value": "brown",
-      "pixel_conf": 0.8833196384552178,
-      "pixel_region": "foreground",
-      "pixel_declined": false,
-      "probe_value": "brown",
-      "estimators_agree": true,
-      "pixel_correct": 0,
-      "probe_correct": 0
     },
     {
       "config": "full",
@@ -1727,22 +1439,6 @@
       "estimators_agree": false,
       "pixel_correct": null,
       "probe_correct": 0
-    },
-    {
-      "config": "full",
-      "row_id": "B07SK9M5T4",
-      "true_color": "brown",
-      "written_color": "yellow",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
     },
     {
       "config": "full",
@@ -2050,22 +1746,6 @@
     },
     {
       "config": "full",
-      "row_id": "B0824FLNHK",
-      "true_color": "white",
-      "written_color": "brown",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "full",
       "row_id": "B0828FB1H1",
       "true_color": "gray",
       "written_color": null,
@@ -2191,22 +1871,6 @@
       "estimators_agree": true,
       "pixel_correct": 1,
       "probe_correct": 1
-    },
-    {
-      "config": "full",
-      "row_id": "B084JPCTHT",
-      "true_color": "red",
-      "written_color": "purple",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
     },
     {
       "config": "full",
@@ -2337,23 +2001,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_arbiter",
-      "row_id": "B07H39WNJR",
-      "true_color": "blue",
-      "written_color": "orange",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B000V7TPSA",
       "true_color": "",
       "written_color": null,
@@ -2369,7 +2017,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B000W8TLN2",
       "true_color": "multicolour",
       "written_color": null,
@@ -2385,7 +2033,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B005GD4KIY",
       "true_color": "red",
       "written_color": null,
@@ -2401,7 +2049,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B006A06O4K",
       "true_color": "white",
       "written_color": "brown",
@@ -2417,7 +2065,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B00BIG2LEI",
       "true_color": "yellow",
       "written_color": "orange",
@@ -2433,7 +2081,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B00FXW7WNS",
       "true_color": "gray",
       "written_color": null,
@@ -2449,7 +2097,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B00GBWF902",
       "true_color": "brown",
       "written_color": "brown",
@@ -2465,7 +2113,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B00N1PD558",
       "true_color": "gray",
       "written_color": null,
@@ -2481,7 +2129,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B013R3OU3E",
       "true_color": "brown",
       "written_color": "gray",
@@ -2497,7 +2145,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B013R3Q62C",
       "true_color": "",
       "written_color": null,
@@ -2513,7 +2161,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B013R47FJE",
       "true_color": "",
       "written_color": "gray",
@@ -2529,7 +2177,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B014WC311G",
       "true_color": "gray",
       "written_color": "white",
@@ -2545,7 +2193,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B015FWU72S",
       "true_color": "gray",
       "written_color": null,
@@ -2561,7 +2209,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B017BQUUP0",
       "true_color": "blue",
       "written_color": "blue",
@@ -2577,7 +2225,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B01D1QG5DA",
       "true_color": "black",
       "written_color": "purple",
@@ -2593,7 +2241,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B01DTZVX08",
       "true_color": "white",
       "written_color": "gray",
@@ -2609,7 +2257,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B01GPY6R4C",
       "true_color": "",
       "written_color": null,
@@ -2625,7 +2273,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B01GPY6THM",
       "true_color": "purple",
       "written_color": null,
@@ -2641,7 +2289,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B01LXBWA9W",
       "true_color": "",
       "written_color": "red",
@@ -2657,7 +2305,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B01MSBI6MB",
       "true_color": "yellow",
       "written_color": null,
@@ -2673,7 +2321,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B01MZB15L9",
       "true_color": "gray",
       "written_color": "black",
@@ -2689,7 +2337,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B06XDQ1PQL",
       "true_color": "",
       "written_color": null,
@@ -2705,7 +2353,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B06XWJPPKN",
       "true_color": "",
       "written_color": "white",
@@ -2721,7 +2369,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B0714MMHBL",
       "true_color": "brown",
       "written_color": null,
@@ -2737,7 +2385,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B0719SX5NS",
       "true_color": "white",
       "written_color": "blue",
@@ -2753,7 +2401,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B071FJZVPH",
       "true_color": "white",
       "written_color": null,
@@ -2769,7 +2417,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B0723DFX97",
       "true_color": "blue",
       "written_color": null,
@@ -2785,7 +2433,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B072FVHSZQ",
       "true_color": "gray",
       "written_color": null,
@@ -2801,7 +2449,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B072JC9KZC",
       "true_color": "blue",
       "written_color": null,
@@ -2817,7 +2465,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B0735W3QK6",
       "true_color": "",
       "written_color": null,
@@ -2833,7 +2481,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B073751DML",
       "true_color": "blue",
       "written_color": "orange",
@@ -2849,7 +2497,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B073P19B2D",
       "true_color": "black",
       "written_color": "yellow",
@@ -2865,7 +2513,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B073P1S8VQ",
       "true_color": "black",
       "written_color": "blue",
@@ -2881,7 +2529,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B073P6DSBQ",
       "true_color": "multicolour",
       "written_color": "orange",
@@ -2897,7 +2545,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B073P6LBBZ",
       "true_color": "multicolour",
       "written_color": "green",
@@ -2913,7 +2561,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B075L9W1BP",
       "true_color": "yellow",
       "written_color": "green",
@@ -2929,7 +2577,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B075NR8HWJ",
       "true_color": "gray",
       "written_color": "gray",
@@ -2945,7 +2593,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B075X2Y4HQ",
       "true_color": "black",
       "written_color": null,
@@ -2961,7 +2609,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B075X33T32",
       "true_color": "gray",
       "written_color": null,
@@ -2977,7 +2625,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B075X5444P",
       "true_color": "",
       "written_color": "gray",
@@ -2993,7 +2641,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B075YNJR62",
       "true_color": "gray",
       "written_color": null,
@@ -3009,7 +2657,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B075ZB5BQ6",
       "true_color": "white",
       "written_color": "multicolour",
@@ -3025,7 +2673,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B0792HCFJR",
       "true_color": "white",
       "written_color": "blue",
@@ -3041,7 +2689,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07B4D4BWD",
       "true_color": "brown",
       "written_color": null,
@@ -3057,7 +2705,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07B4D84TW",
       "true_color": "gray",
       "written_color": null,
@@ -3073,7 +2721,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07B4MF2N5",
       "true_color": "brown",
       "written_color": "brown",
@@ -3089,7 +2737,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07B4MHTG1",
       "true_color": "white",
       "written_color": "white",
@@ -3105,7 +2753,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07B4MYZM8",
       "true_color": "blue",
       "written_color": null,
@@ -3121,7 +2769,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07B4WH8ZQ",
       "true_color": "gray",
       "written_color": "gray",
@@ -3137,7 +2785,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07B4WKMXB",
       "true_color": "yellow",
       "written_color": "orange",
@@ -3153,7 +2801,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07B4YVX6D",
       "true_color": "brown",
       "written_color": "gray",
@@ -3169,7 +2817,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07B4ZQXDG",
       "true_color": "blue",
       "written_color": "blue",
@@ -3185,7 +2833,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07B78LY2F",
       "true_color": "gray",
       "written_color": null,
@@ -3201,7 +2849,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07BL227TW",
       "true_color": "black",
       "written_color": "black",
@@ -3217,7 +2865,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07BL636P7",
       "true_color": "purple",
       "written_color": "gray",
@@ -3233,7 +2881,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07BL6BTJN",
       "true_color": "gray",
       "written_color": null,
@@ -3249,7 +2897,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07BW8P2F7",
       "true_color": "white",
       "written_color": null,
@@ -3265,7 +2913,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07BWMSLVZ",
       "true_color": "brown",
       "written_color": "gray",
@@ -3281,7 +2929,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07CSTYZKM",
       "true_color": "green",
       "written_color": null,
@@ -3297,7 +2945,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07CT65PJM",
       "true_color": "",
       "written_color": "black",
@@ -3313,7 +2961,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07CWD5QBS",
       "true_color": "green",
       "written_color": null,
@@ -3329,7 +2977,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07D1PB5CR",
       "true_color": "gray",
       "written_color": "gray",
@@ -3345,7 +2993,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07DBF1R71",
       "true_color": "black",
       "written_color": "yellow",
@@ -3361,7 +3009,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07DBHB67R",
       "true_color": "brown",
       "written_color": "yellow",
@@ -3377,7 +3025,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07DBJYNRH",
       "true_color": "brown",
       "written_color": null,
@@ -3393,7 +3041,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07FNK1TQZ",
       "true_color": "black",
       "written_color": null,
@@ -3409,7 +3057,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07GZQZQ97",
       "true_color": "black",
       "written_color": "black",
@@ -3425,7 +3073,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07H2MHYDQ",
       "true_color": "brown",
       "written_color": "black",
@@ -3441,7 +3089,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07H39WNJR",
       "true_color": "blue",
       "written_color": "blue",
@@ -3457,7 +3105,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07H8SZP51",
       "true_color": "brown",
       "written_color": "gray",
@@ -3473,7 +3121,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07HCMDRW8",
       "true_color": "",
       "written_color": null,
@@ -3489,7 +3137,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07HCQPYJ6",
       "true_color": "",
       "written_color": "white",
@@ -3505,7 +3153,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07HCXHJ1Q",
       "true_color": "",
       "written_color": null,
@@ -3521,7 +3169,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07HGGPCTS",
       "true_color": "gray",
       "written_color": "gray",
@@ -3537,7 +3185,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07HK3TM6S",
       "true_color": "brown",
       "written_color": "gray",
@@ -3553,7 +3201,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07HKGHSJJ",
       "true_color": "brown",
       "written_color": "gray",
@@ -3569,7 +3217,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07HSHKHHB",
       "true_color": "",
       "written_color": "gray",
@@ -3585,7 +3233,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07HSL2HJZ",
       "true_color": "",
       "written_color": "gray",
@@ -3601,7 +3249,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07HZ1LXX9",
       "true_color": "white",
       "written_color": "brown",
@@ -3617,7 +3265,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07HZ5RM1D",
       "true_color": "gray",
       "written_color": "gray",
@@ -3633,7 +3281,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07HZ8J1WM",
       "true_color": "black",
       "written_color": null,
@@ -3649,7 +3297,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07HZ8N1F5",
       "true_color": "",
       "written_color": null,
@@ -3665,7 +3313,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07J2JGXD7",
       "true_color": "blue",
       "written_color": "black",
@@ -3681,7 +3329,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07J2VY555",
       "true_color": "gray",
       "written_color": "gray",
@@ -3697,7 +3345,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07J2YB48B",
       "true_color": "gray",
       "written_color": "gray",
@@ -3713,7 +3361,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07K35ZXB6",
       "true_color": "yellow",
       "written_color": "purple",
@@ -3729,7 +3377,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07L3D5TFY",
       "true_color": "",
       "written_color": "white",
@@ -3745,7 +3393,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07L6MD26Y",
       "true_color": "brown",
       "written_color": "white",
@@ -3761,7 +3409,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07MBFDKTH",
       "true_color": "gray",
       "written_color": "gray",
@@ -3777,7 +3425,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07MBFF18Y",
       "true_color": "gray",
       "written_color": null,
@@ -3793,7 +3441,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07P5LLWKZ",
       "true_color": "black",
       "written_color": "brown",
@@ -3809,7 +3457,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07PMS5D2D",
       "true_color": "brown",
       "written_color": "green",
@@ -3825,7 +3473,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07PSJ214X",
       "true_color": "",
       "written_color": "white",
@@ -3841,7 +3489,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07Q9TDSGD",
       "true_color": "white",
       "written_color": null,
@@ -3857,7 +3505,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07QFB4HW7",
       "true_color": "white",
       "written_color": null,
@@ -3873,7 +3521,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07QGHVG48",
       "true_color": "yellow",
       "written_color": "green",
@@ -3889,7 +3537,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07QJL7937",
       "true_color": "white",
       "written_color": null,
@@ -3905,7 +3553,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07QJLMTP2",
       "true_color": "",
       "written_color": "gray",
@@ -3921,7 +3569,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07QJXW4JR",
       "true_color": "",
       "written_color": "gray",
@@ -3937,7 +3585,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07R3TWDTM",
       "true_color": "",
       "written_color": "gray",
@@ -3953,7 +3601,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07RD7627C",
       "true_color": "brown",
       "written_color": null,
@@ -3969,7 +3617,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07RT5JN33",
       "true_color": "",
       "written_color": "brown",
@@ -3985,7 +3633,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07SK9M5T4",
       "true_color": "brown",
       "written_color": "yellow",
@@ -4001,7 +3649,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07SV1ZZJC",
       "true_color": "white",
       "written_color": "white",
@@ -4017,7 +3665,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07SW4M9D2",
       "true_color": "white",
       "written_color": "white",
@@ -4033,7 +3681,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07SYRK7TW",
       "true_color": "white",
       "written_color": null,
@@ -4049,7 +3697,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07SZVL88G",
       "true_color": "white",
       "written_color": null,
@@ -4065,7 +3713,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07THSHB7C",
       "true_color": "pink",
       "written_color": "black",
@@ -4081,7 +3729,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07VRWNYMS",
       "true_color": "",
       "written_color": null,
@@ -4097,7 +3745,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07WJ5QGVM",
       "true_color": "gray",
       "written_color": "gray",
@@ -4113,7 +3761,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07WJ5QGVQ",
       "true_color": "brown",
       "written_color": "gray",
@@ -4129,7 +3777,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07WR3695W",
       "true_color": "blue",
       "written_color": "blue",
@@ -4145,7 +3793,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07WRJCKBK",
       "true_color": "black",
       "written_color": "black",
@@ -4161,7 +3809,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07WRJFTRK",
       "true_color": "black",
       "written_color": "black",
@@ -4177,7 +3825,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07WRJG743",
       "true_color": "black",
       "written_color": "black",
@@ -4193,7 +3841,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07WRJG7VM",
       "true_color": "black",
       "written_color": "black",
@@ -4209,7 +3857,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07WSNNPL2",
       "true_color": "black",
       "written_color": "black",
@@ -4225,7 +3873,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07WSNNSZS",
       "true_color": "blue",
       "written_color": "black",
@@ -4241,7 +3889,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07X9ZQ38Y",
       "true_color": "gray",
       "written_color": "gray",
@@ -4257,7 +3905,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B07YGJJ1CL",
       "true_color": "green",
       "written_color": "green",
@@ -4273,7 +3921,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B081HMX742",
       "true_color": "red",
       "written_color": "brown",
@@ -4289,7 +3937,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B0823W2ZWY",
       "true_color": "",
       "written_color": "black",
@@ -4305,7 +3953,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B0824F7KLC",
       "true_color": "gray",
       "written_color": null,
@@ -4321,7 +3969,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B0824FLNHK",
       "true_color": "white",
       "written_color": "brown",
@@ -4337,7 +3985,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B0828FB1H1",
       "true_color": "gray",
       "written_color": null,
@@ -4353,7 +4001,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B082B3NYTD",
       "true_color": "",
       "written_color": "black",
@@ -4369,7 +4017,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B082KNYKZB",
       "true_color": "",
       "written_color": "black",
@@ -4385,7 +4033,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B082QDSXMN",
       "true_color": "white",
       "written_color": "gray",
@@ -4401,7 +4049,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B082S89PMR",
       "true_color": "brown",
       "written_color": "gray",
@@ -4417,7 +4065,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B082VKTV1P",
       "true_color": "white",
       "written_color": null,
@@ -4433,7 +4081,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B082VLDSGL",
       "true_color": "brown",
       "written_color": "brown",
@@ -4449,7 +4097,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B083546SD4",
       "true_color": "red",
       "written_color": "red",
@@ -4465,7 +4113,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B084DXK67W",
       "true_color": "brown",
       "written_color": "brown",
@@ -4481,7 +4129,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B084JPCTHT",
       "true_color": "red",
       "written_color": "purple",
@@ -4497,7 +4145,7 @@
       "probe_correct": null
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B084W368LX",
       "true_color": "black",
       "written_color": "blue",
@@ -4513,7 +4161,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B08568JW1B",
       "true_color": "gray",
       "written_color": "gray",
@@ -4529,7 +4177,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B08B6415S5",
       "true_color": "blue",
       "written_color": "blue",
@@ -4545,7 +4193,7 @@
       "probe_correct": 1
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B08CXFQYS9",
       "true_color": "red",
       "written_color": "black",
@@ -4561,7 +4209,7 @@
       "probe_correct": 0
     },
     {
-      "config": "no_vlm",
+      "config": "no_independent",
       "row_id": "B08F2G7JMZ",
       "true_color": "gray",
       "written_color": null,
@@ -4607,54 +4255,6 @@
       "estimators_agree": false,
       "pixel_correct": 0,
       "probe_correct": 0
-    },
-    {
-      "config": "no_gen",
-      "row_id": "B005GD4KIY",
-      "true_color": "red",
-      "written_color": null,
-      "correct": null,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "leather",
-      "estimators_agree": false,
-      "pixel_correct": null,
-      "probe_correct": 0
-    },
-    {
-      "config": "no_gen",
-      "row_id": "B006A06O4K",
-      "true_color": "white",
-      "written_color": "brown",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gen",
-      "row_id": "B00BIG2LEI",
-      "true_color": "yellow",
-      "written_color": "orange",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
     },
     {
       "config": "no_gen",
@@ -4818,22 +4418,6 @@
     },
     {
       "config": "no_gen",
-      "row_id": "B01DTZVX08",
-      "true_color": "white",
-      "written_color": "gray",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gen",
       "row_id": "B01GPY6R4C",
       "true_color": "",
       "written_color": null,
@@ -4898,22 +4482,6 @@
     },
     {
       "config": "no_gen",
-      "row_id": "B01MZB15L9",
-      "true_color": "gray",
-      "written_color": "black",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gen",
       "row_id": "B06XDQ1PQL",
       "true_color": "",
       "written_color": null,
@@ -4962,22 +4530,6 @@
     },
     {
       "config": "no_gen",
-      "row_id": "B0719SX5NS",
-      "true_color": "white",
-      "written_color": "blue",
-      "correct": 0,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": 0.4250389841835598,
-      "pixel_region": "center_box",
-      "pixel_declined": true,
-      "probe_value": "blue",
-      "estimators_agree": false,
-      "pixel_correct": null,
-      "probe_correct": 0
-    },
-    {
-      "config": "no_gen",
       "row_id": "B071FJZVPH",
       "true_color": "white",
       "written_color": null,
@@ -5006,22 +4558,6 @@
       "probe_value": "green",
       "estimators_agree": false,
       "pixel_correct": 0,
-      "probe_correct": 0
-    },
-    {
-      "config": "no_gen",
-      "row_id": "B072FVHSZQ",
-      "true_color": "gray",
-      "written_color": null,
-      "correct": null,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "silicone",
-      "estimators_agree": false,
-      "pixel_correct": null,
       "probe_correct": 0
     },
     {
@@ -5077,38 +4613,6 @@
       "row_id": "B073P19B2D",
       "true_color": "black",
       "written_color": "yellow",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gen",
-      "row_id": "B073P1S8VQ",
-      "true_color": "black",
-      "written_color": "blue",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gen",
-      "row_id": "B073P6DSBQ",
-      "true_color": "multicolour",
-      "written_color": "orange",
       "correct": 0,
       "value_source": "",
       "pixel_value": "",
@@ -5266,38 +4770,6 @@
     },
     {
       "config": "no_gen",
-      "row_id": "B07B4D84TW",
-      "true_color": "gray",
-      "written_color": null,
-      "correct": null,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "rubber",
-      "estimators_agree": false,
-      "pixel_correct": null,
-      "probe_correct": 0
-    },
-    {
-      "config": "no_gen",
-      "row_id": "B07B4MF2N5",
-      "true_color": "brown",
-      "written_color": "brown",
-      "correct": 1,
-      "value_source": "pixel",
-      "pixel_value": "brown",
-      "pixel_conf": 0.8833196384552178,
-      "pixel_region": "foreground",
-      "pixel_declined": false,
-      "probe_value": "brown",
-      "estimators_agree": true,
-      "pixel_correct": 1,
-      "probe_correct": 1
-    },
-    {
-      "config": "no_gen",
       "row_id": "B07B4MHTG1",
       "true_color": "white",
       "written_color": "white",
@@ -5410,22 +4882,6 @@
     },
     {
       "config": "no_gen",
-      "row_id": "B07BL636P7",
-      "true_color": "purple",
-      "written_color": "gray",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gen",
       "row_id": "B07BL6BTJN",
       "true_color": "gray",
       "written_color": null,
@@ -5454,22 +4910,6 @@
       "probe_value": "gray",
       "estimators_agree": false,
       "pixel_correct": 1,
-      "probe_correct": 0
-    },
-    {
-      "config": "no_gen",
-      "row_id": "B07CSTYZKM",
-      "true_color": "green",
-      "written_color": null,
-      "correct": null,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": 0.4842032967032967,
-      "pixel_region": "foreground",
-      "pixel_declined": true,
-      "probe_value": "brown",
-      "estimators_agree": false,
-      "pixel_correct": null,
       "probe_correct": 0
     },
     {
@@ -5519,38 +4959,6 @@
       "estimators_agree": true,
       "pixel_correct": 1,
       "probe_correct": 1
-    },
-    {
-      "config": "no_gen",
-      "row_id": "B07DBF1R71",
-      "true_color": "black",
-      "written_color": "yellow",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gen",
-      "row_id": "B07DBHB67R",
-      "true_color": "brown",
-      "written_color": "yellow",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
     },
     {
       "config": "no_gen",
@@ -5730,22 +5138,6 @@
     },
     {
       "config": "no_gen",
-      "row_id": "B07HKGHSJJ",
-      "true_color": "brown",
-      "written_color": "gray",
-      "correct": 0,
-      "value_source": "pixel",
-      "pixel_value": "gray",
-      "pixel_conf": 0.6362401521325727,
-      "pixel_region": "foreground",
-      "pixel_declined": false,
-      "probe_value": "gray",
-      "estimators_agree": true,
-      "pixel_correct": 0,
-      "probe_correct": 0
-    },
-    {
-      "config": "no_gen",
       "row_id": "B07HSHKHHB",
       "true_color": "",
       "written_color": "gray",
@@ -5890,22 +5282,6 @@
     },
     {
       "config": "no_gen",
-      "row_id": "B07K35ZXB6",
-      "true_color": "yellow",
-      "written_color": "purple",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gen",
       "row_id": "B07L3D5TFY",
       "true_color": "",
       "written_color": "white",
@@ -5967,22 +5343,6 @@
       "estimators_agree": false,
       "pixel_correct": 0,
       "probe_correct": 1
-    },
-    {
-      "config": "no_gen",
-      "row_id": "B07P5LLWKZ",
-      "true_color": "black",
-      "written_color": "brown",
-      "correct": 0,
-      "value_source": "pixel",
-      "pixel_value": "brown",
-      "pixel_conf": 0.8833196384552178,
-      "pixel_region": "foreground",
-      "pixel_declined": false,
-      "probe_value": "brown",
-      "estimators_agree": true,
-      "pixel_correct": 0,
-      "probe_correct": 0
     },
     {
       "config": "no_gen",
@@ -6143,22 +5503,6 @@
       "estimators_agree": false,
       "pixel_correct": null,
       "probe_correct": 0
-    },
-    {
-      "config": "no_gen",
-      "row_id": "B07SK9M5T4",
-      "true_color": "brown",
-      "written_color": "yellow",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
     },
     {
       "config": "no_gen",
@@ -6466,22 +5810,6 @@
     },
     {
       "config": "no_gen",
-      "row_id": "B0824FLNHK",
-      "true_color": "white",
-      "written_color": "brown",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gen",
       "row_id": "B0828FB1H1",
       "true_color": "gray",
       "written_color": null,
@@ -6610,22 +5938,6 @@
     },
     {
       "config": "no_gen",
-      "row_id": "B084JPCTHT",
-      "true_color": "red",
-      "written_color": "purple",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gen",
       "row_id": "B084W368LX",
       "true_color": "black",
       "written_color": "blue",
@@ -6703,22 +6015,6 @@
       "estimators_agree": false,
       "pixel_correct": 1,
       "probe_correct": 0
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B000L9WFGW",
-      "true_color": "gray",
-      "written_color": null,
-      "correct": null,
-      "value_source": "pixel",
-      "pixel_value": "white",
-      "pixel_conf": 0.6385542168674698,
-      "pixel_region": "foreground",
-      "pixel_declined": false,
-      "probe_value": "gray",
-      "estimators_agree": false,
-      "pixel_correct": 0,
-      "probe_correct": 1
     },
     {
       "config": "no_gamma",
@@ -6818,57 +6114,9 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B006A06O4K",
-      "true_color": "white",
-      "written_color": "brown",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B00BIG2LEI",
-      "true_color": "yellow",
-      "written_color": "orange",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B00DUGZFLK",
       "true_color": "black",
       "written_color": "white",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B00EAIGNVI",
-      "true_color": "white",
-      "written_color": "gray",
       "correct": 0,
       "value_source": "",
       "pixel_value": "",
@@ -7058,22 +6306,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B013R46R0W",
-      "true_color": "blue",
-      "written_color": "orange",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B013R47FJE",
       "true_color": "",
       "written_color": "gray",
@@ -7202,22 +6434,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B01DTZVX08",
-      "true_color": "white",
-      "written_color": "gray",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B01GPY6R4C",
       "true_color": "",
       "written_color": null,
@@ -7314,22 +6530,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B01MZB15L9",
-      "true_color": "gray",
-      "written_color": "black",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B06XDQ1PQL",
       "true_color": "",
       "written_color": null,
@@ -7378,22 +6578,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B0719SX5NS",
-      "true_color": "white",
-      "written_color": "blue",
-      "correct": 0,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": 0.4250389841835598,
-      "pixel_region": "center_box",
-      "pixel_declined": true,
-      "probe_value": "blue",
-      "estimators_agree": false,
-      "pixel_correct": null,
-      "probe_correct": 0
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B071FJZVPH",
       "true_color": "white",
       "written_color": null,
@@ -7426,22 +6610,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B071J4SDZZ",
-      "true_color": "white",
-      "written_color": "brown",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B071ZHL5VC",
       "true_color": "",
       "written_color": null,
@@ -7470,22 +6638,6 @@
       "probe_value": "green",
       "estimators_agree": false,
       "pixel_correct": 0,
-      "probe_correct": 0
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B072FVHSZQ",
-      "true_color": "gray",
-      "written_color": null,
-      "correct": null,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "silicone",
-      "estimators_agree": false,
-      "pixel_correct": null,
       "probe_correct": 0
     },
     {
@@ -7650,38 +6802,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B073P1S8VQ",
-      "true_color": "black",
-      "written_color": "blue",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B073P6DSBQ",
-      "true_color": "multicolour",
-      "written_color": "orange",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B073P6LBBZ",
       "true_color": "multicolour",
       "written_color": "green",
@@ -7695,22 +6815,6 @@
       "estimators_agree": true,
       "pixel_correct": 0,
       "probe_correct": 0
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B073S8XWSM",
-      "true_color": "green",
-      "written_color": "pink",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
     },
     {
       "config": "no_gamma",
@@ -7775,22 +6879,6 @@
       "estimators_agree": true,
       "pixel_correct": 1,
       "probe_correct": 1
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B075X2FW7P",
-      "true_color": "yellow",
-      "written_color": null,
-      "correct": null,
-      "value_source": "pixel",
-      "pixel_value": "white",
-      "pixel_conf": 0.7249134948096886,
-      "pixel_region": "foreground",
-      "pixel_declined": false,
-      "probe_value": "gray",
-      "estimators_agree": false,
-      "pixel_correct": 0,
-      "probe_correct": 0
     },
     {
       "config": "no_gamma",
@@ -7954,22 +7042,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B07B4D84TW",
-      "true_color": "gray",
-      "written_color": null,
-      "correct": null,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "rubber",
-      "estimators_agree": false,
-      "pixel_correct": null,
-      "probe_correct": 0
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B07B4L9C4P",
       "true_color": "gray",
       "written_color": null,
@@ -7983,22 +7055,6 @@
       "estimators_agree": false,
       "pixel_correct": 1,
       "probe_correct": 0
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B07B4MF2N5",
-      "true_color": "brown",
-      "written_color": "brown",
-      "correct": 1,
-      "value_source": "pixel",
-      "pixel_value": "brown",
-      "pixel_conf": 0.8833196384552178,
-      "pixel_region": "foreground",
-      "pixel_declined": false,
-      "probe_value": "brown",
-      "estimators_agree": true,
-      "pixel_correct": 1,
-      "probe_correct": 1
     },
     {
       "config": "no_gamma",
@@ -8194,22 +7250,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B07BL636P7",
-      "true_color": "purple",
-      "written_color": "gray",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B07BL6BTJN",
       "true_color": "gray",
       "written_color": null,
@@ -8277,38 +7317,6 @@
       "row_id": "B07BWLGCB5",
       "true_color": "brown",
       "written_color": "green",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B07CSTYZKM",
-      "true_color": "green",
-      "written_color": null,
-      "correct": null,
-      "value_source": "probe",
-      "pixel_value": "",
-      "pixel_conf": 0.4842032967032967,
-      "pixel_region": "foreground",
-      "pixel_declined": true,
-      "probe_value": "brown",
-      "estimators_agree": false,
-      "pixel_correct": null,
-      "probe_correct": 0
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B07CSVPHWK",
-      "true_color": "",
-      "written_color": "red",
       "correct": 0,
       "value_source": "",
       "pixel_value": "",
@@ -8466,38 +7474,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B07DBF1R71",
-      "true_color": "black",
-      "written_color": "yellow",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B07DBHB67R",
-      "true_color": "brown",
-      "written_color": "yellow",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B07DBJYNRH",
       "true_color": "brown",
       "written_color": null,
@@ -8575,22 +7551,6 @@
       "estimators_agree": true,
       "pixel_correct": 1,
       "probe_correct": 1
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B07H2J7689",
-      "true_color": "multicolour",
-      "written_color": "brown",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
     },
     {
       "config": "no_gamma",
@@ -8722,38 +7682,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B07HKGHSJJ",
-      "true_color": "brown",
-      "written_color": "gray",
-      "correct": 0,
-      "value_source": "pixel",
-      "pixel_value": "gray",
-      "pixel_conf": 0.6362401521325727,
-      "pixel_region": "foreground",
-      "pixel_declined": false,
-      "probe_value": "gray",
-      "estimators_agree": true,
-      "pixel_correct": 0,
-      "probe_correct": 0
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B07HPDLVLC",
-      "true_color": "blue",
-      "written_color": "gray",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B07HSHKHHB",
       "true_color": "",
       "written_color": "gray",
@@ -8850,22 +7778,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B07HZ7PG4D",
-      "true_color": "gray",
-      "written_color": "blue",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B07HZ8J1WM",
       "true_color": "black",
       "written_color": null,
@@ -8943,70 +7855,6 @@
       "estimators_agree": true,
       "pixel_correct": 1,
       "probe_correct": 1
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B07JP5B12Y",
-      "true_color": "gray",
-      "written_color": "green",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B07K35ZXB6",
-      "true_color": "yellow",
-      "written_color": "purple",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B07KRBDTVQ",
-      "true_color": "blue",
-      "written_color": "red",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B07KRBQY8K",
-      "true_color": "brown",
-      "written_color": "pink",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
     },
     {
       "config": "no_gamma",
@@ -9122,22 +7970,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B07MHMJCW7",
-      "true_color": "gray",
-      "written_color": "yellow",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B07MQD29CZ",
       "true_color": "yellow",
       "written_color": "yellow",
@@ -9167,22 +7999,6 @@
       "estimators_agree": null,
       "pixel_correct": null,
       "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B07P5LLWKZ",
-      "true_color": "black",
-      "written_color": "brown",
-      "correct": 0,
-      "value_source": "pixel",
-      "pixel_value": "brown",
-      "pixel_conf": 0.8833196384552178,
-      "pixel_region": "foreground",
-      "pixel_declined": false,
-      "probe_value": "brown",
-      "estimators_agree": true,
-      "pixel_correct": 0,
-      "probe_correct": 0
     },
     {
       "config": "no_gamma",
@@ -9314,22 +8130,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B07QF9Y35N",
-      "true_color": "gray",
-      "written_color": "black",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B07QFB4HW7",
       "true_color": "white",
       "written_color": null,
@@ -9426,22 +8226,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B07QJXK4CD",
-      "true_color": "brown",
-      "written_color": "orange",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B07QJXW4JR",
       "true_color": "",
       "written_color": "gray",
@@ -9503,22 +8287,6 @@
       "estimators_agree": false,
       "pixel_correct": null,
       "probe_correct": 0
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B07SK9M5T4",
-      "true_color": "brown",
-      "written_color": "yellow",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
     },
     {
       "config": "no_gamma",
@@ -10242,22 +9010,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B0824FLNHK",
-      "true_color": "white",
-      "written_color": "brown",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B0828FB1H1",
       "true_color": "gray",
       "written_color": null,
@@ -10418,22 +9170,6 @@
     },
     {
       "config": "no_gamma",
-      "row_id": "B084JPCTHT",
-      "true_color": "red",
-      "written_color": "purple",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
-    },
-    {
-      "config": "no_gamma",
       "row_id": "B084W368LX",
       "true_color": "black",
       "written_color": "blue",
@@ -10479,22 +9215,6 @@
       "estimators_agree": false,
       "pixel_correct": null,
       "probe_correct": 1
-    },
-    {
-      "config": "no_gamma",
-      "row_id": "B08CH7CV5X",
-      "true_color": "blue",
-      "written_color": "brown",
-      "correct": 0,
-      "value_source": "",
-      "pixel_value": "",
-      "pixel_conf": null,
-      "pixel_region": "",
-      "pixel_declined": false,
-      "probe_value": "",
-      "estimators_agree": null,
-      "pixel_correct": null,
-      "probe_correct": null
     },
     {
       "config": "no_gamma",

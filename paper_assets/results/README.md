@@ -52,11 +52,18 @@ Read the accuracy drop together with the case count: more rows are repaired and
 more repairs are correct, at a slightly lower rate, because rows that used to
 escalate now get a repair. The human-review load on clean rows fell by 49%.
 
-**Detection changed too, which the previous run's notes said it would not.**
-The title-contradiction check is a Sieve signal as well as a routing feature, so
-fixing it removes false flags at detection: flag precision **63.8% → 74.8%**,
-for a 7.5% relative recall cost. Detection metrics from before 2026-09-14 are
-stale.
+**ABO now has a detection table of its own** (`detection_metrics_sweep.json`,
+`sweep_summary.csv`), pooled over seeds 7–11. It had never been measured — this
+notebook is the repair notebook, so the earlier flag-precision figure was
+inferred from repair-stage row counts. Measured: **P=0.707, R=0.611, F1=0.655**.
+
+That profile is the opposite of the synthetic catalogue's (P≈0.34, R≈0.99) and
+the contrast is worth a paragraph in the paper: on rendered silhouettes the
+Sieve over-flags and catches nearly everything; on real photographs it is
+precise and misses a third of the faults (`mutate_text` recall 0.477).
+
+`encoder_comparison.json` is `B7`'s answer — per-field probe accuracy for CLIP
+vs SigLIP on the clean catalogue.
 
 `v2t_estimator_diagnostics.csv` gained a `pixel_region` column recording how
 each estimate was obtained (`foreground` / `center_box` / `flooded`), which is

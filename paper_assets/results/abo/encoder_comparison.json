@@ -1,0 +1,42 @@
+{
+  "openai/clip-vit-base-patch32": {
+    "color": {
+      "accuracy": 0.5452445128994994,
+      "correct": 4248,
+      "total": 7791,
+      "n_values": 12
+    },
+    "material": {
+      "accuracy": 0.2055470478135103,
+      "correct": 1208,
+      "total": 5877,
+      "n_values": 17
+    },
+    "pattern": {
+      "accuracy": NaN,
+      "correct": 0,
+      "total": 0,
+      "n_values": 3
+    }
+  },
+  "google/siglip-base-patch16-224": {
+    "color": {
+      "accuracy": 0.603901938133744,
+      "correct": 4705,
+      "total": 7791,
+      "n_values": 12
+    },
+    "material": {
+      "accuracy": 0.3280585332652714,
+      "correct": 1928,
+      "total": 5877,
+      "n_values": 17
+    },
+    "pattern": {
+      "accuracy": NaN,
+      "correct": 0,
+      "total": 0,
+      "n_values": 3
+    }
+  }
+}
