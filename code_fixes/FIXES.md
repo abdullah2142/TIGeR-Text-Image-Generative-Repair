@@ -1885,23 +1885,44 @@ different rows**. That is textbook retrieval hubness — a few images sit close 
 many captions in embedding space and win repeatedly. A donor installed 18 times
 is not 18 correct repairs.
 
-**Fix options:**
-1. **Do not let a row whose own similarity is already normal be eligible for
-   image replacement.** `c_before = 0.264` is healthy; the Sieve already
-   computes a per-category `sim_z`, and the verifier ignores it in favour of a
-   global tau. Gate T2V on the row being an outlier *for its category*.
-2. **Penalise hub donors** — cap how often one image may be installed across a
-   run, or divide the retrieval score by the donor's global attractiveness
-   (standard hubness correction).
-3. **Require the improvement to exceed what a category-typical image would give**
-   — i.e. compare against the category centroid, not against the row's own
-   previous score.
+**Three fixes were proposed, measured, and two refuted.** The negative results
+are more useful than the guesses were:
 
-Option 1 is the smallest change with the clearest justification, and it
-addresses the clean-row damage directly: a clean row is by definition not a
-similarity outlier.
+1. ~~**Gate T2V on the row being a similarity outlier for its category.**~~
+   **Refuted.** The rationale was "a clean row is by definition not a
+   similarity outlier". Not true here: clean rows routed to T2V have mean
+   `sim_z` **−2.86** (median −2.91) against **−4.25** for genuine `swap_image`
+   rows — heavily overlapping. Gating at `sim_z >= -2.0` protects 13% of clean
+   rows while losing 2.2% of genuine repairs; at −2.5, 21% protected for 7.3%
+   lost. A bad trade — and the stated reason was wrong, because the chaise
+   looked "healthy" only when 0.264 was compared against a *global* tau, which
+   is the very error this item accuses the verifier of making.
+2. ~~**CSLS hubness correction on retrieval.**~~ **Measured, no benefit.**
+   Replayed over 3,689 `swap_image` rows using the calibration seeds'
+   embeddings (`tests/bench_hubness.py`): accuracy **48.0% → 48.4%**, inside
+   noise. It does fix the symptom — distinct donors 515 → 634, most-installed
+   image 171 → 89 — but a less concentrated wrong answer is still wrong. Not
+   shipped, on the same principle that dropped the brand regex in `D15`.
+3. **The independent verifier should have caught this** — and structurally
+   cannot. Split out as `D17`; it is the real lead here.
 
-**Status:** TODO
+**What the hubness data does say.** Accuracy by how many rows a donor image was
+installed on: 35.3% (1), 37.5% (2), 46.2% (3–4), 49.0% (5–8), **25.5% (9+)**.
+Only extreme hubs are harmful and donors reused 3–8 times are the *best*, which
+is why a blanket correction gains nothing. Capping at 9+ would convert 51
+repairs at 25.5% into escalations, lifting T2V accuracy 38.6% → 42.7% on the
+remainder — a genuine risk–coverage trade, but an install cap is order-dependent
+(the 9th row wanting a donor is refused, the 1st is not), so it is not
+reproducible in the way this pipeline requires. Left unimplemented deliberately.
+
+**Conclusion.** Installing a category-typical image over a correct-but-atypical
+one is not fixable at the routing or retrieval layer with CLIP-family encoders:
+on this data the clean and dirty populations are not separable by any
+similarity statistic available. The leverage is a product-identity-aware judge
+(`D17`) or a stronger encoder (`B7`).
+
+**Status:** TODO — two candidate fixes eliminated by measurement; the remaining
+lead is `D17`
 
 
 ---
