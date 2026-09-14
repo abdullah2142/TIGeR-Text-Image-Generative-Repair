@@ -88,3 +88,60 @@ def test_unreadable_image_not_vetoed_on_v2t(schema):
     iv = IndependentVerifier(FakeEncoder(colors), schema)
     # path has no colour -> FakeEncoder marks image not-ok -> do not veto
     assert iv.check_v2t("/x/unnamed.jpg", "shirts", "color", "blue") is True
+
+
+# ---------------------------------------------------------------------------
+# D17 · the T2V check must be able to reject
+# ---------------------------------------------------------------------------
+
+class _RankEncoder:
+    """Independent encoder with its own opinion about which image fits.
+
+    Images embed as a one-hot over `order`, the caption as a weight vector, so
+    the encoder's preference between candidates is whatever `order` says --
+    independent of whichever candidate the primary encoder chose.
+    """
+
+    def __init__(self, preference: dict[str, float]):
+        self.preference = preference
+
+    def encode_images(self, paths):
+        import numpy as np
+        return (np.array([[self.preference.get(str(p), 0.0)] for p in paths], dtype=float),
+                np.ones(len(paths), dtype=bool))
+
+    def encode_texts(self, texts):
+        import numpy as np
+        return np.array([[1.0]] * len(texts), dtype=float)
+
+    def save_cache(self):
+        pass
+
+
+def _verifier(preference, schema):
+    return IndependentVerifier(_RankEncoder(preference), schema)
+
+
+def test_t2v_accepts_when_the_independent_encoder_agrees_on_the_choice(schema):
+    v = _verifier({"old.jpg": 0.1, "new.jpg": 0.9, "runner.jpg": 0.5}, schema)
+    assert v.check_t2v("old.jpg", "new.jpg", "a red chair", runner_up_image_path="runner.jpg")
+
+
+def test_t2v_rejects_when_the_independent_encoder_prefers_the_runner_up(schema):
+    """The case that made this check vacuous: the new image beats the OLD one --
+    it was selected to -- but the second encoder would have picked differently.
+    Under the old direction-only test this returned True, always."""
+    v = _verifier({"old.jpg": 0.1, "new.jpg": 0.5, "runner.jpg": 0.9}, schema)
+    assert not v.check_t2v("old.jpg", "new.jpg", "a red chair", runner_up_image_path="runner.jpg")
+
+
+def test_t2v_still_rejects_a_swap_that_is_worse_than_the_original(schema):
+    v = _verifier({"old.jpg": 0.9, "new.jpg": 0.2, "runner.jpg": 0.1}, schema)
+    assert not v.check_t2v("old.jpg", "new.jpg", "a red chair", runner_up_image_path="runner.jpg")
+
+
+def test_t2v_falls_back_to_the_direction_test_with_no_runner_up(schema):
+    """Single-candidate case: there is no second choice to agree about."""
+    v = _verifier({"old.jpg": 0.1, "new.jpg": 0.5}, schema)
+    assert v.check_t2v("old.jpg", "new.jpg", "a red chair")
+    assert not v.check_t2v("new.jpg", "old.jpg", "a red chair")

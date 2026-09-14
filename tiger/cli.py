@@ -522,7 +522,12 @@ def cmd_ablate_repair(cfg: dict, args) -> None:
         _judge = GeminiVLMJudge.from_env(verbose=False)
         class _JudgeAdapter:
             def check_v2t(self, image_path, category, field, value): return _judge.check_v2t(image_path, category, field, value)
-            def check_t2v(self, old_image_path, new_image_path, caption): return _judge.check_t2v(old_image_path, new_image_path, caption)
+            def check_t2v(self, old_image_path, new_image_path, caption,
+                          runner_up_image_path=""):
+                # The VLM judges the proposed image against the caption on its
+                # own terms, so it never had the circularity D17 describes and
+                # needs no runner-up.
+                return _judge.check_t2v(old_image_path, new_image_path, caption)
         independent = _JudgeAdapter()
     elif getattr(args, "independent", False) and iv_name:
         iv_enc = ClipEncoder(iv_name, device=cfg["models"].get("device", "cpu"),
@@ -597,7 +602,8 @@ def cmd_repair(cfg: dict, args) -> None:
             """Wrap GeminiVLMJudge to match IndependentVerifier's call interface."""
             def check_v2t(self, image_path, category, field, value):
                 return _judge.check_v2t(image_path, category, field, value)
-            def check_t2v(self, old_image_path, new_image_path, caption):
+            def check_t2v(self, old_image_path, new_image_path, caption,
+                          runner_up_image_path=""):
                 return _judge.check_t2v(old_image_path, new_image_path, caption)
 
         independent = _JudgeAdapter()

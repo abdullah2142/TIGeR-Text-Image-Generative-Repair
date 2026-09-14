@@ -179,11 +179,37 @@ class IndependentVerifier:
         # headline contribution.
         return self.schema.normalize(field, pred) == self.schema.normalize(field, value)
 
-    def check_t2v(self, old_image_path: str, new_image_path: str, caption: str) -> bool:
+    def check_t2v(self, old_image_path: str, new_image_path: str, caption: str,
+                  runner_up_image_path: str = "") -> bool:
+        """Does the independent encoder endorse this swap?
+
+        D17: the original check asked only whether the new image beats the old
+        one for the caption. The candidate was *selected* by maximising exactly
+        that, so a second encoder asked the same question about the winner of
+        that contest answers yes essentially always -- 304 of 304 on the ABO
+        run, against 30 of 107 rejections on the V2T side, which works because
+        it asks the encoder something the selection did not already decide.
+
+        With `runner_up_image_path` the check becomes one the selection did not
+        decide: the independent encoder must *also* prefer the chosen candidate
+        to the primary encoder's second choice. Two encoders disagreeing about
+        which of two plausible images belongs is real evidence, and it is the
+        same "agree or abstain" rule the V2T value path already uses (B6).
+
+        Falls back to the old direction-only test when no runner-up is
+        available, which is the single-candidate case.
+        """
         t = self.encoder.encode_texts([caption])[0]
-        imgs, ok = self.encoder.encode_images([old_image_path, new_image_path])
+        paths = [old_image_path, new_image_path]
+        if runner_up_image_path:
+            paths.append(runner_up_image_path)
+        imgs, ok = self.encoder.encode_images(paths)
         self.encoder.save_cache()
         if not ok[1]:
             return False  # a candidate we cannot independently read is not trusted
-        old_s = float(imgs[0] @ t) if ok[0] else -1.0
-        return float(imgs[1] @ t) > old_s
+        new_s = float(imgs[1] @ t)
+        if new_s <= (float(imgs[0] @ t) if ok[0] else -1.0):
+            return False
+        if runner_up_image_path and ok[2]:
+            return new_s > float(imgs[2] @ t)
+        return True

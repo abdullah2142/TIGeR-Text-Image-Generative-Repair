@@ -124,6 +124,7 @@ class RepairPlan:
     patch: dict = field(default_factory=dict)      # V2T: {field: value}
     candidate_image_path: str = ""       # T2V: catalogue image to swap in
     candidate_product_id: str = ""
+    runner_up_image_path: str = ""       # T2V: second-best candidate (D17)
     cost: float = 0.0                    # edit cost (fields changed / tier weight)
     plannable: bool = True
     notes: str = ""
@@ -162,15 +163,32 @@ class CandidatePool:
     def best_for_text(self, caption_emb: np.ndarray, exclude_product: str,
                       category_ids: np.ndarray | None = None,
                       category: str | None = None) -> tuple[int, float] | None:
+        top = self.top_k_for_text(caption_emb, exclude_product, category_ids, category, k=1)
+        return top[0] if top else None
+
+    def top_k_for_text(self, caption_emb: np.ndarray, exclude_product: str,
+                       category_ids: np.ndarray | None = None,
+                       category: str | None = None,
+                       k: int = 2) -> list[tuple[int, float]]:
+        """The k best candidates, best first.
+
+        The runner-up exists so the independent verifier can be asked about the
+        *choice* rather than about the direction (D17). Asking a second encoder
+        "is the winner better than what was there before?" re-runs the question
+        the winner was selected to win, and it answered yes 304 times out of
+        304. Asking "do you also prefer this one to the next best?" is a
+        question the selection did not already decide.
+        """
         sims = self.image_emb @ caption_emb
         mask = self.ok & (self.product_ids != exclude_product)
         if category_ids is not None and category is not None:
             mask &= (category_ids == category)
         if not mask.any():
-            return None
+            return []
         sims = np.where(mask, sims, -np.inf)
-        j = int(np.argmax(sims))
-        return j, float(sims[j])
+        k = min(int(k), int(mask.sum()))
+        idx = np.argsort(-sims)[:k]
+        return [(int(j), float(sims[j])) for j in idx]
 
 
 def _corrected_value(field: str, ev: dict) -> tuple[str, dict]:
@@ -268,9 +286,10 @@ def plan_repair(ev: dict, route, sieve_row: dict, pool: CandidatePool,
                           notes="no valid single-field patch from evidence")
 
     if route.direction in ("T2V", "BOTH"):
-        res = pool.best_for_text(caption_emb, exclude_product=str(ev.get("product_id", "")),
-                                 category_ids=cat_ids if same_category_only else None,
-                                 category=category if same_category_only else None)
+        top = pool.top_k_for_text(caption_emb, exclude_product=str(ev.get("product_id", "")),
+                                  category_ids=cat_ids if same_category_only else None,
+                                  category=category if same_category_only else None, k=2)
+        res = top[0] if top else None
         if res is None:
             if generator is not None and root_path is not None:
                 # Generative Fallback
@@ -287,9 +306,11 @@ def plan_repair(ev: dict, route, sieve_row: dict, pool: CandidatePool,
             else:
                 return RepairPlan(row_id, "T2V", plannable=False, notes="no candidate image in pool")
         j, _ = res
+        runner_up = str(pool.image_paths[top[1][0]]) if len(top) > 1 else ""
         return RepairPlan(row_id, "T2V",
                           candidate_image_path=str(pool.image_paths[j]),
                           candidate_product_id=str(pool.product_ids[j]),
+                          runner_up_image_path=runner_up,
                           cost=2.0,
                           notes=f"T2V replace image from product {pool.product_ids[j]} "
                                 f"(own original held out, F14)")

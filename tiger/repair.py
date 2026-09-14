@@ -210,9 +210,12 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
                 attrs = text_views.parse_attrs(flagged.at[i, "attributes"])
                 indep = None
                 if independent is not None:
+                    runner_up = (str((root / plan.runner_up_image_path).resolve())
+                                 if plan.runner_up_image_path else "")
                     indep = independent.check_t2v(
                         str((root / flagged.at[i, "image_path"]).resolve()),
-                        str(cand_path), text_views.full_caption(category, attrs))
+                        str(cand_path), text_views.full_caption(category, attrs),
+                        runner_up_image_path=runner_up)
                 verdict = verify_mod.verify_repair(row_id, category, attrs, c_before, c_after,
                                                    tau, eps, schema, independent_ok=indep)
                 entry = {"pass": pass_i, "direction": "T2V",

@@ -2004,19 +2004,36 @@ in the half nobody measured. `paper_concepts.md` §6 describes it as "a final
 semantic safety checkpoint ... catching wrong-direction repairs"; on T2V it
 has never caught anything.
 
-**Proposed fix (designed, not shipped — it cannot be validated without a run):**
-ask the independent encoder to agree on the *choice*, not on the direction.
-Pass it CLIP's top-2 candidates and require the winner to beat the runner-up
-under the independent encoder too. Cross-encoder disagreement about *which*
-candidate is best is genuine evidence, and it is the same "two estimators must
-agree or we abstain" principle the V2T path already uses (`B6`). Cost is one
-extra image encode per repair.
+**Fixed 2026-09-14: ask about the choice, not the direction.** The independent
+encoder must *also* prefer the chosen candidate to the primary encoder's second
+choice. Two encoders disagreeing about which of two plausible images belongs is
+genuine evidence, and it is the same "agree or abstain" rule the V2T value path
+already uses (`B6`). The old direction-only test remains as the fallback when
+the pool held only one candidate — there is no second choice to agree about.
 
-Not shipped because `torch`/`transformers` are unavailable in this checkout, so
-the change could not be measured — and shipping an unmeasured behaviour change
-is what this backlog exists to stop.
+Plumbing: `CandidatePool.top_k_for_text` returns the top *k* (the previous
+`best_for_text` is now a `k=1` wrapper, so its behaviour is unchanged),
+`RepairPlan` carries `runner_up_image_path`, and `repair.py` hands it to the
+verifier. The VLM adapters accept and ignore the argument — a VLM judges the
+proposed image against the caption on its own terms, so it never had this
+circularity.
 
-**Status:** TODO — diagnosed and designed; needs a run to validate
+Cost: one extra image encode per T2V repair, cached by content hash.
+
+Tests (`tests/test_independent.py`): the verifier accepts when it agrees on the
+choice, **rejects when it prefers the runner-up** — the case that was
+structurally unreachable before, and the reason the old check scored 304/304 —
+still rejects a swap worse than the original, and falls back cleanly with no
+runner-up. Plus two in `tests/test_solver_planning.py` pinning that the plan
+carries the runner-up and leaves it empty when the pool has one candidate.
+
+**Not yet validated on data.** `torch`/`transformers` are unavailable in this
+checkout, so the rejection *rate* is unknown: the mechanism is tested, the
+effect is not. The next ABO run measures it, and the number to watch is the
+T2V `independent_ok` split — anything other than 100% True is already evidence
+the check can do its job.
+
+**Status:** DONE (mechanism) — needs the next run to size
 
 
 ---

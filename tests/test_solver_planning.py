@@ -197,3 +197,31 @@ def test_a_real_disagreement_still_escalates(schema):
     assert not plan.plannable
     assert "disagree" in plan.notes
     assert plan.pixel_declined is False
+
+
+def test_t2v_plan_carries_the_runner_up(schema):
+    """D17: the independent verifier needs the primary encoder's second choice
+    so it can be asked about the *choice* rather than about the direction."""
+    emb = np.stack([_unit(np.array([1.0, 0.0])),    # r1 (own, excluded)
+                    _unit(np.array([0.95, 0.1])),   # r2 best
+                    _unit(np.array([0.8, 0.4])),    # r3 runner-up
+                    _unit(np.array([0.0, 1.0]))])   # r4 far
+    pool = CandidatePool(emb, ["r1", "r2", "r3", "r4"],
+                         ["a.jpg", "b.jpg", "c.jpg", "d.jpg"], np.array([True] * 4))
+    cats = np.array(["shirts"] * 4)
+    ev = {"row_id": "r1", "category": "shirts", "product_id": "r1"}
+    row = {"attributes": '{"color": "red"}', "title": "Red Shirt", "category": "shirts"}
+    plan = plan_repair(ev, Route("T2V"), row, pool, cats, emb[0], schema)
+    assert plan.candidate_image_path == "b.jpg"
+    assert plan.runner_up_image_path == "c.jpg"
+
+
+def test_t2v_runner_up_is_empty_when_there_is_only_one_candidate(schema):
+    emb = np.stack([_unit(np.array([1.0, 0.0])), _unit(np.array([0.9, 0.2]))])
+    pool = CandidatePool(emb, ["r1", "r2"], ["a.jpg", "b.jpg"], np.array([True, True]))
+    cats = np.array(["shirts", "shirts"])
+    ev = {"row_id": "r1", "category": "shirts", "product_id": "r1"}
+    row = {"attributes": '{"color": "red"}', "title": "Red Shirt", "category": "shirts"}
+    plan = plan_repair(ev, Route("T2V"), row, pool, cats, emb[0], schema)
+    assert plan.candidate_image_path == "b.jpg"
+    assert plan.runner_up_image_path == ""
