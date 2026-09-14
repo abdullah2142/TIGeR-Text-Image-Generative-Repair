@@ -274,12 +274,24 @@ def route(ev: dict, model: ArbiterModel, cfg: dict) -> Route:
         # arrives with the guard already tripped and can never be dismissed --
         # the guard cancels the path it guards. Configurable so the trade can
         # be swept; the default reproduces the original behaviour exactly.
+        # Which signals may veto is configurable, because a signal only belongs
+        # here if it is *strong* evidence. `title_contradiction` was in this set
+        # and measures 0.510 precision on ABO -- a coin flip, which blocks clean
+        # and dirty rows in equal proportion and so contributes no discrimination
+        # while suppressing the path entirely. Swept over 10,554 flagged rows
+        # (D19): removing it takes clearances from 57 to 331 (1.8% -> 10.6% of
+        # clean rows) with precision unchanged, 0.722 -> 0.720. It remains an
+        # Arbiter *feature*, where the model can weigh it against everything
+        # else rather than wielding an absolute veto.
         contrary_z = float(acfg.get("dismiss_contrary_z", -2.0))
+        vetoes = acfg.get("dismiss_contrary_signals",
+                          ["probe", "text_out_of_domain", "title_contradiction"])
         probes = ev.get("probes") or {}
         strong_probe = any((probes.get(f) or {}).get("z") is not None
                            and float(probes[f]["z"]) <= contrary_z for f in probes)
-        contrary = (strong_probe or ev.get("title_contradiction")
-                    or ev.get("text_out_of_domain"))
+        contrary = ((strong_probe and "probe" in vetoes)
+                    or (ev.get("title_contradiction") and "title_contradiction" in vetoes)
+                    or (ev.get("text_out_of_domain") and "text_out_of_domain" in vetoes))
         if p_top >= dismiss_thr and not contrary:
             return Route(row_id, probs, "CLEAN", "NONE", "dismiss", 0,
                          f"routed clean with p={p_top:.2f}: sieve false positive")

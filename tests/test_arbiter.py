@@ -115,3 +115,52 @@ def test_calibration_report_reports_the_gap_where_the_gate_sits():
     rep = A.calibration_report(m, ev, labels, gamma=0.60)
     assert rep["n_near_gamma"] == 100
     assert rep["gap_at_gamma"] < -0.30    # states 0.62, delivers 0.30
+
+
+# ---------------------------------------------------------------------------
+# D19 · only strong evidence may veto a dismissal
+# ---------------------------------------------------------------------------
+
+def _cfg(**over):
+    a = {"gamma": 0.60, "dismiss_threshold": 0.80, "dismiss_contrary_z": -3.0,
+         "t2v_policy": {"allowed_categories": ["shirts"]}}
+    a.update(over)
+    return {"arbiter": a}
+
+
+def test_title_contradiction_does_not_veto_a_dismissal_by_default():
+    """It measures 0.510 precision on ABO. A coin flip blocks clean and dirty
+    rows in equal proportion, so as a veto it suppresses the path without
+    discriminating -- 57 clearances against 331 with it removed, same precision."""
+    ev = dict(BASE_EV, title_contradiction=True)
+    r = A.route(ev, constant_model("CLEAN", 0.95),
+                _cfg(dismiss_contrary_signals=["probe", "text_out_of_domain"]))
+    assert r.action == "dismiss"
+
+
+def test_it_still_vetoes_when_explicitly_configured_to():
+    ev = dict(BASE_EV, title_contradiction=True)
+    r = A.route(ev, constant_model("CLEAN", 0.95),
+                _cfg(dismiss_contrary_signals=["probe", "title_contradiction"]))
+    assert r.action == "human_review"
+
+
+def test_a_strong_probe_still_vetoes():
+    ev = dict(BASE_EV, probes={"color": {"z": -4.0, "margin": -0.05, "pred": "blue"}})
+    r = A.route(ev, constant_model("CLEAN", 0.95),
+                _cfg(dismiss_contrary_signals=["probe", "text_out_of_domain"]))
+    assert r.action == "human_review"
+
+
+def test_out_of_domain_still_vetoes():
+    ev = dict(BASE_EV, text_out_of_domain=True)
+    r = A.route(ev, constant_model("CLEAN", 0.95),
+                _cfg(dismiss_contrary_signals=["probe", "text_out_of_domain"]))
+    assert r.action == "human_review"
+
+
+def test_the_shipped_config_excludes_the_title_signal():
+    from tiger import cli
+    v = cli.load_cfg()["arbiter"]["dismiss_contrary_signals"]
+    assert "title_contradiction" not in v
+    assert "probe" in v and "text_out_of_domain" in v

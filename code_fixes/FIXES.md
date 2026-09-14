@@ -2241,38 +2241,55 @@ for detection, and this is it.
 
 ---
 
-### D19 · The dismiss guard is tuned for an encoder that no longer runs the probes
-**Severity:** Medium — an interaction between two fixes in this backlog
-**Where:** `configs/tiger.yaml` `arbiter.dismiss_contrary_z` · `models.probe_model_name`
-**Found:** 2026-09-14, from the SigLIP run
+### D19 ⚑ · A coin-flip signal was holding an absolute veto over dismissal
+**Severity:** Medium — suppressed the dismiss path by ~6×
+**Where:** `tiger/arbiter.py::route` dismiss guard · `configs/tiger.yaml`
+**Found:** 2026-09-14, after the SigLIP swap
 
-`D14` swept the dismiss guard to **z ≤ −3.0** against the z-distribution of
-**CLIP** probes. `B7` then moved the probes to SigLIP, which fires more often
-and more confidently (`flag_probe_color` fired 2,279 → 2,801, precision
-0.798 → 0.845). The guard blocks a dismissal whenever any probe z reaches the
-threshold, so a better probe trips it more often:
+**The symptom:** moving the probes to SigLIP (`B7`) *reduced* clean-row
+dismissals, 19 → 8. A better detector made the pipeline clear fewer clean rows.
 
-| | CLIP probes | SigLIP probes |
-|---|---|---|
-| clean rows dismissed | 19 | **8** |
-| clean rows escalated | 289 | 296 |
+**The hypothesis was wrong, again.** The obvious read was that `D14`'s guard
+threshold (z ≤ −3.0) had been swept against CLIP z-distributions and was stale
+for SigLIP, which fires more confidently. Re-swept over 10,554 flagged rows
+from the SigLIP run: the probe guard blocks **5** of the 336 dismissable clean
+rows (1.5%), and turning it off entirely moves clearances 1.8% → 2.0%. It is
+not the constraint. **This is the third time in this backlog that a
+plausible mechanism for the dismiss path turned out to be wrong, and the third
+time the answer came from decomposing the blocked rows rather than reasoning
+about the code.**
 
-**A better detector made the pipeline clear fewer clean rows.** That is not a
-contradiction — both fixes did what they were measured to do — it is a
-threshold calibrated against a distribution that has since moved.
+**The actual cause, same suspect as `D14`:** `title_contradiction` blocks
+**274 of 336 (81.5%)**. `D15` fixed its worst mechanical false positives, but on
+real ABO titles it still measures **0.510 precision** — a coin flip.
 
-**Fix:** re-sweep the guard against SigLIP-probe z-scores.
-`tests/bench_dismiss_guard.py` does this offline against committed evidence:
-no GPU, no re-encoding, the same instrument that chose −3.0 in the first place.
-Needs the new run's calibration evidence, which is not committed (too large),
-so run it against an unpacked results zip.
+**And that is the design error, independent of how good the signal is.** A veto
+should require *strong* evidence. A signal at 0.510 precision removes clean and
+dirty rows in equal proportion: it contributes no discrimination and simply
+suppresses the path. Swept both ways at dismiss p ≥ 0.80:
 
-**Worth stating in the paper regardless.** It is a concrete example of the
-thing selective-prediction systems do: a component that improves in isolation
-can move a downstream threshold off its operating point, and the only way to
-notice is to measure the pipeline end to end rather than the component.
+| `title_contradiction` vetoes? | clean rows cleared | dirty leaked | precision |
+|---|---|---|---|
+| yes (shipped) | 57 (1.8%) | 22 (0.3%) | 0.722 |
+| **no** | **331 (10.6%)** | 129 (1.7%) | **0.720** |
 
-**Status:** TODO — offline-measurable, needs one sweep against the new evidence
+**5.8× the clearances at identical precision.** The signal was pure loss.
+
+**Fix:** `arbiter.dismiss_contrary_signals` lists which signals may veto;
+shipped as `["probe", "text_out_of_domain"]`. `title_contradiction` remains one
+of the Arbiter's 14 *features*, where the model weighs it against everything
+else instead of wielding an absolute veto — which is the right place for a
+weak signal.
+
+**On the 1.7% of dirty rows now dismissed:** a wrongly dismissed dirty row is a
+*missed detection*, not a corruption — the row stays as it was. That is a far
+cheaper error than a wrong write, and it is why favouring clearance is
+defensible here. Report it as recall loss on the dismiss path, not as damage.
+
+Five tests in `tests/test_arbiter.py` pin it, including that the shipped config
+excludes the title signal and that strong probes and out-of-domain still veto.
+
+**Status:** DONE — needs a run to confirm end-to-end
 
 
 ---
