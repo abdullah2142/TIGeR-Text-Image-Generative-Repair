@@ -2553,11 +2553,15 @@ system when the contribution came from a second image encoder.
 This is `E9`'s defect repeated on the repair table — labels crediting a
 mechanism other than the one that ran.
 
-**Fix:** rename the parameter to `independent` and the row to "No Independent
-Verifier", or make the label reflect which object was actually supplied.
-Cosmetic in code, load-bearing in the paper.
+**Fixed 2026-09-14.** The parameter is `independent`, the row is **"No
+Independent Verifier"**, and `vlm_judge` is now a genuinely separate parameter
+with its own ablation row (off by default — see the note in the ABO notebook on
+when spending Gemini quota is justified). Committed results carry the corrected
+label from the 2026-09-14 run onward. Five tests pin the separation, including
+that no config other than the dedicated row may use the VLM — swapping it into
+"Full System" would silently change what the reported configuration means.
 
-**Status:** TODO
+**Status:** DONE
 
 
 ---

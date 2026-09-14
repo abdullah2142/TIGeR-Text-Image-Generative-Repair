@@ -13,6 +13,28 @@ The goal of TIGeR was to build an autonomous, agentic pipeline that not only **d
 
 ## 2. Key Decisions & Model Selections
 
+> **Correction (2026-09-14).** Two decisions below were overtaken by later
+> measurement. They are left as written, because this document records what was
+> decided and why at the time; the corrections are dated inline.
+>
+> - *"Sticking with CLIP (Over SigLIP)"* — the head-to-head was run on the
+>   **synthetic** catalogue, whose flat-fill silhouettes carry no material
+>   texture, so both encoders were being asked to read information that was not
+>   in the image. On real ABO photographs they separate clearly: per-field probe
+>   accuracy colour 0.545 → 0.604 and **material 0.206 → 0.328** in SigLIP's
+>   favour. The conclusion drawn here — that the limitation was the visual data
+>   rather than the encoder — was correct *for that corpus*, and generalising it
+>   to real photography was the error. The probes now run on SigLIP
+>   (`code_fixes/FIXES.md` B7); the similarity path stays on CLIP, so the
+>   reported baseline is unchanged.
+> - *"The Independent Verifier: SigLIP (Over Gemini)"* — the +13.3% vs +13.1%
+>   comparison stands as recorded, but it cannot settle the question it is now
+>   cited for. It was measured on the Fashion dataset (since dropped), at a
+>   0.2-point margin, and **before** the T2V check was found to be structurally
+>   incapable of rejecting anything (`D17`: it approved 304 of 304 image swaps).
+>   SigLIP's +13.3% therefore came entirely from its text-side check. The two
+>   verifiers have never been compared on image repairs.
+
 ### The Sieve: Sticking with CLIP (Over SigLIP)
 * **The Decision:** We kept OpenAI's CLIP (Base/32) as the primary multimodal encoder for the Phase 1 Sieve, despite testing Google's newer SigLIP model.
 * **The Reasoning:** We conducted a head-to-head probe accuracy test on our synthetic data. While SigLIP is technically a newer architecture, it did not provide a statistically significant upgrade for our specific use case. Both models struggled identically with identifying "material" (e.g., leather vs. cotton), proving that the limitation was in the *visual data* (synthetic silhouettes lack texture), not the encoder. We stuck with CLIP because it is the industry-standard baseline for multimodal research, making our paper's results more comparable to existing literature.
