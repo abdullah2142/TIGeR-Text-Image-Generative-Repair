@@ -25,18 +25,41 @@ from pathlib import Path
 import pandas as pd
 
 from tiger import arbiter as A
+from tiger import text_views
+from tiger.schema import load_schema
+from tiger.sieve import _title_color
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUTS = ROOT / "data/outputs"
 SEEDS = [1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014]
 GUARD_Z = [-2.0, -2.5, -3.0, -3.5, -4.0, -99.0]     # -99 = guard disabled
 DISMISS_P = [0.70, 0.80, 0.90]
+SHIPPED_GUARD_Z = -3.0      # configs/tiger.yaml arbiter.dismiss_contrary_z
 
 
-def load(outputs: Path, seed: int):
+def load(outputs: Path, seed: int, recompute_title: bool = False):
+    """Evidence + ground-truth labels for one calibration seed.
+
+    `recompute_title` re-derives `title_contradiction` from the row's title with
+    the *current* `_title_color`, rather than using the value frozen into the
+    evidence file by the run. The flag is a pure text check, so this predicts
+    what the next run will do without re-encoding anything (D15).
+    """
     ev = [json.loads(l) for l in (outputs / f"evidence_cal_seed{seed}.jsonl").open()]
-    truth = (pd.read_parquet(outputs / f"sieve_cal_seed{seed}.parquet")
-             .set_index("row_id")["noise_label"].astype(str).to_dict())
+    sieve = pd.read_parquet(outputs / f"sieve_cal_seed{seed}.parquet").set_index("row_id")
+    truth = sieve["noise_label"].astype(str).to_dict()
+
+    if recompute_title:
+        schema = load_schema(ROOT / "configs/schema.yaml")
+        for e in ev:
+            rid = e["row_id"]
+            if rid not in sieve.index:
+                continue
+            attrs = text_views.parse_attrs(sieve.at[rid, "attributes"])
+            declared = schema.normalize("color", attrs.get("color", "")) if attrs.get("color") else ""
+            tc = _title_color(str(sieve.at[rid, "title"]), schema, str(attrs.get("brand", "")))
+            e["title_contradiction"] = bool(tc and declared and tc != declared)
+
     lab = [truth.get(e["row_id"], "clean") for e in ev]
     keep = [(e, l) for e, l in zip(ev, lab)
             if not e.get("image_missing") and not e.get("text_missing")]
@@ -45,6 +68,7 @@ def load(outputs: Path, seed: int):
 
 def main() -> None:
     outputs = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_OUTPUTS
+    recompute = "--recompute-title" in sys.argv
     model = A.ArbiterModel.from_json(
         (ROOT / "paper_assets/results/abo/thresholds/tiger_arbiter_model.json").read_text())
 
@@ -52,11 +76,13 @@ def main() -> None:
     for s in SEEDS:
         if not (outputs / f"evidence_cal_seed{s}.jsonl").exists():
             continue
-        e, l = load(outputs, s)
+        e, l = load(outputs, s, recompute_title=recompute)
         evs += e
         labs += l
     if not evs:
         raise SystemExit(f"no calibration evidence under {outputs}")
+    if recompute:
+        print("title_contradiction RECOMPUTED with the current text check (D15)\n")
 
     n_clean = sum(1 for l in labs if l == "clean")
     n_dirty = len(labs) - n_clean
@@ -81,7 +107,7 @@ def main() -> None:
                     leaked += 1
             total = cleared + leaked
             prec = cleared / total if total else float("nan")
-            tag = "  <- shipped" if (gz == -2.0 and dp == 0.80) else ""
+            tag = "  <- shipped" if (gz == SHIPPED_GUARD_Z and dp == 0.80) else ""
             gz_s = "off" if gz < -50 else f"{gz:.1f}"
             print(f"{gz_s:>8s} {dp:>10.2f} {cleared:>7d} ({cleared / n_clean:>5.1%}) "
                   f"{leaked:>7d} ({leaked / n_dirty:>5.1%}) {prec:>10.3f}{tag}")

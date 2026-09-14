@@ -1719,9 +1719,28 @@ is the real defect; this item is the symptom that led to it.
 precision 0.90) *and* fix `D15`. Neither alone is sufficient — the probe change
 alone leaves 93% of the blockage in place.
 
-**Status:** TODO — diagnosis complete, `dismiss_contrary_z` is now configurable
-(default −2.0, i.e. unchanged behaviour) so the sweep runs against the real
-routing code rather than a reimplementation of it
+**Fixed 2026-09-14, both halves.** `dismiss_contrary_z` is configurable and set
+to **−3.0**, and `D15`'s text check landed. Re-swept with the title flag
+recomputed from the current check (`--recompute-title`, which is honest because
+the flag is a pure text function — no re-encoding needed to predict the next
+run):
+
+| | clean rows cleared | dirty leaked | precision |
+|---|---|---|---|
+| before (guard −2.0, old title check) | 15 (0.3%) | 1 | 0.938 |
+| title check alone (guard −2.0) | 1,068 (18.6%) | 82 | 0.929 |
+| **both (guard −3.0) — shipped** | **1,123 (19.6%)** | 88 (1.2%) | **0.927** |
+| guard off entirely | 1,125 (19.6%) | 90 | 0.926 |
+
+**15 → 1,123, a 75× improvement**, at a cost of 88 dirty rows dismissed out of
+7,466 (1.2%). −3.0 captures essentially everything disabling the guard would
+give, so the guard keeps doing its job on genuinely egregious contrary evidence
+while no longer vetoing itself.
+
+The decomposition was right: the title check was the blockage (71× of the 75×),
+the guard threshold the remainder.
+
+**Status:** DONE — pending a run to confirm end-to-end
 
 ---
 
@@ -1773,8 +1792,42 @@ that writes "Stone & Beam", "Walnut" and "Blue, Grey, Brown".
    routing and dismissal; measuring routing accuracy with it removed is one
    offline run.
 
-**Status:** TODO — measured, not yet fixed. Offline-measurable: it needs no
-re-encoding, only re-running the title check over committed evidence.
+**Fixed 2026-09-14.** Two rules, both in `sieve._title_color`:
+
+1. **Exclusivity.** The title must name *exactly one* colour. A title naming
+   several is enumerating what is in the picture, not disagreeing with the
+   attribute. This also removes an arbitrariness nobody had noticed: the old
+   scan returned the first match in *schema iteration order*, so which colour a
+   multi-colour title "asserted" depended on the order of `surface_forms`.
+2. **Metal cues.** `silver` and `gold` are colour surface forms (→ gray, yellow)
+   and also the two commonest words in jewellery product names. When the title
+   carries a metal cue — `sterling`, `plated`, `platinum`, `14k`, … — they are
+   material claims and do not count as colour evidence.
+
+A third rule was tried and **dropped**: positionally masking the
+`Amazon Brand – <Brand>` prefix. Measured over 39,808 rows it moved false
+positives by 11 (1,578 vs 1,567 — slightly *worse*) while being able to swallow
+a genuine colour word in a product name. Brand names collide with the material
+vocabulary, not the colour one, so the colour check never needed it.
+
+**Measured over 39,808 rows, 8 calibration seeds:**
+
+| | before | after |
+|---|---|---|
+| fires on clean rows | 15.9% | **5.6%** |
+| fires on `mutate_text` (true faults) | 34.9% | 20.0% |
+| precision as a text-fault detector | 0.251 | **0.347** |
+
+It keeps well over half its true positives while dropping two-thirds of its
+false ones. The knock-on effect on dismissal is `D14`: 15 → 1,123 clean rows
+cleared.
+
+Tests: `tests/test_title_contradiction.py` — a single contradicting colour
+still fires, aliases still normalise (`D7`), multi-colour titles and jewellery
+metal names no longer do, and a bare "Silver Chair" with no metal cue still
+counts as a colour.
+
+**Status:** DONE — pending a run to confirm end-to-end
 
 ---
 

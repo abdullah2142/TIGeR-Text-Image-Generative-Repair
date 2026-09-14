@@ -195,26 +195,57 @@ def compute_signals(df: pd.DataFrame, encoder: ClipEncoder, schema: Schema,
     return df, arrays
 
 
-def _title_color(title: str, schema: Schema, brand: str) -> str:
-    """First colour word in the title, NORMALISED, ignoring brand names (D7).
+# Words that make a following "silver"/"gold" a statement about metal rather
+# than about colour (D15). "Sterling Silver Necklace" is a material claim in a
+# product name; the row's colour attribute is describing the stone.
+_METAL_CUES = ("sterling", "plated", "plate", "karat", "carat", "platinum",
+               "rhodium", "10k", "14k", "18k", "24k")
 
-    Scans surface forms rather than domain members, so "Navy Shirt" is
-    recognised even though `navy` is an alias. Returns the canonical value so the
-    caller can compare it against a normalised declared colour: returning the raw
-    match made "Navy Shirt" + color=navy read as a contradiction, because
-    "navy" != "blue".
-    """
+# Colour surface forms that are also ordinary metal names.
+_METAL_COLORS = ("silver", "gold")
+
+
+def _title_colors(title: str, schema: Schema, brand: str) -> set[str]:
+    """Every distinct colour the title names, normalised. Brand text excluded."""
     import re
 
     masked = (title or "").lower()
     if brand:
         masked = masked.replace(brand.lower(), " ")
+    # Positionally masking the "Amazon Brand - <Brand>" prefix was tried and
+    # dropped: measured over 39,808 rows it changed false positives by 11
+    # (1578 vs 1567, i.e. slightly worse) while being able to swallow a real
+    # colour word in a product name. Brand names collide with the *material*
+    # vocabulary ("Stone & Beam"), not the colour one, so the colour check
+    # never needed it.
+
+    metal_context = any(cue in masked for cue in _METAL_CUES)
+    found = set()
     for form in schema.surface_forms("color"):
         if schema.normalize("color", form) == "multicolour":
             continue
+        if form in _METAL_COLORS and metal_context:
+            continue
         if re.search(rf"\b{re.escape(form)}\b", masked):
-            return schema.normalize("color", form)
-    return ""
+            found.add(schema.normalize("color", form))
+    return found
+
+
+def _title_color(title: str, schema: Schema, brand: str) -> str:
+    """The colour the title *asserts*, or "" when it asserts none (D7, D15).
+
+    Returns a value only when the title names exactly one colour. A title that
+    names several is enumerating what is in the picture -- "Wool Area Rug, Blue,
+    Grey, Brown" against `color=blue` is a summary, not a contradiction -- and
+    the old first-match-wins scan turned every such title into a disagreement
+    decided by schema iteration order.
+
+    Scans surface forms rather than domain members, so "Navy Shirt" is
+    recognised even though `navy` is an alias, and returns the canonical value
+    so the caller can compare against a normalised declared colour.
+    """
+    found = _title_colors(title, schema, brand)
+    return next(iter(found)) if len(found) == 1 else ""
 
 
 # ---------------------------------------------------------------------------
