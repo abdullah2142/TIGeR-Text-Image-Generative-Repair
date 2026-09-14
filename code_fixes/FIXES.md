@@ -939,7 +939,43 @@ share of V2T repairs the probe decides alone. Colour accuracy may move less
 than material — the pixel estimator still contributes there, the probe is the
 only estimator for material.
 
-**Status:** DONE — measured, swapped, guarded; the next run sizes the effect
+**Sized (2026-09-14 run). A clear win on the text path, a small regression
+elsewhere — both worth reporting.**
+
+| ABO, Full System | CLIP probes | SigLIP probes |
+|---|---|---|
+| Colour accuracy | 0.476 (63 cases) | **0.519 (79)** |
+| **Correct colour repairs** | 30 | **41** (+37%) |
+| Detection F1 | 0.655 | **0.689** |
+| `mutate_text` recall | 0.477 | **0.545** |
+| `swap_image` recall | 0.677 | **0.719** |
+| `flag_probe_color` precision | 0.798 | **0.845** |
+| Image repairs correct | 50 (111 cases) | 42 (97) |
+| Clean rows dismissed | 19 | **8** |
+| Clean rows damaged | 7 | **9** |
+
+More colour repairs attempted *and* a higher hit rate — the rare combination.
+`mutate_text` recall, the weakest detection number on real photos, gains 6.8
+points.
+
+**The regression has a mechanism, and it is an interaction between two of this
+backlog's own fixes.** SigLIP probes fire more often and more confidently
+(`flag_probe_color` fired 2,279 → 2,801). `D14`'s dismiss guard blocks a
+dismissal whenever a probe z reaches −3.0. So a better probe trips the guard
+more often, and clean rows that used to be cleared now escalate: dismissals
+19 → 8. **Improving the probes partially undoes the dismiss fix.** The guard
+threshold was swept against CLIP-probe z-distributions; it is now tuned for an
+encoder that is no longer in that path and should be re-swept
+(`tests/bench_dismiss_guard.py` does this offline, no GPU).
+
+**Two things SigLIP did not fix.** Material repairs remain **0 correct of 8**,
+despite SigLIP scoring 0.328 vs CLIP's 0.206 on material probe *accuracy* — a
+better argmax in isolation is not the same as a better repair, and the gap
+between those two facts is itself a finding. And `flag_probe_material`
+precision *fell* (0.703 → 0.629): the probe fires more but discriminates less,
+because the flag keys on the z-margin rather than the argmax.
+
+**Status:** DONE — swapped, measured, and the interaction with `D14` recorded
 
 ---
 
@@ -2201,6 +2237,42 @@ synthetic titles — there **is** now a reason to re-run the synthetic notebook
 for detection, and this is it.
 
 **Status:** DONE — pending the re-run that re-measures the table
+
+
+---
+
+### D19 · The dismiss guard is tuned for an encoder that no longer runs the probes
+**Severity:** Medium — an interaction between two fixes in this backlog
+**Where:** `configs/tiger.yaml` `arbiter.dismiss_contrary_z` · `models.probe_model_name`
+**Found:** 2026-09-14, from the SigLIP run
+
+`D14` swept the dismiss guard to **z ≤ −3.0** against the z-distribution of
+**CLIP** probes. `B7` then moved the probes to SigLIP, which fires more often
+and more confidently (`flag_probe_color` fired 2,279 → 2,801, precision
+0.798 → 0.845). The guard blocks a dismissal whenever any probe z reaches the
+threshold, so a better probe trips it more often:
+
+| | CLIP probes | SigLIP probes |
+|---|---|---|
+| clean rows dismissed | 19 | **8** |
+| clean rows escalated | 289 | 296 |
+
+**A better detector made the pipeline clear fewer clean rows.** That is not a
+contradiction — both fixes did what they were measured to do — it is a
+threshold calibrated against a distribution that has since moved.
+
+**Fix:** re-sweep the guard against SigLIP-probe z-scores.
+`tests/bench_dismiss_guard.py` does this offline against committed evidence:
+no GPU, no re-encoding, the same instrument that chose −3.0 in the first place.
+Needs the new run's calibration evidence, which is not committed (too large),
+so run it against an unpacked results zip.
+
+**Worth stating in the paper regardless.** It is a concrete example of the
+thing selective-prediction systems do: a component that improves in isolation
+can move a downstream threshold off its operating point, and the only way to
+notice is to measure the pipeline end to end rather than the component.
+
+**Status:** TODO — offline-measurable, needs one sweep against the new evidence
 
 
 ---

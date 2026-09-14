@@ -1,6 +1,6 @@
-Configuration,Repaired,Escalated,Total Attempted,Color Accuracy,V2T Cases,Attr Accuracy,Attr Cases,T2V Accuracy,T2V Cases,Attr Accuracy (color),Attr Cases (color)
-No Arbiter (Random),0,443,443,0.0,0,,0,,0,,
-No VLM Judge,5,438,443,0.0,0,,0,1.0,4,,
-No Generative Fallback,4,439,443,0.0,0,,0,1.0,4,,
-No Gamma Gate (gamma=0),15,428,443,0.2,5,0.2,5,0.7142857142857143,14,0.2,5.0
-Full System,4,439,443,0.0,0,,0,1.0,4,,
+Configuration,Repaired,Escalated,Dismissed,Acquire Image,Unrepaired,Total Attempted,Total (All Statuses),Color Accuracy,V2T Cases,Attr Accuracy,Attr Cases,T2V Accuracy,T2V Cases,Attr Accuracy (color),Attr Cases (color)
+No Arbiter (Random),1,181,0,7,0,182,189,1.0,1,1.0,1,,0,1.0,1
+No Independent Verifier,22,137,23,7,0,159,189,0.7857142857142857,14,0.7857142857142857,14,0.7,10,0.7857142857142857,14
+No Generative Fallback,21,138,23,7,0,159,189,0.7857142857142857,14,0.7857142857142857,14,0.6666666666666666,9,0.7857142857142857,14
+No Gamma Gate (gamma=0),50,108,23,7,1,158,189,0.75,28,0.75,28,0.5882352941176471,17,0.75,28
+Full System,21,138,23,7,0,159,189,0.7857142857142857,14,0.7857142857142857,14,0.6666666666666666,9,0.7857142857142857,14

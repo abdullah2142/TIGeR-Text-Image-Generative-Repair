@@ -1,17 +1,17 @@
 {
   "per_signal": {
     "flag_probe_color": {
-      "z_margin": 3.0,
-      "fired": 790,
-      "precision": 0.901,
-      "precision_any_dirty": 0.91,
+      "z_margin": 2.5,
+      "fired": 2632,
+      "precision": 0.883,
+      "precision_any_dirty": 0.892,
       "quarantined": false
     },
     "flag_probe_material": {
-      "z_margin": 3.0,
-      "fired": 400,
-      "precision": 0.863,
-      "precision_any_dirty": 0.902,
+      "z_margin": 3.5,
+      "fired": 113,
+      "precision": 0.947,
+      "precision_any_dirty": 0.956,
       "quarantined": false
     },
     "flag_probe_pattern": {

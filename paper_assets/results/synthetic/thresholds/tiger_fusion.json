@@ -2,36 +2,36 @@
   "per_signal": {
     "flag_probe_color": {
       "z_margin": 2.0,
-      "fired": 1045,
-      "precision": 0.857,
-      "precision_any_dirty": 0.861,
+      "fired": 1070,
+      "precision": 0.861,
+      "precision_any_dirty": 0.87,
       "quarantined": false
     },
     "flag_probe_material": {
       "z_margin": 4.0,
-      "fired": 0,
-      "precision": null,
-      "precision_any_dirty": null,
-      "quarantined": true
+      "fired": 3,
+      "precision": 1.0,
+      "precision_any_dirty": 1.0,
+      "quarantined": false
     },
     "flag_probe_pattern": {
-      "z_margin": 3.0,
-      "fired": 278,
-      "precision": 0.957,
-      "precision_any_dirty": 0.964,
+      "z_margin": 2.5,
+      "fired": 359,
+      "precision": 0.919,
+      "precision_any_dirty": 0.933,
       "quarantined": false
     },
     "flag_low_sim": {
-      "precision": 0.874,
-      "precision_any_dirty": 0.874,
-      "fired": 811,
+      "precision": 0.871,
+      "precision_any_dirty": 0.871,
+      "fired": 812,
       "quarantined": false,
       "z_margin": null
     },
     "flag_text_out_of_domain": {
-      "precision": 0.299,
-      "precision_any_dirty": 0.299,
-      "fired": 3609,
+      "precision": 1.0,
+      "precision_any_dirty": 1.0,
+      "fired": 17,
       "quarantined": false,
       "z_margin": null
     },
