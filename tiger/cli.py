@@ -514,26 +514,34 @@ def cmd_ablate_repair(cfg: dict, args) -> None:
 
     enc = _encoder(cfg)
     
-    # Initialize optional components
+    # Initialize optional components. The two verifiers are built separately
+    # and passed separately (E13): they answer different questions, and when
+    # both are available the ablation gives each its own row instead of one
+    # standing in for the other.
     independent = None
+    vlm = None
     iv_name = cfg.get("models", {}).get("independent_verifier", "")
+    if getattr(args, "independent", False) and iv_name:
+        iv_enc = ClipEncoder(iv_name, device=cfg["models"].get("device", "cpu"),
+                             batch_size=int(cfg["models"].get("batch_size", 32)),
+                             cache_dir=_paths(cfg)["cache"])
+        independent = verify_mod.IndependentVerifier(iv_enc, schema)
     if getattr(args, "vlm_judge", False):
         from tiger.vlm_judge import GeminiVLMJudge
         _judge = GeminiVLMJudge.from_env(verbose=False)
+
         class _JudgeAdapter:
-            def check_v2t(self, image_path, category, field, value): return _judge.check_v2t(image_path, category, field, value)
+            def check_v2t(self, image_path, category, field, value):
+                return _judge.check_v2t(image_path, category, field, value)
+
             def check_t2v(self, old_image_path, new_image_path, caption,
                           runner_up_image_path=""):
                 # The VLM judges the proposed image against the caption on its
                 # own terms, so it never had the circularity D17 describes and
                 # needs no runner-up.
                 return _judge.check_t2v(old_image_path, new_image_path, caption)
-        independent = _JudgeAdapter()
-    elif getattr(args, "independent", False) and iv_name:
-        iv_enc = ClipEncoder(iv_name, device=cfg["models"].get("device", "cpu"),
-                             batch_size=int(cfg["models"].get("batch_size", 32)),
-                             cache_dir=_paths(cfg)["cache"])
-        independent = verify_mod.IndependentVerifier(iv_enc, schema)
+
+        vlm = _JudgeAdapter()
 
     generator = None
     if getattr(args, "generative_fallback", False):
@@ -545,7 +553,8 @@ def cmd_ablate_repair(cfg: dict, args) -> None:
 
     results = repair_ablation.run_repair_ablations(
         noisy, enc, schema, thr, loo_stats, vcal, model, cfg, ROOT,
-        generator=generator, vlm_judge=independent, sample_size=sample_size,
+        generator=generator, independent=independent, vlm_judge=vlm,
+        sample_size=sample_size,
         fusion=_load_fusion(getattr(args, "fusion", False))
     )
     
