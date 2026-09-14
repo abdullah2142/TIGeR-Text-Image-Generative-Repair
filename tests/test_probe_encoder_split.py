@@ -165,3 +165,25 @@ def test_probe_prompts_fit_siglips_shorter_context():
                 for t in text_views.field_caption_templates(cat, fld, v):
                     longest = max(longest, len(t.split()))
     assert longest <= 20, f"longest probe prompt is {longest} words; SigLIP pads to 64 tokens"
+
+
+def test_auto_device_falls_back_when_torch_is_absent():
+    """`auto` must never crash a machine without torch -- the whole test suite
+    runs on one. It resolves to cpu there and to cuda only where a GPU exists."""
+    from tiger.encoders import resolve_device
+    assert resolve_device("auto") in ("cpu", "cuda")
+    assert resolve_device("cpu") == "cpu"
+    assert resolve_device("cuda") == "cuda"
+    assert resolve_device("") == "cpu"
+    assert resolve_device(None) == "cpu"
+
+
+def test_no_encoder_is_constructed_with_a_raw_config_device():
+    """Every construction site must go through resolve_device, or one encoder
+    lands on the GPU and another on the CPU in the same run."""
+    import re
+    from pathlib import Path
+
+    src = (ROOT_DIR / "tiger/cli.py").read_text()
+    raw = re.findall(r'device=cfg\["models"\]\.get\("device"[^)]*\)', src)
+    assert not raw, f"unresolved device passed straight from config: {raw}"

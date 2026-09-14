@@ -190,6 +190,25 @@ class ClipEncoder:
 # probe encoder (B7)
 # ---------------------------------------------------------------------------
 
+def resolve_device(device: str) -> str:
+    """Turn the configured device into a real one. "auto" picks cuda if present.
+
+    The config shipped `cpu`, which is right for a laptop with no GPU and wrong
+    for the Kaggle runs that produce every reported number -- and it mattered
+    once the probes moved to SigLIP base/16, which processes 196 patches per
+    image against CLIP ViT-B/32's 49. Encoding the catalogue twice on CPU is
+    hours; on the GPU that is already loaded for SDXL it is minutes.
+    """
+    d = str(device or "").strip().lower()
+    if d != "auto":
+        return d or "cpu"
+    try:
+        import torch
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except ImportError:
+        return "cpu"
+
+
 _PROBE_ENCODERS: dict[tuple, "ClipEncoder"] = {}
 
 
@@ -213,7 +232,8 @@ def probe_encoder_from_cfg(cfg: dict, root: str | Path) -> "ClipEncoder | None":
     if not name or name == m.get("clip_model_name"):
         return None
     cache_dir = Path(root) / cfg["data"]["cache_dir"]
-    key = (name, m.get("device", "cpu"), int(m.get("batch_size", 32)), str(cache_dir))
+    key = (name, resolve_device(m.get("device", "cpu")),
+           int(m.get("batch_size", 32)), str(cache_dir))
     if key not in _PROBE_ENCODERS:
         _PROBE_ENCODERS[key] = ClipEncoder(name, device=key[1], batch_size=key[2],
                                            cache_dir=cache_dir)

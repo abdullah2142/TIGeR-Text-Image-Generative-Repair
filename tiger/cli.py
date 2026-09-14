@@ -38,7 +38,7 @@ from tiger.data import noise as noise_mod
 from tiger.data import synthgen
 from tiger.data import fashion_import
 from tiger.data import import_abo as abo_import
-from tiger.encoders import ClipEncoder, probe_encoder_from_cfg
+from tiger.encoders import ClipEncoder, probe_encoder_from_cfg, resolve_device
 from tiger.eval import detection as det_eval
 from tiger.schema import load_schema
 
@@ -80,7 +80,7 @@ def _load_fusion(enabled: bool):
 
 def _encoder(cfg: dict) -> ClipEncoder:
     m = cfg["models"]
-    return ClipEncoder(m["clip_model_name"], device=m.get("device", "cpu"),
+    return ClipEncoder(m["clip_model_name"], device=resolve_device(m.get("device", "cpu")),
                        batch_size=int(m.get("batch_size", 32)),
                        cache_dir=_paths(cfg)["cache"])
 
@@ -421,7 +421,7 @@ def cmd_compare_encoders(cfg: dict, args) -> None:
     fields = [f for f in cfg.get("sieve", {}).get("probes", {}).get("fields", []) if f in schema.checkable_fields()]
     names = cfg.get("models", {}).get("compare_encoders", [cfg["models"]["clip_model_name"]])
 
-    encoders = {n: ClipEncoder(n, device=cfg["models"].get("device", "cpu"),
+    encoders = {n: ClipEncoder(n, device=resolve_device(cfg["models"].get("device", "cpu")),
                                batch_size=int(cfg["models"].get("batch_size", 32)),
                                cache_dir=p["cache"]) for n in names}
     results = ec.compare(encoders, df, schema, fields)
@@ -522,7 +522,7 @@ def cmd_ablate_repair(cfg: dict, args) -> None:
     vlm = None
     iv_name = cfg.get("models", {}).get("independent_verifier", "")
     if getattr(args, "independent", False) and iv_name:
-        iv_enc = ClipEncoder(iv_name, device=cfg["models"].get("device", "cpu"),
+        iv_enc = ClipEncoder(iv_name, device=resolve_device(cfg["models"].get("device", "cpu")),
                              batch_size=int(cfg["models"].get("batch_size", 32)),
                              cache_dir=_paths(cfg)["cache"])
         independent = verify_mod.IndependentVerifier(iv_enc, schema)
@@ -546,7 +546,7 @@ def cmd_ablate_repair(cfg: dict, args) -> None:
     generator = None
     if getattr(args, "generative_fallback", False):
         from tiger.generator import StableDiffusionGenerator
-        generator = StableDiffusionGenerator(device=cfg["models"].get("device", "cuda"))
+        generator = StableDiffusionGenerator(device=resolve_device(cfg["models"].get("device", "auto")))
     sample_size = getattr(args, "sample", None)
     if sample_size is not None:
         sample_size = int(sample_size)
@@ -617,7 +617,7 @@ def cmd_repair(cfg: dict, args) -> None:
 
         independent = _JudgeAdapter()
     elif getattr(args, "independent", False) and iv_name:
-        iv_enc = ClipEncoder(iv_name, device=cfg["models"].get("device", "cpu"),
+        iv_enc = ClipEncoder(iv_name, device=resolve_device(cfg["models"].get("device", "cpu")),
                              batch_size=int(cfg["models"].get("batch_size", 32)),
                              cache_dir=_paths(cfg)["cache"])
         independent = verify_mod.IndependentVerifier(iv_enc, schema)
@@ -626,7 +626,7 @@ def cmd_repair(cfg: dict, args) -> None:
     generator = None
     if getattr(args, "generative_fallback", False):
         from tiger.generator import StableDiffusionGenerator
-        generator = StableDiffusionGenerator(device=cfg["models"].get("device", "cuda"))
+        generator = StableDiffusionGenerator(device=resolve_device(cfg["models"].get("device", "auto")))
         
     repaired, report = repair_mod.run_repair_cycle(noisy, enc, schema, thr, loo_stats, vcal,
                                                    model, cfg, ROOT, max_passes=max_passes,
@@ -765,7 +765,7 @@ def cmd_generate(cfg: dict, args) -> None:
     attrs = json.loads(args.attrs) if getattr(args, "attrs", None) else {}
     category = getattr(args, "category", "") or ""
     out_path = Path(args.output) if args.output else Path("data/outputs/generated_test.jpg")
-    generator = StableDiffusionGenerator(device=cfg["models"].get("device", "cuda"))
+    generator = StableDiffusionGenerator(device=resolve_device(cfg["models"].get("device", "auto")))
 
     patterns = [p.strip() for p in (getattr(args, "pattern_panel", "") or "").split(",") if p.strip()]
     if not patterns:
