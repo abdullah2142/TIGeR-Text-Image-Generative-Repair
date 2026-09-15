@@ -2337,7 +2337,42 @@ dismissal entirely and escalate everything — which is the honest position give
 a claimed capability that cannot be demonstrated, and the one most consistent
 with the rest of the system's abstention design.
 
-**Status:** DONE (change measured) — the dismiss path itself is now an open
+**Turned off (2026-09-16, user decision).** `arbiter.dismiss_enabled: false`.
+A flagged clean row now escalates like any other uncertain row.
+
+The reasoning behind removing the title veto was sound and is not withdrawn — a
+0.510-precision signal genuinely contributes nothing as a veto. Removing it
+simply exposed that the path underneath was never working: at **every** setting
+measured, most of what the pipeline dismissed was dirty.
+
+| dismiss threshold | dismissed | clean | dirty | precision |
+|---|---|---|---|---|
+| ≥ 0.80 | 51 | 20 | 31 | **0.392** |
+| ≥ 0.85 | 24 | 9 | 15 | 0.375 |
+| ≥ 0.90 | 8 | 2 | 6 | 0.250 |
+
+Precision *falls* as the bar rises, which is the signature of a score that does
+not rank the thing it is read as.
+
+**Why disable rather than revert to the previous setting.** The pre-D19
+configuration scored 0.615 on **13** rows; this one scores 0.392 on 51. Those
+confidence intervals overlap heavily — the earlier number was not better, it
+was quieter. Keeping a mechanism because it fails less visibly is the opposite
+of what this backlog is for.
+
+**The asymmetry that decides it.** A wrongly escalated clean row costs a human
+a few seconds and is recoverable. A wrongly dismissed dirty row leaves the
+pipeline unseen by anyone and is not. For a system whose entire argument is
+safe abstention, a 61%-wrong silent-drop path is not a capability, and
+`paper_concepts.md` should describe dismissal as implemented-and-measured-unfit
+rather than as a contribution.
+
+The path is intact, tested and one config line from returning if a future
+corpus calibrates better. Four tests pin the off state, that off means
+*escalate* rather than silently drop, that it still works when switched on, and
+that it changes no other route.
+
+**Status:** DONE — disabled by measurement
 question, tracked as `D20`
 
 

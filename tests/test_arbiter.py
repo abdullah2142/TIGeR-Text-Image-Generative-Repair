@@ -178,3 +178,37 @@ def test_calibration_is_reported_per_class():
     assert rep["per_class"]["E1"]["n"] == 100
     assert rep["per_class"]["E1"]["accuracy"] == 0.5
     assert rep["per_class"]["E1"]["ece"] > 0.40
+
+
+# ---------------------------------------------------------------------------
+# D19 · dismissal is off, and off means escalate rather than silently drop
+# ---------------------------------------------------------------------------
+
+def test_dismissal_is_disabled_in_the_shipped_config():
+    from tiger import cli
+    assert cli.load_cfg()["arbiter"]["dismiss_enabled"] is False
+
+
+def test_a_confident_clean_row_escalates_when_dismissal_is_off():
+    r = A.route(dict(BASE_EV), constant_model("CLEAN", 0.95),
+                _cfg(dismiss_enabled=False))
+    assert r.action == "human_review"
+    assert r.error_type == "E4"
+    assert "disabled" in r.reason
+
+
+def test_the_path_still_works_when_switched_back_on():
+    """Disabled by measurement, not deleted -- re-enabling must restore it."""
+    r = A.route(dict(BASE_EV), constant_model("CLEAN", 0.95),
+                _cfg(dismiss_enabled=True))
+    assert r.action == "dismiss"
+
+
+def test_disabling_dismissal_does_not_touch_any_other_route():
+    """It must change exactly one branch. E1/E2/E3 and the gamma gate are
+    untouched, or the ablation table stops being comparable."""
+    off = _cfg(dismiss_enabled=False)
+    assert A.route(dict(BASE_EV), constant_model("E1"), off).action == "v2t_patch"
+    assert A.route(dict(BASE_EV), constant_model("E2"), off).action == "t2v_replace_image"
+    assert A.route(dict(BASE_EV), constant_model("E3"), off).direction == "BOTH"
+    assert A.route(dict(BASE_EV), constant_model("E1", 0.40), off).error_type == "E4"

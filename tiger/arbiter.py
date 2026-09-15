@@ -16,8 +16,10 @@ Design:
     state) and escalates to human review;
   - direction selection respects the Analyzer's allowed_directions (F11) and
     a T2V policy object (allowed categories / cost ceiling, roadmap 2.6);
-  - CLEAN with high confidence is dismissed (detected as a sieve false
-    positive); CLEAN with middling confidence escalates instead.
+  - CLEAN escalates. The dismiss path (treat a confident CLEAN as a sieve false
+    positive) exists and is tested, but ships DISABLED: measured end to end it
+    was right 39% of the time and got worse as the threshold rose, because
+    p(CLEAN) does not rank actual cleanliness on held-out data. See D19.
 
 Error-type conventions: E1 = text wrong (V2T), E2 = image wrong (T2V),
 E3 = mixed (both), E4 = ambiguous (escalate). Labels map from noise ground
@@ -287,6 +289,21 @@ def route(ev: dict, model: ArbiterModel, cfg: dict) -> Route:
                      f"max p={p_top:.2f} < gamma={gamma}: ambiguous (E4)")
 
     if top == "CLEAN":
+        # D19: dismissal is OFF by default, because it was measured and does not
+        # work. The rule reads p_top as "probability this row is CLEAN" and acts
+        # on it; on held-out ABO data that quantity is flat -- rows called CLEAN
+        # are actually clean 68-83% of the time whether the router states 0.55
+        # or 0.92 -- so no threshold can separate them. Measured end to end,
+        # dismissal precision was 0.392 at p>=0.80, 0.375 at 0.85 and 0.250 at
+        # 0.90: raising the bar makes it worse. A dismissed dirty row leaves the
+        # pipeline unseen by anyone, which is the one outcome this system is
+        # built to avoid, so the honest default is to escalate instead and say
+        # so. Everything below still runs when it is switched back on.
+        if not bool(acfg.get("dismiss_enabled", True)):
+            return Route(row_id, probs, "E4", "HUMAN", "human_review", 3,
+                         f"clean with p={p_top:.2f}, but dismissal is disabled "
+                         f"(unvalidated on this corpus -- see FIXES.md D19)")
+
         # Safety guard: never dismiss while a strong contrary signal is live
         # (a confident-but-wrong CLEAN would silently drop a dirty row).
         #
