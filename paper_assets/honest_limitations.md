@@ -75,12 +75,13 @@ appear in the pre-fix run's six most common pixel outputs at all — black
 products were being hue-binned as blue and green — and post-fix it is the
 fourth most common at **66.7%** correct, the highest of any colour.
 
-**What the estimator's remaining error actually is:** `multicolour` is the most
-common pixel verdict (28% of estimates) and is right **1.7%** of the time, and
-`orange` is 0/9 (wood grain). That is a *vocabulary* limit — a twelve-value
-flat colour domain cannot describe a patterned rug or a wood grain — not a
-localisation one, and it bounds what any estimator behind that schema can
-achieve (`FIXES.md` B9).
+**What the estimator's remaining error actually is:** it *declines* on **23%**
+of rows — reporting that no single colour dominates, which is correct for a
+patterned rug or a wood grain and which a twelve-value flat domain has nowhere
+to put. When it does answer, its commonest verdicts are `gray` (44.2% correct)
+and `white` (**17.6%**): the studio ground, twice. That is a *vocabulary* limit
+rather than a localisation one, and it bounds what any estimator behind that
+schema can achieve (`FIXES.md` B9).
 
 
 ### 7. Dismissal is implemented, measured, and switched off

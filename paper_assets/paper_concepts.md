@@ -20,16 +20,18 @@ headline ablation number. That was a mis-credit: `tiger/eval/ablation.py`'s
 except them — Eq. 18 leave-one-out lives in `tiger/analyzer.py` and only runs
 on rows *already* flagged, so it contributes nothing to detection at all. The
 mechanism behind the project's strongest verified result — `mutate_text`
-recall **0.267 → 0.853** — is the contrastive probes, not LOO. This correction
+recall **0.367 → 0.779** — is the contrastive probes, not LOO. This correction
 runs in the project's favour: the probe result is stronger and more novel
 than the LOO framing gave it credit for.
 
 **Per-field contrastive probes (detection):** for each attribute field
 (colour, material, pattern), the sieve tests whether the image matches the
 *declared* value better than every other value in that field's domain. This
-catches subtle text mutations (e.g. "blue" → "red") that a single global
-CLIP score misses — without probes, `mutate_text` recall is ~0.27; with them,
-~0.85.
+catches subtle text mutations (e.g. "blue" → "red") that a single global CLIP
+score misses. Measured on the synthetic catalogue (`results/synthetic/ablations.json`,
+2026-09-16): without probes `mutate_text` recall is **0.367**; with them,
+**0.779**. On real ABO photography the same signal reaches 0.545 — the gap
+between the two corpora is itself reported in `tiger_project_doc.md` §8.2.
 
 **Leave-One-Out (LOO) masking (field attribution for routing, not detection):**
 once a row is already flagged, the system masks one attribute at a time from
@@ -46,7 +48,7 @@ Automated repair systems risk corrupting clean data if they guess blindly (hallu
 - **Architecture**: A Multinomial Logistic Regression Router that ingests 14 dimensions of multimodal evidence (LOO Z-scores, swap margins, pixel-level color checks, and k-NN consistency).
 - **The Gamma (γ) Gate**: A configured confidence threshold (Eq. 22), read statically from `configs/tiger.yaml` (default 0.40; overridable per run with `--gamma`, see `code_fixes/FIXES.md` C1/C2). If the Arbiter's predicted probability for the winning error class fails to beat γ, the row is marked E4 (ambiguous) and routed to human review rather than automated. *(Note: γ is not dynamically calibrated and is unrelated to the Sieve's separate fusion `precision_floor` (0.85) — an earlier draft of this document conflated the two; they are different mechanisms on different components.)*
   - **Which γ produced the reported numbers (corrected 2026-09-13).** The config default and the reported runs are not the same number, and quoting only the former misleads. **Every ABO result in `paper_assets/results/` was produced at γ = 0.60**, passed per-run and recorded in that run's `run_manifest.json`. Cite 0.60 with the results; cite 0.40 only as the repository default.
-  - **The gate reads a probability, so the probability is measured.** The router is trained with `class_weight="balanced"`, which is a standard way to lose calibration, so the claim is checked rather than asserted: expected calibration error **0.023** on a held-out calibration seed (n = 1,653), with the router **under**-confident by 0.033 at γ itself — it over-escalates slightly, the safe direction for a gate whose purpose is abstention. Every training run now writes this into the model artifact as `calibration_holdout` (`code_fixes/FIXES.md` D1).
+  - **The gate reads a probability, so the probability is measured.** The router is trained with `class_weight="balanced"`, which is a standard way to lose calibration, so the claim is checked rather than asserted: expected calibration error **0.027** on a held-out calibration seed (n = 1,318), with the router **under**-confident by 0.040 at γ itself — it over-escalates slightly, the safe direction for a gate whose purpose is abstention. Every training run now writes this into the model artifact as `calibration_holdout` (`code_fixes/FIXES.md` D1). **Aggregate calibration is necessary but not sufficient, and the difference decided a design question:** the same model's CLEAN head is flat — rows it calls CLEAN are actually clean 68–83% of the time whether it states 0.55 or 0.92 — which no aggregate ECE reveals and which made the dismiss path unusable (D19). The report is now per class.
 
 ## 4. Repair-Value Estimation, and Abstention on Value Uncertainty
 
@@ -110,21 +112,31 @@ accepted repair is therefore held as *pending* rather than immediately marked
 repaired, and the row re-enters diagnosis on the next pass with its updated
 image and text: an image swapped in pass 1 lets pass 2 re-examine the text
 against the new image. A row is promoted to repaired only when a fresh sieve
-pass finds it no longer flagged. On the reported ABO run 96 rows reached a
-second pass and 8 received repairs in both directions.
+pass finds it no longer flagged. On the reported ABO run **30** rows reached a
+second pass and **5** received repairs in both directions
+(`results/abo/repair_ablations.json`, 2026-09-16).
 
 ### 4.4 What this costs, honestly
 
-On the reported ABO run the two estimators agree on **29%** of candidate rows,
-and of the repairs that agreement commits, **49%** write the correct value. The
-system's abstention machinery is therefore doing real work — the disagreeing
-71% are escalated rather than guessed — but agreement is not a guarantee of
-correctness, and this should be stated rather than implied. The dominant
-residual failure is vocabulary, not vision: `multicolour` is the most common
-pixel verdict (28% of estimates) and is almost never the declared value,
-because a twelve-value colour domain cannot describe a patterned rug or a wood
-grain. That is a schema limitation, and it bounds what any estimator behind it
-can achieve.
+On the reported ABO run (2026-09-16) the two estimators agree on **40.2%** of
+the rows where both produce a value, and of everything the pipeline commits,
+**51.9%** is correct. The abstention machinery is doing real work — the
+disagreeing 59.8% are escalated rather than guessed, and 36 such rows were
+escalated with none written — but agreement is not a guarantee of correctness,
+and that should be stated rather than implied.
+
+**Where the residual error lives is a vocabulary problem, not a vision one.**
+The pixel estimator *declines* on **23%** of rows: it reports that no single
+colour dominates, which is the correct answer for a patterned rug or a wood
+grain and an answer a twelve-value flat colour domain has nowhere to put. When
+it does answer, its two most common verdicts are `gray` (52 rows, 44.2%
+correct) and `white` (34 rows, **17.6%**) — the studio ground and the studio
+ground again. Its best verdict by far is `black` at **64.7%**, which exists as
+a category only because a saturation bug that mis-binned near-black pixels as
+blue was found and fixed (`FIXES.md` B8).
+
+The schema bounds what any estimator behind it can achieve, and closing that
+gap is a domain-design question rather than a modelling one.
 
 ## 5. Generative Fallback for Missing Modalities
 Traditional curation pipelines fail when attempting to repair an image (E2) if a suitable replacement does not exist within the catalogue.
