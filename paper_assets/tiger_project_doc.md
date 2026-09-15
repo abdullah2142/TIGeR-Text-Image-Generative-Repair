@@ -113,11 +113,11 @@ Every patch the pipeline proposes is validated against Ω_j and C before it is a
 
 4. **Per-category thresholds (fixes F4):** Each product category gets its own τ. Categories with too few products fall back to a global τ. This prevents low-similarity categories (e.g., patterned bags) from drowning high-similarity ones.
 
-5. **Per-field contrastive probes (Phases 3.1/3.2):** For each attribute field (colour, material, pattern), the sieve tests: *"Does the image match the declared colour better than any other colour in the domain?"* This is what catches subtle text mutations (e.g., "blue" → "red") that the global CLIP score would miss entirely. Without probes, `mutate_text` recall is ~0.27; with probes it rises to ~0.85.
+5. **Per-field contrastive probes (Phases 3.1/3.2):** For each attribute field (colour, material, pattern), the sieve tests: *"Does the image match the declared colour better than any other colour in the domain?"* This is what catches subtle text mutations (e.g., "blue" → "red") that the global CLIP score would miss entirely. Without probes (`global_only`), `mutate_text` recall is **0.367**; with them (`full`) it is **0.779** — measured 2026-09-16, `results/synthetic/ablations.json`.
 
 6. **Text-only checks (Phase 3.5):** Out-of-domain attribute values and title-attribute contradictions are caught without needing CLIP at all.
 
-7. **Precision-floor fusion (Phase 3.4):** Each signal is calibrated to meet a 0.85 precision floor. Signals that can't meet the floor are quarantined. The fused detector achieves **precision 0.89, recall 0.88, F1 0.885**.
+7. **Precision-floor fusion (Phase 3.4):** Each signal is calibrated to meet a 0.85 precision floor. Signals that can't meet the floor are quarantined. The fused detector achieves **precision 0.761, recall 0.867, F1 0.811** on the synthetic catalogue, against 0.738 / 0.869 / 0.798 unfused — fusion buys 2.3 points of precision for 0.2 of recall (`results/synthetic/ablations.json`, `full_fusion` vs `full`). It is opt-in (`--fusion`) and off in the reported runs.
 
 **Outputs:** A DataFrame with one row per product, with columns: `flagged`, `flag_reason`, `sim_full`, `sim_z`, `probe_color_margin`, `probe_color_z`, etc.
 
@@ -160,13 +160,22 @@ A **calibrated multinomial logistic model** is trained on 14 evidence features (
 
 **Eq. 22 γ-gate:** If `max(P(E1..E4)) < γ=0.60`, the arbiter is too uncertain to act confidently. The row is escalated to **E4 (human review)** rather than risk a confident wrong-direction repair.
 
-**CLEAN dismissal safety guard:** A row is only dismissed as a false positive if P(CLEAN) ≥ 0.80 AND no strong contrary signal (swap_z, pixel disagreement) is live.
+**CLEAN dismissal — implemented, measured, and disabled.** The rule was: dismiss if P(CLEAN) ≥ 0.80 and no strong contrary signal is live. Measured end to end it was right **39%** of the time and got *worse* as the threshold rose (0.375 at 0.85, 0.250 at 0.90), because P(CLEAN) does not rank actual cleanliness on held-out data — rows called CLEAN are clean 68–83% of the time whether the router states 0.55 or 0.92. A dismissed dirty row leaves the pipeline unseen by anyone, so every flagged clean row now escalates instead (`arbiter.dismiss_enabled: false`, `FIXES.md` D19). The path is intact and one config line from returning.
 
 **Missing modality bypass:** Rows with missing images or text skip the model entirely and follow strict F11 rules (missing image → T2V acquire; missing text → V2T).
 
 **Model storage:** Transparent JSON coefficients in `data/thresholds/tiger_arbiter_model.json` (no pickle, fully auditable).
 
-**Measured performance (holdout seed):** Direction accuracy **0.909** among acted-on rows.
+**Measured performance (ABO, seed 7):** direction accuracy **0.896** (346/386)
+among acted-on rows — when the Arbiter decides to act, it picks the right
+direction nine times in ten. By true fault: `mixed` 1.000 (48/48),
+`mutate_text` 0.964 (108/112), `swap_image` 0.918 (190/207), and 0/19 on rows
+that were actually clean (acting at all is the error there — see §8.3's
+clean-row damage figure).
+
+Read this against the Arbiter's overall holdout routing accuracy of **0.602**:
+the gap is the γ-gate doing its job. Most of what the router gets wrong, it is
+unsure about, and abstains on rather than acting.
 
 ---
 
@@ -204,7 +213,7 @@ A **calibrated multinomial logistic model** is trained on 14 evidence features (
 | **Threshold floor** | Eq. 28: c' ≥ τ̂ | The new CLIP similarity score meets the locked detection threshold |
 | **Improvement margin** | Eq. 29: Δc ≥ ε | The improvement is larger than what a mere paraphrase would produce |
 
-**ε (epsilon) — the noise floor:** ε is not an arbitrary constant. It is measured empirically: on clean calibration rows, we rephrase captions and measure how much CLIP similarity fluctuates. A repair must beat this natural variation. Currently ε = 0.0318 globally (per-category: 0.024–0.035).
+**ε (epsilon) — the noise floor:** ε is not an arbitrary constant. It is measured empirically: on clean calibration rows, we rephrase captions and measure how much CLIP similarity fluctuates. A repair must beat this natural variation. Currently ε = **0.0318** globally on ABO (per-category 0.0223–0.0426); 0.0289 on the synthetic catalogue.
 
 **Independent Verifier hook (`independent_ok`):** A slot in `verify_repair()` for a second verification signal beyond CLIP. Currently supports:
 - **SigLIP encoder** (available now, `--independent` flag): a second image-text encoder family cross-checking the repair
@@ -253,7 +262,7 @@ A **calibrated multinomial logistic model** is trained on 14 evidence features (
 | `noise` | injection rates per error type (swap_image, color_flip, missing_image, etc.) |
 | `sieve` | `threshold_method: quantile`, `quantile_q: 0.02`, probe fields and z-margins |
 | `analyzer` | `knn_k: 8`, `swap_z_margin: 2.0` |
-| `arbiter` | `gamma: 0.60`, `dismiss_threshold: 0.80`, `train_seeds` |
+| `arbiter` | `gamma: 0.40` (runs use `--gamma 0.60`), `dismiss_enabled: false`, `dismiss_contrary_signals`, `train_seeds` |
 | `verify` | `epsilon_quantile: 0.95`, `max_passes: 2` |
 
 ---
@@ -306,35 +315,99 @@ Due to heavy CLIP inference, running locally on a CPU is extremely slow. We have
 
 ## 8. Results Summary
 
-### Detection (pooled over 5 seeds, product-level bootstrap CIs)
+*Every figure below is pooled over 5 noise seeds with product-level bootstrap
+CIs, and traces to a committed artifact under `paper_assets/results/`. Regenerated
+2026-09-16; anything quoted elsewhere from an earlier date is stale.*
 
-| Operating Point | Precision | Recall | F1 |
+### 8.1 Detection
+
+| Corpus | Precision | Recall | F1 |
 |---|---|---|---|
-| Full (OR-fused signals) | 0.793 | 0.924 | 0.853 |
-| Full + fusion (precision floor 0.85) | **0.888** | 0.882 | **0.885** |
+| Synthetic catalogue | 0.738 [0.696–0.784] | 0.869 [0.845–0.893] | **0.798** [0.771–0.826] |
+| ABO (real photography) | 0.719 [0.702–0.736] | 0.661 [0.649–0.672] | **0.689** [0.678–0.699] |
 
-### Per-Error-Type Recall (full operating point)
+Source: `results/{synthetic,abo}/detection_metrics_sweep.json`.
 
-| Error Type | Recall | Notes |
-|---|---|---|
-| swap_image (subtype-level) | 0.983 (59/60) | Strong — CLIP similarity drops clearly |
-| swap_image_same_category | 0.950 | Subtle, but probes catch it |
-| color_flip | 0.971 | Per-field colour probe |
-| near_color_flip | 0.800 | Adjacent colour, harder |
-| material_flip | **0.200** | Low — material invisible on synthetic silhouettes |
-| attribute_drop | 1.000 | Schema required-field check |
-| title_contradiction | 1.000 | Text-only check |
-| missing_image | 1.000 | Trivial flag |
-| mixed (E3) | 1.000 | |
+**The two corpora have opposite failure modes, and that contrast is the
+finding.** On rendered silhouettes the Sieve is recall-dominant — it catches
+87% of faults and pays in precision. On real photographs it is precision-
+dominant and misses a third. The same thresholds, the same signals: what
+changes is that real product photography carries texture, branding and
+multi-object composition that a flat-fill silhouette does not.
 
-### Repair (end-to-end, seed 7)
+### 8.2 Per-Error-Type Recall
+
+| Error subtype | Synthetic | ABO | Notes |
+|---|---|---|---|
+| `missing_image` | 1.000 | 1.000 | Trivial flag |
+| `title_contradiction` | 1.000 | 0.614 | Real titles carry brand names and multi-colour lists (D15) |
+| `color_flip` | 0.971 | 0.690 | Per-field colour probe |
+| `mixed_swap_color` (E3) | 0.964 | 0.904 | Two faults, two chances to be caught |
+| `swap_image` | 0.940 | 0.805 | CLIP similarity drops clearly |
+| `swap_image_same_category` | 0.929 | 0.430 | **The honest gap** — a different chair is still a chair |
+| `near_color_flip` | 0.873 | 0.536 | Adjacent colour, harder |
+| `attribute_drop` | 0.455 | 0.065 | Weak: absence is not a contradiction (see §8.5) |
+| `material_flip` | **0.200** | 0.422 | Inverted — see below |
+
+**`material_flip` is the one subtype ABO beats synthetic on, and the reason is
+instructive.** Material is invisible on a flat-fill silhouette: the renderer
+draws no wood grain, no weave, no specular metal, so no encoder can read it and
+recall is floored at 0.200. On real photographs the signal exists and recall
+more than doubles. An earlier version of this document cited the 0.200 as a
+model limitation; it is a limitation of the *stimulus*.
+
+**`swap_image_same_category` at 0.430 on ABO is the weakest real result** and
+should be stated plainly: when a chair's photo is replaced by a different
+chair's photo, the pipeline catches it fewer than half the time.
+
+### 8.3 Repair (ABO, seed 7, Full System)
 
 | Metric | Value |
 |---|---|
-| V2T colour restoration (vs ground truth) | 5/5 = 100% |
-| Direction correctness | 14/15 = 93.3% |
-| Rows escalated to human | 22 |
-| 1 failure explained | F7: same-category swap — fixed by Gemini VLM judge |
+| Rows repaired | 198 |
+| Attribute (colour) restoration accuracy | **0.519** (41/79) |
+| Image restoration accuracy | **0.433** (42/97) |
+| Rows escalated to human review | 1,018 |
+| Clean rows the pipeline damaged | 9 of 313 (2.9%) |
+
+Source: `results/abo/repair_ablations_summary.csv`, `repair_ablations.json`.
+
+Roughly half of what the system commits is correct. That is the number to
+defend, and §8.4 is why it is the right number to have optimised for.
+
+> **One derived row.** These figures come from a run with the dismiss path
+> still enabled (51 rows dismissed). That path was disabled after the run
+> (`FIXES.md` D19), which converts those 51 rows to escalations — 1,018 → 1,069
+> — and changes nothing else: the dismiss branch is the only code path
+> affected, verified by two consecutive runs being bit-identical outside it.
+> Regenerate on the next run rather than citing the derived number.
+
+### 8.4 Ablations (ABO)
+
+| Configuration | Repaired | Colour accuracy | Image accuracy |
+|---|---|---|---|
+| Full System | 198 | **0.519** | **0.433** |
+| No Independent Verifier | 300 | 0.447 | 0.352 |
+| No Gamma Gate (γ=0) | 408 | 0.432 | 0.414 |
+| No Arbiter (random routing) | 8 | 0.000 | 0.333 |
+
+**Read every row as a risk–coverage trade, never as accuracy alone.** Removing
+the independent verifier buys 102 more repairs and costs 7 points of colour
+accuracy; removing the γ-gate buys 210 more and costs 9. The full system is the
+most conservative configuration and the most accurate one, which is the claim —
+but it repairs the fewest rows, and a reviewer who sees only the accuracy column
+will rightly ask what it cost.
+
+### 8.5 What the numbers do not support
+
+- **Dismissal.** Implemented, measured, and **disabled**: it was right 39% of
+  the time and got *worse* as its threshold rose (D19). Not a contribution.
+- **The generative fallback.** Never fires on a catalogue of this size —
+  retrieval always has a candidate. Present for the sparse-category case, but it
+  carried no reported result (§5 of `paper_concepts.md`).
+- **`attribute_drop` detection**, at 0.455 synthetic / 0.065 ABO. A missing
+  attribute is not a contradiction between modalities, so the cross-modal
+  signals have nothing to fire on; only the schema check sees it.
 
 ---
 
