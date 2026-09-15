@@ -1,6 +1,43 @@
 # TIGeR Paper Draft Materials
 
-The following sections contain pre-formatted text, code, and tables that you can directly copy-paste into your research manuscript.
+Pre-formatted text, code and tables for the manuscript.
+
+> **Read this first (2026-09-16).** This file is part draft, part lab notebook.
+> Several sections record investigations that were later **disproven** and are
+> kept, clearly marked, so the reasoning is not re-derived — they are not
+> citable. Every section carrying a live number now says where it came from.
+>
+> | | |
+> |---|---|
+> | **Citable, current** | §1b (ablation table), §7.4 (γ distribution) |
+> | **Historical — do not cite** | §1 (A1 bug), §7.1–7.3 (pre-schema-fix run, withdrawn "early exit" story) |
+> | **Authoritative source for all current numbers** | `tiger_project_doc.md` §8, itself generated from `paper_assets/results/` |
+
+---
+
+## 1b. Results Section: Ablation Table (current)
+
+ABO, seed 7, pooled configurations. Regenerated 2026-09-16 from
+`paper_assets/results/abo/repair_ablations_summary.csv`.
+
+| Configuration | Repaired | Colour accuracy | Image accuracy |
+|---|---|---|---|
+| Full System | 198 | **0.519** (41/79) | **0.433** (42/97) |
+| No Independent Verifier | 300 | 0.447 (n=94) | 0.352 (n=199) |
+| No Gamma Gate (γ=0) | 408 | 0.432 (n=148) | 0.414 (n=237) |
+| No Arbiter (random routing) | 8 | 0.000 (n=3) | 0.333 (n=6) |
+
+**Present this as a risk–coverage trade, not an accuracy ranking.** The full
+system is both the most accurate and the least productive configuration:
+disabling the independent verifier buys 102 more repairs at a cost of 7 points
+of colour accuracy, and disabling the γ-gate buys 210 more at a cost of 9. A
+reader who sees only the accuracy column will ask what it cost, and the answer
+should already be in the table.
+
+Two labels changed and the old ones should not be reused: the row formerly
+called **"No VLM Judge"** ablates the SigLIP encoder cross-check, not a VLM
+(`FIXES.md` E13) — no VLM was involved in any reported number — and dismissal
+no longer appears as an outcome because the path is disabled (`FIXES.md` D19).
 
 ---
 
@@ -239,11 +276,10 @@ identity left to explain. **Do not cite the "perfect early-exit" framing or
 the quoted paper paragraph below in any manuscript.**
 
 What *does* still stand from this section, on its own separate evidence: the
-underconfidence measurement (the Arbiter's max-p distribution genuinely
-shifts on out-of-domain ABO data — though the corrected run shows **38.8%**
-of predictions below γ=0.60, not 75.2%; re-measure before citing either
-number) and the general recommendation that γ may need per-domain
-recalibration. Those are real findings independent of the withdrawn "early
+underconfidence measurement (the Arbiter's max-p distribution genuinely shifts
+on out-of-domain ABO data) and the general recommendation that γ may need
+per-domain recalibration. **Both numbers previously quoted here — 75.2% and
+38.8% — are superseded; see §7.4 for the measured distribution.** Those are real findings independent of the withdrawn "early
 exit" story; if you want to keep them in the paper, restate them without the
 disproven causal claim and with the corrected confidence numbers.
 
@@ -304,3 +340,37 @@ This is supported by three sub-questions:
 1. **RQ1 (Efficacy vs. Compute):** How much computational and financial cost can be saved by using a lightweight Sieve to triangulate and route specific errors, rather than applying heavy generative AI (SDXL/VLMs) blindly across an entire catalogue?
 2. **RQ2 (Safety & Precision):** To what extent can independent multimodal verification (SigLIP) and statistical confidence thresholding (the Gamma gate) act as a cascading safety net to prevent destructive, hallucinated repairs on highly ambiguous items?
 3. **RQ3 (Generalizability):** Can a pipeline engineered for a specific vertical (e.g., fashion) maintain its safety guarantees and efficacy on an open-domain catalog (e.g., Amazon Berkeley Objects) via lightweight schema adaptation, rather than structural retraining?
+
+
+---
+
+## 7.4 The γ Distribution on ABO (current)
+
+Measured 2026-09-16 on the held-out calibration seed (1014), n = 1,318, using
+the shipped Arbiter (`paper_assets/results/abo/thresholds/tiger_arbiter_model.json`):
+
+| | |
+|---|---|
+| mean max-p | **0.615** |
+| median max-p | 0.609 |
+| below γ = 0.40 (config default) | **3.3%** |
+| below γ = 0.448 (the 25th-percentile proposal in §7.3) | 8.2% |
+| below γ = 0.60 (**what every reported run used**) | **47.7%** |
+
+This supersedes both earlier figures (75.2% and 38.8%). The finding that
+survives is the one worth reporting: **the router's confidence on real ABO
+photography centres almost exactly on the operating threshold** — median 0.609
+against γ = 0.60 — so the gate sits at the mode of the distribution and roughly
+half of all flagged rows escalate on confidence alone.
+
+That is a defensible operating point for a system built around abstention, but
+it should be stated as a *choice*, with the distribution shown, rather than
+presented as a tuned optimum. And note the gap between the config default
+(0.40) and what the runs actually used (0.60): cite 0.60 with any result, and
+0.40 only as the repository default.
+
+Related and worth citing together: the router is **well calibrated in
+aggregate** (holdout ECE 0.027) but **not per class** — its CLEAN head is flat,
+with rows called CLEAN actually clean 68–83% of the time whether it states 0.55
+or 0.92. That per-class failure is invisible in the aggregate ECE and is what
+made the dismiss path unusable (`FIXES.md` D19).
