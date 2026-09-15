@@ -164,3 +164,17 @@ def test_the_shipped_config_excludes_the_title_signal():
     v = cli.load_cfg()["arbiter"]["dismiss_contrary_signals"]
     assert "title_contradiction" not in v
     assert "probe" in v and "text_out_of_domain" in v
+
+
+def test_calibration_is_reported_per_class():
+    """D19: the dismiss rule keys on p_top for ONE class, so that class needs
+    its own calibration. An aggregate ECE of 0.027 hid a CLEAN head that was
+    flat -- 68-83% actually clean whether it stated 0.55 or 0.92."""
+    m = constant_model("E1", conf=0.95)
+    ev = [dict(BASE_EV) for _ in range(100)]
+    labels = ["mutate_text"] * 50 + ["clean"] * 50
+    rep = A.calibration_report(m, ev, labels, gamma=0.60)
+    assert "per_class" in rep
+    assert rep["per_class"]["E1"]["n"] == 100
+    assert rep["per_class"]["E1"]["accuracy"] == 0.5
+    assert rep["per_class"]["E1"]["ece"] > 0.40

@@ -1,9 +1,9 @@
 {
   "full": {
-    "total_attempted": 1254,
+    "total_attempted": 1216,
     "repaired": 198,
-    "escalated": 1056,
-    "dismissed": 13,
+    "escalated": 1018,
+    "dismissed": 51,
     "acquire_image": 50,
     "passes_used_distribution": {
       "1": 1287,
@@ -61,10 +61,10 @@
     "t2v_total": 6
   },
   "no_independent": {
-    "total_attempted": 1254,
+    "total_attempted": 1211,
     "repaired": 300,
-    "escalated": 954,
-    "dismissed": 13,
+    "escalated": 911,
+    "dismissed": 56,
     "acquire_image": 50,
     "passes_used_distribution": {
       "1": 1258,
@@ -94,10 +94,10 @@
     "t2v_total": 199
   },
   "no_gen": {
-    "total_attempted": 1254,
+    "total_attempted": 1216,
     "repaired": 198,
-    "escalated": 1056,
-    "dismissed": 13,
+    "escalated": 1018,
+    "dismissed": 51,
     "acquire_image": 50,
     "passes_used_distribution": {
       "1": 1287,
@@ -127,10 +127,10 @@
     "t2v_total": 97
   },
   "no_gamma": {
-    "total_attempted": 1246,
+    "total_attempted": 1206,
     "repaired": 408,
-    "escalated": 838,
-    "dismissed": 21,
+    "escalated": 798,
+    "dismissed": 61,
     "acquire_image": 50,
     "passes_used_distribution": {
       "1": 1266,

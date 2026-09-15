@@ -190,13 +190,14 @@ def calibration_report(model: ArbiterModel, evidence_records: list[dict], labels
     A negative gap means the router is under-confident there, so the gate
     escalates rows it would in fact have routed correctly.
     """
-    conf, hit = [], []
+    conf, hit, pred = [], [], []
     for ev, lab in zip(evidence_records, labels):
         p = model.predict_proba(featurize(ev))
         top = max(p, key=p.get)
         conf.append(p[top])
+        pred.append(top)
         hit.append(float(top == LABEL_TO_CLASS.get(lab, "CLEAN")))
-    conf, hit = np.asarray(conf), np.asarray(hit)
+    conf, hit, pred = np.asarray(conf), np.asarray(hit), np.asarray(pred)
     if conf.size == 0:
         return {}
 
@@ -210,6 +211,26 @@ def calibration_report(model: ArbiterModel, evidence_records: list[dict], labels
               if (m := (conf >= a) & (conf < b)).any())
     near = (conf >= gamma - 0.05) & (conf < gamma + 0.05)
     above = conf >= gamma
+
+    # Per-class, because the aggregate hides the failure that matters. The
+    # dismiss rule reads p_top as "probability this row is CLEAN" and acts on
+    # it; on the ABO run that quantity was flat -- rows called CLEAN were
+    # actually clean 68-83% of the time whether the router stated 0.55 or 0.92
+    # -- while overall ECE sat at a healthy 0.027. A decision keyed to one
+    # class needs that class measured (D19).
+    per_class = {}
+    for c in CLASSES:
+        m = pred == c
+        if not m.any():
+            continue
+        cc, hh = conf[m], hit[m]
+        e = sum(abs(hh[b].mean() - cc[b].mean()) * int(b.sum())
+                for a2, b2 in zip(edges[:-1], edges[1:])
+                if (b := (cc >= a2) & (cc < b2)).any())
+        per_class[c] = {"n": int(m.sum()), "ece": float(e / m.sum()),
+                        "accuracy": float(hh.mean()),
+                        "mean_confidence": float(cc.mean())}
+
     return {
         "n": int(conf.size),
         "ece": float(ece / conf.size),
@@ -218,6 +239,7 @@ def calibration_report(model: ArbiterModel, evidence_records: list[dict], labels
         "n_near_gamma": int(near.sum()),
         "share_above_gamma": float(above.mean()),
         "accuracy_above_gamma": float(hit[above].mean()) if above.any() else None,
+        "per_class": per_class,
     }
 
 

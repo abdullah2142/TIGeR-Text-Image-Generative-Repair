@@ -2289,7 +2289,56 @@ defensible here. Report it as recall loss on the dismiss path, not as damage.
 Five tests in `tests/test_arbiter.py` pin it, including that the shipped config
 excludes the title signal and that strong probes and out-of-domain still veto.
 
-**Status:** DONE — needs a run to confirm end-to-end
+**Confirmed 2026-09-14 — and the confirmation is a negative result that
+supersedes the fix's rationale.** The change did what the sweep said
+structurally (dismissals 13 → 51, everything else in the run bit-identical),
+but on the report split:
+
+| | before D19 | after D19 |
+|---|---|---|
+| clean rows dismissed | 8 | 20 |
+| **dirty rows dismissed** | 5 | **31** |
+| precision | 0.615 (n=13) | **0.392** (n=51) |
+
+Twelve clean rows cleared for twenty-six more missed detections. The offline
+sweep predicted 0.720; the holdout *calibration* seed predicted 0.763. Neither
+transferred.
+
+**Why, and it is the finding worth keeping.** The dismiss rule reads `p_top` as
+"probability this row is CLEAN". On held-out data that quantity is **flat**:
+
+| router states | rows are actually clean |
+|---|---|
+| 0.55 | 76.9% |
+| 0.65 | 69.7% |
+| 0.75 | 68.2% |
+| 0.84 | 75.9% |
+| 0.92 | 83.3% |
+
+Confidence moves 0.55 → 0.92 while actual cleanliness stays near 70–80%. So no
+threshold can work: raising it on the report split makes precision *worse*
+(0.392 at ≥0.80, 0.375 at ≥0.85, **0.250** at ≥0.90).
+
+**And the aggregate hid it.** Overall holdout ECE is **0.027** — the router is
+well calibrated *on its argmax*, and miscalibrated specifically on the one
+class a decision keys to. `calibration_report` now reports per-class ECE,
+accuracy and mean confidence (`D1`'s instrument, extended), so a decision
+attached to a single class is measured on that class.
+
+**Consequence: the dismiss path is not validated at any setting tested** —
+precision between 0.25 and 0.62 with overlapping intervals, on 13–51 rows of
+1,317. `D19`'s reasoning stands (a 0.510-precision signal has no business
+holding a veto) and removing the veto merely exposed a mechanism that was never
+working; the veto had been suppressing it by accident.
+
+**Open decision, for the user:** keep it (higher volume, 0.39 precision),
+revert the veto (lower volume, 0.62 on n=13, intervals overlap), or disable
+dismissal entirely and escalate everything — which is the honest position given
+a claimed capability that cannot be demonstrated, and the one most consistent
+with the rest of the system's abstention design.
+
+**Status:** DONE (change measured) — the dismiss path itself is now an open
+question, tracked as `D20`
 
 
 ---
