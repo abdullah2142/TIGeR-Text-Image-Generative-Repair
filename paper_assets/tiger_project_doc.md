@@ -367,7 +367,7 @@ chair's photo, the pipeline catches it fewer than half the time.
 | Rows repaired | 198 |
 | Attribute (colour) restoration accuracy | **0.519** (41/79) |
 | Image restoration accuracy | **0.433** (42/97) |
-| Rows escalated to human review | 1,018 |
+| Rows escalated to human review | 1,069 |
 | Clean rows the pipeline damaged | 9 of 313 (2.9%) |
 
 Source: `results/abo/repair_ablations_summary.csv`, `repair_ablations.json`.
@@ -375,12 +375,12 @@ Source: `results/abo/repair_ablations_summary.csv`, `repair_ablations.json`.
 Roughly half of what the system commits is correct. That is the number to
 defend, and §8.4 is why it is the right number to have optimised for.
 
-> **One derived row.** These figures come from a run with the dismiss path
-> still enabled (51 rows dismissed). That path was disabled after the run
-> (`FIXES.md` D19), which converts those 51 rows to escalations — 1,018 → 1,069
-> — and changes nothing else: the dismiss branch is the only code path
-> affected, verified by two consecutive runs being bit-identical outside it.
-> Regenerate on the next run rather than citing the derived number.
+> **Dismissal is off in this configuration**, so no row is dismissed and every
+> flagged clean row escalates (`FIXES.md` D19). An earlier version of this
+> table derived the escalation count rather than measuring it; the 2026-09-16
+> re-run confirms it exactly — 1,018 + 51 = 1,069, with every other column
+> bit-identical, which also demonstrates that the dismiss branch touches
+> nothing else in the pipeline.
 
 ### 8.4 Ablations (ABO)
 
