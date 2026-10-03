@@ -452,7 +452,7 @@ will rightly ask what it cost.
 
 ### ✅ Generative Fallback Completed
 - **Stable Diffusion XL Turbo (SDXL-Turbo)** implemented via `tiger/generator.py`.
-- Generative fallback successfully rescued 15 products with missing/corrupted modalities.
+- Never fires in any evaluated run — retrieval-based image search always finds a same-category candidate first, confirmed by ablation (removing the generative fallback changes zero repair outcomes). Validated only standalone: correctly renders colour/material/category, drops requested pattern. (Earlier versions of this doc stated it "rescued 15 products" — that figure was incorrect and is retracted; see `honest_limitations.md` §2.)
 
 ### ✅ Evaluation Completed
 - Repair ablation study completed.
