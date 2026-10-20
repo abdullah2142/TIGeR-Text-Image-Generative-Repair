@@ -2378,6 +2378,36 @@ question, tracked as `D20`
 
 ---
 
+### D20 ⚑ · Material repairs were committed on one weak estimator — 0 of 8 correct
+
+**Found:** 2026-10-21, from a reviewer asking how the eight material repairs in
+the ABO results table were proposed and verified. `tiger/solver.py` has a pixel
+estimator for **colour only**; material and pattern are proposed by the
+contrastive probe alone ("one opinion, planned normally"), so the
+dual-estimator agreement check that the paper presented as the V2T safeguard
+never applied to them. On the committed ABO run all 8 committed material
+repairs were wrong. Probe accuracy on material is 0.328 over 17 values.
+
+**Also found:** the paper described a declined pixel estimate as escalating,
+when the code commits the probe estimate on its own (46.2% accurate on those
+rows). The text was corrected in the same pass.
+
+**Fix:** new config key `solver.v2t_auto_fields: ["color"]`, passed to
+`plan_repair` as `v2t_auto_fields`. A suspect field outside the set is withheld;
+the row falls through to the next suspect and, if none is eligible, escalates
+with `"<field> withheld: no second estimator to cross-check the probe"`
+recorded. Four tests pin it (`tests/test_solver_planning.py`). Add a field to
+the list to re-enable automatic repair for it.
+
+**Effect on reported numbers:** the Full System row and every ablation row
+change (the gate is system-level, applied in all configurations). Material
+disappears from `attr_by_field`; escalations rise by about the old committed
+material count; colour figures can move slightly because a row whose top
+suspect was material can now fall through to an eligible colour suspect.
+`tiger_abo_corrected_run.ipynb` Step 7b counts the material funnel the old table
+could not. **Every ABO repair figure in the paper must be taken from the re-run,
+not carried over.**
+
 ## E. Documentation contradicted by the code
 
 Fix **after** the corrected ablation run — the numbers will move.

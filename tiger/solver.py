@@ -245,8 +245,20 @@ def _corrected_value(field: str, ev: dict) -> tuple[str, dict]:
 def plan_repair(ev: dict, route, sieve_row: dict, pool: CandidatePool,
                 cat_ids: np.ndarray, caption_emb: np.ndarray, schema: Schema,
                 same_category_only: bool = True, generator=None, root_path=None,
-                sample_dir: str = "data/sample") -> RepairPlan:
-    """Build a concrete repair payload from evidence + route."""
+                sample_dir: str = "data/sample",
+                v2t_auto_fields: "set[str] | None" = None) -> RepairPlan:
+    """Build a concrete repair payload from evidence + route.
+
+    ``v2t_auto_fields`` limits which text fields a V2T repair may write
+    automatically. Only colour has a second, independent estimator (the pixel
+    estimate); every other field is proposed by the contrastive probe alone, so
+    a patch to it would be committed on a single estimator with nothing to
+    cross-check against. On the committed ABO run all 8 such material patches
+    were wrong (0/8). A field outside this set is never patched: the row falls
+    through to the next suspect and, if none is eligible, is escalated with the
+    reason recorded. ``None`` means unrestricted (unit tests only; the pipeline
+    always passes solver.v2t_auto_fields from the config).
+    """
     row_id = str(ev.get("row_id", ""))
     category = str(ev.get("category", ""))
     attrs = text_views.parse_attrs(sieve_row.get("attributes", {}))
@@ -261,7 +273,11 @@ def plan_repair(ev: dict, route, sieve_row: dict, pool: CandidatePool,
             z = (ev["probes"][f] or {}).get("z")
             if z is not None and z <= -2.0 and f not in suspects:
                 suspects.append(f)
+        withheld: list[str] = []
         for f in suspects:
+            if v2t_auto_fields is not None and f not in v2t_auto_fields:
+                withheld.append(f)
+                continue
             val, diag = _corrected_value(f, ev)
             if not val or not schema.in_domain(f, val):
                 continue
@@ -282,6 +298,12 @@ def plan_repair(ev: dict, route, sieve_row: dict, pool: CandidatePool,
             return RepairPlan(row_id, "V2T", patch={f: val}, cost=1.0,
                               notes=f"V2T single-field patch {f}={val} (suspect via LOO/probe)",
                               **diag)
+        if withheld:
+            return RepairPlan(
+                row_id, "V2T", plannable=False,
+                notes=(f"no valid single-field patch from evidence; "
+                       f"{', '.join(withheld)} withheld: no second estimator to "
+                       f"cross-check the probe"))
         return RepairPlan(row_id, "V2T", plannable=False,
                           notes="no valid single-field patch from evidence")
 

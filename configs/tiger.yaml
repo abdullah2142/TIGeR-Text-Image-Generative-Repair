@@ -140,6 +140,17 @@ arbiter:
                          "handbag", "suitcase", "hat"]
     max_cost_units: 5.0
 
+solver:
+  # Fields a V2T (text) repair may write automatically. Colour only: it is the
+  # one field with a second, independent estimator (the pixel estimate), so a
+  # colour patch is cross-checked and a disagreement escalates. Material and
+  # pattern are proposed by the contrastive probe alone -- one weak opinion with
+  # nothing to check it against (probe accuracy on material is 0.328 over 17
+  # values). On the committed ABO run every committed material repair was wrong
+  # (0/8), so they now escalate to human review instead. Add a field here to
+  # re-enable automatic repair for it.
+  v2t_auto_fields: ["color"]
+
 verify:
   epsilon_quantile: 0.95               # eps = this quantile of |clean pair deltas|
   max_passes: 2

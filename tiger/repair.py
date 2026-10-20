@@ -135,7 +135,8 @@ def run_repair_cycle(working: pd.DataFrame, encoder: ClipEncoder, schema: Schema
             plan = solver_mod.plan_repair(ev, route, flagged.loc[i].to_dict(), pool,
                                           cat_ids, caption_emb[i], schema,
                                           generator=generator, root_path=root,
-                                          sample_dir=cfg["data"]["sample_dir"])
+                                          sample_dir=cfg["data"]["sample_dir"],
+                                          v2t_auto_fields=set(cfg["solver"]["v2t_auto_fields"]))
             if not plan.plannable:
                 entry = {"pass": pass_i, "action": "human_review",
                          "reason": f"unplannable: {plan.notes}", "error_type": route.error_type}

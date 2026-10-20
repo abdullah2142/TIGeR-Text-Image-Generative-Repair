@@ -225,3 +225,46 @@ def test_t2v_runner_up_is_empty_when_there_is_only_one_candidate(schema):
     plan = plan_repair(ev, Route("T2V"), row, pool, cats, emb[0], schema)
     assert plan.candidate_image_path == "b.jpg"
     assert plan.runner_up_image_path == ""
+
+
+# ---------------------------------------------------------------------------
+# Material/pattern have no second estimator, so V2T never writes them
+# ---------------------------------------------------------------------------
+
+MATERIAL_EV = {"row_id": "r1", "category": "shirts", "product_id": "r1",
+               "loo_top_field": "material",
+               "probes": {"material": {"z": -3.0, "pred": "leather"}}}
+MATERIAL_ROW = {"attributes": '{"color": "red", "material": "cotton", "pattern": "solid", "size": "M"}',
+                "title": "Red Shirt", "category": "shirts"}
+
+
+def test_shipped_config_restricts_v2t_to_colour():
+    from tiger import cli
+    assert cli.load_cfg()["solver"]["v2t_auto_fields"] == ["color"]
+
+
+def test_material_patch_is_withheld_and_escalates_with_the_reason(schema):
+    plan = plan_repair(MATERIAL_EV, Route("V2T"), MATERIAL_ROW, None, None, None, schema,
+                       v2t_auto_fields={"color"})
+    assert not plan.plannable
+    assert plan.patch == {}
+    assert "material withheld" in plan.notes
+
+
+def test_material_patch_is_still_planned_when_the_field_is_allowed(schema):
+    plan = plan_repair(MATERIAL_EV, Route("V2T"), MATERIAL_ROW, None, None, None, schema,
+                       v2t_auto_fields={"color", "material"})
+    assert plan.plannable
+    assert plan.patch == {"material": "leather"}
+
+
+def test_a_withheld_material_suspect_falls_through_to_an_eligible_colour_suspect(schema):
+    ev = {**MATERIAL_EV,
+          "pixel_color": "blue", "pixel_color_confidence": 0.9,
+          "pixel_color_region": "foreground",
+          "probes": {"material": {"z": -3.0, "pred": "leather"},
+                     "color": {"z": -3.0, "pred": "blue"}}}
+    plan = plan_repair(ev, Route("V2T"), MATERIAL_ROW, None, None, None, schema,
+                       v2t_auto_fields={"color"})
+    assert plan.plannable
+    assert plan.patch == {"color": "blue"}
