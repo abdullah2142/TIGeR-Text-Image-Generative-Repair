@@ -146,8 +146,8 @@ solver:
   # colour patch is cross-checked and a disagreement escalates. Material and
   # pattern are proposed by the contrastive probe alone -- one weak opinion with
   # nothing to check it against (probe accuracy on material is 0.328 over 17
-  # values). On the committed ABO run every committed material repair was wrong
-  # (0/8), so they now escalate to human review instead. Add a field here to
+  # values). On the committed ABO run the 8 repaired rows whose injected fault was
+  # material were all left wrong (0/8), so they now escalate to human review instead. Add a field here to
   # re-enable automatic repair for it.
   v2t_auto_fields: ["color"]
 

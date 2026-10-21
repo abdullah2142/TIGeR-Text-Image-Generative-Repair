@@ -2378,15 +2378,23 @@ question, tracked as `D20`
 
 ---
 
-### D20 ⚑ · Material repairs were committed on one weak estimator — 0 of 8 correct
+### D20 ⚑ · Material text repairs had no second estimator — the 8 material rows were all left wrong
 
 **Found:** 2026-10-21, from a reviewer asking how the eight material repairs in
 the ABO results table were proposed and verified. `tiger/solver.py` has a pixel
 estimator for **colour only**; material and pattern are proposed by the
 contrastive probe alone ("one opinion, planned normally"), so the
 dual-estimator agreement check that the paper presented as the V2T safeguard
-never applied to them. On the committed ABO run all 8 committed material
-repairs were wrong. Probe accuracy on material is 0.328 over 17 values.
+never applied to them. Probe accuracy on material is 0.328 over 17 values.
+
+**What the old `0/8` was.** `attr_by_field` counts every *repaired* row whose
+injected fault was in that field and checks the final value — not "material
+patches written". The eight were repaired rows with an injected material fault
+that ended wrong. The committed artifacts do not record which repair path each
+took (a material patch, a colour fall-through, or an image swap), so "eight
+material repairs committed on the probe alone" was an inference, not a
+measurement. The first re-run supports it: with material gated, that count fell
+from 8 to 1, so most of the eight were material patches.
 
 **Also found:** the paper described a declined pixel estimate as escalating,
 when the code commits the probe estimate on its own (46.2% accurate on those
@@ -2399,14 +2407,18 @@ with `"<field> withheld: no second estimator to cross-check the probe"`
 recorded. Four tests pin it (`tests/test_solver_planning.py`). Add a field to
 the list to re-enable automatic repair for it.
 
+**Verification:** `tiger_abo_corrected_run.ipynb` Step 7b asserts directly that
+no repaired row has a non-colour V2T patch in its outcome log, counts the rows
+escalated because a patch was withheld, and prints the repair path of any row
+still scored under `material`. (An earlier version of that cell asserted
+`attr_by_field["material"]["n"] == 0`, which tests the wrong thing and failed
+on a row repaired by another path.)
+
 **Effect on reported numbers:** the Full System row and every ablation row
-change (the gate is system-level, applied in all configurations). Material
-disappears from `attr_by_field`; escalations rise by about the old committed
-material count; colour figures can move slightly because a row whose top
-suspect was material can now fall through to an eligible colour suspect.
-`tiger_abo_corrected_run.ipynb` Step 7b counts the material funnel the old table
-could not. **Every ABO repair figure in the paper must be taken from the re-run,
-not carried over.**
+change (the gate is system-level, applied in all configurations). Escalations
+rise; colour figures can move slightly because a row whose top suspect was
+material can now fall through to an eligible colour suspect. **Every ABO repair
+figure in the paper must be taken from the re-run, not carried over.**
 
 ## E. Documentation contradicted by the code
 

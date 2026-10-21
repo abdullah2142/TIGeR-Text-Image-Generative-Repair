@@ -253,8 +253,9 @@ def plan_repair(ev: dict, route, sieve_row: dict, pool: CandidatePool,
     automatically. Only colour has a second, independent estimator (the pixel
     estimate); every other field is proposed by the contrastive probe alone, so
     a patch to it would be committed on a single estimator with nothing to
-    cross-check against. On the committed ABO run all 8 such material patches
-    were wrong (0/8). A field outside this set is never patched: the row falls
+    cross-check against. On the committed ABO run, the 8 repaired rows whose
+    injected fault was material were all left wrong (0/8); the repair path per
+    row was not logged in the committed artifacts. A field outside this set is never patched: the row falls
     through to the next suspect and, if none is eligible, is escalated with the
     reason recorded. ``None`` means unrestricted (unit tests only; the pipeline
     always passes solver.v2t_auto_fields from the config).
